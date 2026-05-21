@@ -1,74 +1,33 @@
 # LoserReversal
 
-> 个人量化研究项目：基于链上数据的散户反向交易策略探索。
-> 核心思路 → 多 alpha 源回测 → 小额实盘验证。
+个人量化研究项目：探索基于链上数据的散户反向交易策略。
 
-## 项目背景
+## 概述
 
-最初想法：在链上监控亏损散户钱包地址，按权重反向开仓。
+基于 Hyperliquid 等链上数据，验证多个独立 alpha 源：
 
-经过深度研究后，扩展为 **4 个独立可量化的 alpha 源**：
-1. **解锁日做空**（Keyrock 16000+ 事件实证 90% 负价格压力）
-2. **单钱包反向**（最初想法的精确量化版）
-3. **跨平台 Funding 套利**（低风险底盘）
-4. **反 Sybil 集群信号**（最初想法的终极进化版）
+- 解锁日做空（基于 token unlock 事件）
+- 单钱包反向（跟踪并反向操作亏损钱包池）
+- 跨平台 Funding 套利
+- 反 Sybil 集群信号
 
-## 当前阶段
-
-**Phase 0: 基础设施搭建**（Roadmap Week 1-2）
-
-完整路线见 [ROADMAP.md](.ccg/tasks/loser-reversal-indicator-research/research/ROADMAP.md)。
-
-## 研究产出
-
-- [ROADMAP](.ccg/tasks/loser-reversal-indicator-research/research/ROADMAP.md) — 16-20 周完整执行路线
-- [REPORT](.ccg/tasks/loser-reversal-indicator-research/research/REPORT.md) — 最初可行性研究报告
-- [PROFIT-PATH](.ccg/tasks/loser-reversal-indicator-research/research/PROFIT-PATH.md) — 盈利路径分析
-- [evidence/](.ccg/tasks/loser-reversal-indicator-research/research/evidence/) — 22 份原始搜索证据 + 3 份关键页面抓取
+完整研究背景、可行性分析与执行路线见 [`.ccg/tasks/loser-reversal-indicator-research/research/`](./.ccg/tasks/loser-reversal-indicator-research/research/)。
 
 ## 技术栈
 
-- **数据**：Hyperliquid Python SDK + CCXT + Parquet + DuckDB
-- **回测**：Vectorbt（research）+ NautilusTrader（后期 live）
-- **数据源**：Hyperliquid 公共 S3 archive + TokenUnlocks API + Coinglass
+- Python 3.11+
+- Hyperliquid Python SDK / CCXT
+- Vectorbt（回测）/ NautilusTrader（实盘）
+- DuckDB + Parquet（数据层）
 
-## 项目结构（规划）
+## 使用
 
-```
-LoserReversal/
-├── data/                   # 历史数据（gitignored）
-│   ├── candles/           # K 线
-│   ├── fills/             # 钱包成交
-│   ├── funding/           # 资金费率
-│   └── unlocks/           # 解锁事件
-├── signals/                # 信号生成
-├── backtest/               # 回测脚手架
-├── features/               # 特征工程
-├── live/                   # 实盘执行
-├── strategies/             # 已验证策略配置
-├── notebooks/              # 研究笔记本
-├── reports/                # 回测报告（gitignored）
-└── .ccg/                   # 研究历史 + CCG 工作流
+环境准备（即将提供）：
+
+```bash
+# TODO: setup steps once Phase 0 infrastructure is in
 ```
 
-## 工作流
+## License
 
-后续开发基于 [CCG](https://github.com/) 工作流推进，每个 phase 作为一个独立 task。
-
-## 公开与不公开的边界
-
-本仓库 **public**，但严格遵守反身性原则：
-
-**✅ 公开**：
-- 基础设施代码（数据 fetcher / 回测脚手架 / 可视化）
-- 研究方法论 + ROADMAP
-- 公共数据集（解锁事件、funding history 等已公开数据）
-- 通用工具函数
-
-**❌ 不入库（在 `.gitignore` 或 private branch）**：
-- 真实策略参数 + 阈值
-- 实盘交易记录 + PnL
-- 私有钱包池清单（如反向跟踪的具体地址）
-- 实时信号生成的最终配置
-
-**理由**：如果完整策略公开 → 反身性闭环 → alpha 立即衰减。但基础设施和研究方法本身公开有学习价值，且不会泄漏 alpha。
+MIT
