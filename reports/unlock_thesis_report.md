@@ -1,6 +1,6 @@
 # Unlock Thesis Validation Report
 
-_Generated 2026-05-21 19:32 UTC_
+_Generated 2026-05-21 20:01 UTC_
 
 ## Verdict: WEAK
 
@@ -35,12 +35,12 @@ Thesis partially confirmed. **Proceed to Phase 0 with reduced expectations** for
 
 | Metric | Value |
 | --- | --- |
-| n_events | 0 |
-| pct_pre_negative | — |
-| pct_post_negative | — |
-| mean_pre (vs BTC) | — |
-| mean_post (vs BTC) | — |
-| p_value_pre (one-sided) | — |
+| n_events | 5 |
+| pct_pre_negative | 80.0% |
+| pct_post_negative | 60.0% |
+| mean_pre (vs BTC) | -0.0751 |
+| mean_post (vs BTC) | 0.0107 |
+| p_value_pre (one-sided) | 0.0841 |
 
 ### Ex-Ecosystem Subset
 

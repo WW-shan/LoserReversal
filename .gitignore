@@ -9,6 +9,9 @@ config/secrets.*
 credentials.json
 **/api_keys.json
 
+# ===== CCG workflow state (local only — kept out of repo) =====
+.ccg/
+
 # ===== Trading credentials =====
 hyperliquid_wallet.json
 *.wallet

@@ -42,7 +42,7 @@ def main() -> int:
     print(f"[3/4] enriched {len(enriched)} events with abnormal returns")
 
     overall_stats = aggregate_statistics(enriched)
-    team_stats = aggregate_statistics(enriched[enriched["category"] == "team"])
+    team_stats = aggregate_statistics(enriched[enriched["category"].isin(["team", "insiders"])])
     ex_eco_stats = aggregate_statistics(filter_ex_ecosystem(enriched))
 
     decision = pass_fail_decision(overall_stats, team_stats)
