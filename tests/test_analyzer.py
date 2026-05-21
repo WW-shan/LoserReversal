@@ -54,3 +54,61 @@ def test_abnormal_return_handles_pre_window():
 
     assert ar < 0
     assert ar == pytest.approx(np.log(90 / 100), abs=1e-6)
+
+
+from unlock_validation.analyzer import aggregate_statistics
+
+
+def test_aggregate_statistics_computes_pct_negative():
+    events = pd.DataFrame({
+        "ar_pre": [-0.05, -0.02, 0.01, -0.10, 0.03],   # 3 negative out of 5
+        "ar_day": [0.01, -0.02, 0.0, -0.01, 0.02],
+        "ar_post": [-0.03, -0.04, 0.02, -0.01, -0.05], # 4 negative out of 5
+        "category": ["team", "investor", "ecosystem", "team", "investor"],
+    })
+
+    stats = aggregate_statistics(events)
+
+    assert stats["pct_pre_negative"] == pytest.approx(3 / 5)
+    assert stats["pct_post_negative"] == pytest.approx(4 / 5)
+    assert stats["n_events"] == 5
+
+
+def test_aggregate_statistics_computes_mean_pre():
+    events = pd.DataFrame({
+        "ar_pre": [-0.05, -0.02, 0.01, -0.10, 0.03],
+        "ar_day": [0.0, 0.0, 0.0, 0.0, 0.0],
+        "ar_post": [0.0, 0.0, 0.0, 0.0, 0.0],
+        "category": ["team"] * 5,
+    })
+
+    stats = aggregate_statistics(events)
+
+    expected_mean = (-0.05 - 0.02 + 0.01 - 0.10 + 0.03) / 5
+    assert stats["mean_pre"] == pytest.approx(expected_mean)
+
+
+def test_aggregate_statistics_computes_t_test_p_value():
+    """With clearly negative AR values, p-value (one-sided AR<0) should be < 0.05."""
+    np.random.seed(42)
+    events = pd.DataFrame({
+        "ar_pre": np.random.normal(loc=-0.05, scale=0.02, size=30),
+        "ar_day": np.zeros(30),
+        "ar_post": np.zeros(30),
+        "category": ["team"] * 30,
+    })
+
+    stats = aggregate_statistics(events)
+
+    assert stats["p_value_pre"] < 0.05
+
+
+def test_aggregate_statistics_empty_events_returns_safe_defaults():
+    events = pd.DataFrame(columns=["ar_pre", "ar_day", "ar_post", "category"])
+
+    stats = aggregate_statistics(events)
+
+    assert stats["n_events"] == 0
+    assert stats["pct_pre_negative"] is None
+    assert stats["mean_pre"] is None
+    assert stats["p_value_pre"] is None
