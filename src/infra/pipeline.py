@@ -38,6 +38,9 @@ def run_pipeline(
             candles = read_candles(config.symbol, config.interval, start=config.start, end=config.end)
         except (FileNotFoundError, OSError, duckdb.IOException):
             candles = _fetch_store_load_candles(config)
+        else:
+            if not _candles_cover_range(candles, config):
+                candles = _fetch_store_load_candles(config)
     else:
         candles = _fetch_store_load_candles(config)
 
@@ -51,3 +54,41 @@ def _fetch_store_load_candles(config: PipelineConfig) -> pd.DataFrame:
     candles = fetch_candles(config.symbol, config.interval, config.start, config.end, client=client)
     write_candles(candles, config.symbol, config.interval)
     return read_candles(config.symbol, config.interval, start=config.start, end=config.end)
+
+
+def _candles_cover_range(candles: pd.DataFrame, config: PipelineConfig) -> bool:
+    if candles.empty:
+        return False
+
+    interval = _interval_timedelta(config.interval)
+    start = _coerce_utc_timestamp(config.start)
+    end = _coerce_utc_timestamp(config.end)
+    first = _coerce_utc_timestamp(candles.index.min())
+    last = _coerce_utc_timestamp(candles.index.max())
+
+    start_gap = first - start if first > start else pd.Timedelta(0)
+    end_gap = end - last if last < end else pd.Timedelta(0)
+    return start_gap < interval and end_gap < interval
+
+
+def _coerce_utc_timestamp(value: datetime | pd.Timestamp) -> pd.Timestamp:
+    ts = pd.Timestamp(value)
+    if ts.tz is None:
+        return ts.tz_localize("UTC")
+    return ts.tz_convert("UTC")
+
+
+def _interval_timedelta(interval: str) -> pd.Timedelta:
+    amount = int(interval[:-1])
+    unit = interval[-1]
+    if unit == "m":
+        return pd.Timedelta(minutes=amount)
+    if unit == "h":
+        return pd.Timedelta(hours=amount)
+    if unit == "d":
+        return pd.Timedelta(days=amount)
+    if unit == "w":
+        return pd.Timedelta(weeks=amount)
+    if unit == "M":
+        return pd.Timedelta(days=31 * amount)
+    raise ValueError(f"Unsupported candle interval: {interval}")

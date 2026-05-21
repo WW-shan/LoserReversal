@@ -24,6 +24,7 @@ def main() -> int:
     parser.add_argument("--fast", type=int, default=10)
     parser.add_argument("--slow", type=int, default=30)
     args = parser.parse_args()
+    _validate_args(parser, args)
 
     end = datetime.now(tz=timezone.utc)
     start = end - timedelta(days=args.days)
@@ -59,6 +60,19 @@ def main() -> int:
         f"n_trades={result.stats['n_trades']}  -> {out}"
     )
     return 0
+
+
+def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    if args.days <= 0:
+        parser.error("--days must be greater than 0")
+    if args.fast <= 0:
+        parser.error("--fast must be greater than 0")
+    if args.slow <= 0:
+        parser.error("--slow must be greater than 0")
+    if args.fast >= args.slow:
+        parser.error("--fast must be less than --slow")
+    if "/" in args.symbol or "\\" in args.symbol or ".." in args.symbol:
+        parser.error("--symbol must not contain path separators or '..'")
 
 
 if __name__ == "__main__":

@@ -119,6 +119,31 @@ def test_run_pipeline_refreshes_cache_when_use_cache_is_false(mocker):
     read_candles.assert_called_once_with("SOL", "1d", start=start, end=end)
 
 
+def test_run_pipeline_refreshes_cache_when_cached_range_is_incomplete(mocker):
+    cached = _candles().iloc[1:]
+    loaded = _candles()
+    expected = _result(loaded.index)
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    end = datetime(2026, 1, 3, tzinfo=timezone.utc)
+    config = PipelineConfig(symbol="BTC", interval="1d", start=start, end=end)
+    client = object()
+    mocker.patch("infra.pipeline.HyperliquidClient", return_value=client)
+    read_candles = mocker.patch("infra.pipeline.read_candles", side_effect=[cached, loaded])
+    fetch_candles = mocker.patch("infra.pipeline.fetch_candles", return_value=loaded)
+    write_candles = mocker.patch("infra.pipeline.write_candles")
+    mocker.patch("infra.pipeline.run_backtest", return_value=expected)
+
+    actual = run_pipeline(config, _signals)
+
+    assert actual is expected
+    assert read_candles.call_args_list == [
+        call("BTC", "1d", start=start, end=end),
+        call("BTC", "1d", start=start, end=end),
+    ]
+    fetch_candles.assert_called_once_with("BTC", "1d", start, end, client=client)
+    write_candles.assert_called_once_with(loaded, "BTC", "1d")
+
+
 def test_run_pipeline_passes_signal_outputs_to_backtest(mocker):
     candles = _candles()
     expected = _result(candles.index)
