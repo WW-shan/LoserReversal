@@ -112,3 +112,39 @@ def test_aggregate_statistics_empty_events_returns_safe_defaults():
     assert stats["pct_pre_negative"] is None
     assert stats["mean_pre"] is None
     assert stats["p_value_pre"] is None
+
+
+from unlock_validation.analyzer import filter_ex_ecosystem
+
+
+def test_filter_ex_ecosystem_removes_ecosystem_rows():
+    events = pd.DataFrame({
+        "token": ["A", "B", "C", "D"],
+        "category": ["team", "ecosystem", "investor", "ecosystem development"],
+    })
+
+    filtered = filter_ex_ecosystem(events)
+
+    assert len(filtered) == 2
+    assert set(filtered["token"]) == {"A", "C"}
+
+
+def test_filter_ex_ecosystem_handles_case_insensitivity():
+    events = pd.DataFrame({
+        "token": ["A", "B"],
+        "category": ["team", "Ecosystem"],  # mixed case
+    })
+
+    filtered = filter_ex_ecosystem(events)
+
+    assert len(filtered) == 1
+    assert filtered.iloc[0]["token"] == "A"
+
+
+def test_filter_ex_ecosystem_does_not_mutate_input():
+    events = pd.DataFrame({"token": ["A", "B"], "category": ["team", "ecosystem"]})
+    original_len = len(events)
+
+    filter_ex_ecosystem(events)
+
+    assert len(events) == original_len

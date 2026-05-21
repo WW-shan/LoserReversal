@@ -69,3 +69,13 @@ def aggregate_statistics(events: pd.DataFrame) -> dict:
         "mean_post": float(ar_post.mean()),
         "p_value_pre": float(p_one_sided),
     }
+
+
+def filter_ex_ecosystem(events: pd.DataFrame) -> pd.DataFrame:
+    """Return events with ecosystem-style categories removed.
+
+    Categories are matched case-insensitively against ECOSYSTEM_CATEGORIES.
+    """
+    cat_lower = events["category"].str.lower().str.strip()
+    mask = ~cat_lower.isin(ECOSYSTEM_CATEGORIES)
+    return events.loc[mask].reset_index(drop=True)
