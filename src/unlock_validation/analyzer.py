@@ -79,3 +79,49 @@ def filter_ex_ecosystem(events: pd.DataFrame) -> pd.DataFrame:
     cat_lower = events["category"].str.lower().str.strip()
     mask = ~cat_lower.isin(ECOSYSTEM_CATEGORIES)
     return events.loc[mask].reset_index(drop=True)
+
+
+def pass_fail_decision(overall_stats: dict, team_subset_stats: dict) -> dict:
+    """Apply the 5-metric Pass/Fail matrix and return a verdict.
+
+    Verdict mapping:
+      ≥ 4/5 pass → STRONG
+      3/5 pass   → WEAK
+      ≤ 2/5 pass → REJECT
+    """
+    t = PASS_FAIL_THRESHOLDS
+
+    details = {
+        "pct_pre_pass": (
+            overall_stats["pct_pre_negative"] is not None
+            and overall_stats["pct_pre_negative"] >= t["pct_pre_negative_pass"]
+        ),
+        "pct_post_pass": (
+            overall_stats["pct_post_negative"] is not None
+            and overall_stats["pct_post_negative"] >= t["pct_post_negative_pass"]
+        ),
+        "mean_pre_pass": (
+            overall_stats["mean_pre"] is not None
+            and overall_stats["mean_pre"] <= t["mean_pre_pass"]
+        ),
+        "p_value_pass": (
+            overall_stats["p_value_pre"] is not None
+            and overall_stats["p_value_pre"] < t["p_value_pass"]
+        ),
+        "team_subset_match": (
+            team_subset_stats["mean_pre"] is not None
+            and overall_stats["mean_pre"] is not None
+            and team_subset_stats["mean_pre"] <= overall_stats["mean_pre"]
+        ),
+    }
+
+    passed = sum(1 for v in details.values() if v)
+
+    if passed >= 4:
+        verdict = "STRONG"
+    elif passed == 3:
+        verdict = "WEAK"
+    else:
+        verdict = "REJECT"
+
+    return {"verdict": verdict, "passed": passed, "details": details}

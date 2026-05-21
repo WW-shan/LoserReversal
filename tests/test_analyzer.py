@@ -148,3 +148,63 @@ def test_filter_ex_ecosystem_does_not_mutate_input():
     filter_ex_ecosystem(events)
 
     assert len(events) == original_len
+
+
+from unlock_validation.analyzer import pass_fail_decision
+
+
+def _stats(pct_pre=0.7, pct_post=0.6, mean_pre=-0.04, p_value=0.01, n=30):
+    return {
+        "n_events": n,
+        "pct_pre_negative": pct_pre,
+        "pct_post_negative": pct_post,
+        "mean_pre": mean_pre,
+        "mean_post": -0.02,
+        "p_value_pre": p_value,
+    }
+
+
+def test_pass_fail_all_metrics_pass_returns_strong():
+    overall = _stats()
+    team_subset = _stats(mean_pre=-0.05)  # team stronger than overall
+    decision = pass_fail_decision(overall, team_subset)
+    assert decision["verdict"] == "STRONG"
+    assert decision["passed"] == 5
+
+
+def test_pass_fail_three_metrics_pass_returns_weak():
+    # pct_pre fails, p-value fails; rest pass
+    overall = _stats(pct_pre=0.5, p_value=0.5)
+    team_subset = _stats(pct_pre=0.5, p_value=0.5, mean_pre=-0.05)
+    decision = pass_fail_decision(overall, team_subset)
+    assert decision["verdict"] == "WEAK"
+    assert decision["passed"] == 3
+
+
+def test_pass_fail_two_metrics_pass_returns_reject():
+    overall = _stats(pct_pre=0.4, pct_post=0.3, p_value=0.5)
+    team_subset = _stats(pct_pre=0.4, pct_post=0.3, p_value=0.5, mean_pre=0.0)
+    decision = pass_fail_decision(overall, team_subset)
+    assert decision["verdict"] == "REJECT"
+    assert decision["passed"] <= 2
+
+
+def test_pass_fail_team_subset_weaker_than_overall_fails_metric_5():
+    overall = _stats(mean_pre=-0.05)
+    team_subset = _stats(mean_pre=-0.01)  # weaker than overall
+    decision = pass_fail_decision(overall, team_subset)
+    assert decision["details"]["team_subset_match"] is False
+
+
+def test_pass_fail_per_metric_details_are_exposed():
+    overall = _stats()
+    team_subset = _stats(mean_pre=-0.05)
+    decision = pass_fail_decision(overall, team_subset)
+    keys = {
+        "pct_pre_pass",
+        "pct_post_pass",
+        "mean_pre_pass",
+        "p_value_pass",
+        "team_subset_match",
+    }
+    assert set(decision["details"].keys()) == keys
