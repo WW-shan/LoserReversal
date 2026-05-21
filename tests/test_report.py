@@ -1,6 +1,5 @@
 """Tests for markdown report writer."""
 
-from pathlib import Path
 
 import pandas as pd
 

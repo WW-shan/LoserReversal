@@ -6,7 +6,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from unlock_validation.analyzer import compute_abnormal_return
+from unlock_validation.analyzer import (
+    aggregate_statistics,
+    compute_abnormal_return,
+    enrich_events_with_returns,
+    filter_ex_ecosystem,
+    pass_fail_decision,
+)
 
 
 def _price_series(values: list[float], start: str = "2025-09-10") -> pd.DataFrame:
@@ -54,9 +60,6 @@ def test_abnormal_return_handles_pre_window():
 
     assert ar < 0
     assert ar == pytest.approx(np.log(90 / 100), abs=1e-6)
-
-
-from unlock_validation.analyzer import aggregate_statistics
 
 
 def test_aggregate_statistics_computes_pct_negative():
@@ -114,9 +117,6 @@ def test_aggregate_statistics_empty_events_returns_safe_defaults():
     assert stats["p_value_pre"] is None
 
 
-from unlock_validation.analyzer import filter_ex_ecosystem
-
-
 def test_filter_ex_ecosystem_removes_ecosystem_rows():
     events = pd.DataFrame({
         "token": ["A", "B", "C", "D"],
@@ -148,9 +148,6 @@ def test_filter_ex_ecosystem_does_not_mutate_input():
     filter_ex_ecosystem(events)
 
     assert len(events) == original_len
-
-
-from unlock_validation.analyzer import pass_fail_decision
 
 
 def _stats(pct_pre=0.7, pct_post=0.6, mean_pre=-0.04, p_value=0.01, n=30):
@@ -208,9 +205,6 @@ def test_pass_fail_per_metric_details_are_exposed():
         "team_subset_match",
     }
     assert set(decision["details"].keys()) == keys
-
-
-from unlock_validation.analyzer import enrich_events_with_returns
 
 
 def test_enrich_events_attaches_three_ar_columns(tmp_path, mocker):

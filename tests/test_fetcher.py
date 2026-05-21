@@ -1,12 +1,11 @@
 """Tests for fetcher.load_events and price fetching."""
 
-import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
-import pytest
 
-from unlock_validation.fetcher import load_events
+from unlock_validation.fetcher import fetch_prices, load_events
 
 
 def test_load_events_returns_dataframe(fixtures_dir: Path):
@@ -41,11 +40,6 @@ def test_load_events_filters_below_pct_threshold(fixtures_dir: Path):
     # APT has 0.018 → excluded
     assert "APT" not in df["token"].values
     assert len(df) == 4
-
-
-from datetime import datetime, timedelta, timezone
-
-from unlock_validation.fetcher import fetch_prices
 
 
 def test_fetch_prices_returns_dataframe_with_date_index(tmp_path, fixtures_dir, mocker):
