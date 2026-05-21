@@ -125,3 +125,35 @@ def pass_fail_decision(overall_stats: dict, team_subset_stats: dict) -> dict:
         verdict = "REJECT"
 
     return {"verdict": verdict, "passed": passed, "details": details}
+
+
+def enrich_events_with_returns(
+    events: pd.DataFrame,
+    prices_by_id: dict[str, pd.DataFrame],
+    btc_id: str = "bitcoin",
+) -> pd.DataFrame:
+    """Attach ar_pre, ar_day, ar_post columns to each event.
+
+    prices_by_id maps coingecko_id → price DataFrame (datetime index, 'price' col).
+    Events whose coingecko_id is missing from prices_by_id are skipped (with warning).
+    """
+    btc_prices = prices_by_id[btc_id]
+
+    rows = []
+    for _, ev in events.iterrows():
+        cg_id = ev["coingecko_id"]
+        if cg_id not in prices_by_id:
+            continue
+        token_prices = prices_by_id[cg_id]
+        event_date = ev["unlock_date"].to_pydatetime()
+
+        try:
+            ar_pre = compute_abnormal_return(token_prices, btc_prices, event_date, WINDOWS["pre"])
+            ar_day = compute_abnormal_return(token_prices, btc_prices, event_date, WINDOWS["day"])
+            ar_post = compute_abnormal_return(token_prices, btc_prices, event_date, WINDOWS["post"])
+        except ValueError:
+            continue
+
+        rows.append({**ev.to_dict(), "ar_pre": ar_pre, "ar_day": ar_day, "ar_post": ar_post})
+
+    return pd.DataFrame(rows)

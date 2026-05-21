@@ -208,3 +208,34 @@ def test_pass_fail_per_metric_details_are_exposed():
         "team_subset_match",
     }
     assert set(decision["details"].keys()) == keys
+
+
+from unlock_validation.analyzer import enrich_events_with_returns
+
+
+def test_enrich_events_attaches_three_ar_columns(tmp_path, mocker):
+    """Given events and prices, returns DataFrame with ar_pre/ar_day/ar_post columns."""
+    events = pd.DataFrame({
+        "token": ["TST"],
+        "coingecko_id": ["test-token"],
+        "unlock_date": pd.to_datetime(["2025-09-15"], utc=True),
+        "unlock_pct": [0.03],
+        "category": ["team"],
+        "has_hl_perp": [True],
+    })
+
+    token_idx = pd.date_range("2025-09-01", "2025-09-25", freq="D", tz="UTC")
+    token_prices = pd.DataFrame({"price": np.linspace(100, 90, len(token_idx))}, index=token_idx)
+
+    btc_idx = pd.date_range("2025-09-01", "2025-09-25", freq="D", tz="UTC")
+    btc_prices = pd.DataFrame({"price": np.linspace(60000, 60000, len(btc_idx))}, index=btc_idx)
+
+    enriched = enrich_events_with_returns(
+        events,
+        prices_by_id={"test-token": token_prices, "bitcoin": btc_prices},
+    )
+
+    assert "ar_pre" in enriched.columns
+    assert "ar_day" in enriched.columns
+    assert "ar_post" in enriched.columns
+    assert enriched["ar_pre"].iloc[0] < 0  # token down, btc flat → negative AR
