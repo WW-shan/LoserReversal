@@ -12,7 +12,8 @@ credentials.json
 # ===== Trading credentials =====
 hyperliquid_wallet.json
 *.wallet
-*_seed*
+*wallet_seed*
+*mnemonic_seed*
 private_key*
 
 # ===== Python =====
