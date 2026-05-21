@@ -1,0 +1,42 @@
+[project]
+name = "unlock-validation"
+version = "0.1.0"
+description = "Thesis validation: token unlocks → negative price pressure"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31",
+    "pandas>=2.1",
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "matplotlib>=3.8",
+    "python-dateutil>=2.8",
+    "tenacity>=8.2",
+]
+
+[project.scripts]
+unlock-validate = "unlock_validation.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unlock_validation"]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4",
+    "pytest-mock>=3.12",
+    "pytest-cov>=4.1",
+    "ruff>=0.4",
+    "jupyter>=1.0",
+    "ipykernel>=6.29",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
