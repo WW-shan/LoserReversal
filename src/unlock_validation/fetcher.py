@@ -34,13 +34,20 @@ def _cache_key(coingecko_id: str, start: datetime, end: datetime) -> str:
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def _http_get_prices(coingecko_id: str, start: datetime, end: datetime) -> dict:
-    url = f"{COINGECKO_BASE}/coins/{coingecko_id}/market_chart/range"
-    params = {
-        "vs_currency": "usd",
-        "from": int(start.timestamp()),
-        "to": int(end.timestamp()),
-    }
-    response = requests.get(url, params=params, timeout=20)
+    """Fetch daily prices covering [start, end] via the free /market_chart?days=N endpoint.
+
+    The /market_chart/range endpoint requires a paid plan; the days-based variant is free
+    and returns up to 365 days. We compute days from `start` (clamped to 365) and trim
+    the response to the requested range in the caller.
+    """
+    now = datetime.now(tz=start.tzinfo) if start.tzinfo else datetime.utcnow()
+    days = max(1, min(365, (now - start).days + 2))
+    url = f"{COINGECKO_BASE}/coins/{coingecko_id}/market_chart"
+    response = requests.get(
+        url,
+        params={"vs_currency": "usd", "days": days, "interval": "daily"},
+        timeout=20,
+    )
     response.raise_for_status()
     return response.json()
 
