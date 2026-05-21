@@ -91,7 +91,7 @@ def write_unlocks_csv_to_parquet(csv_path: Path, parquet_path: Path | None = Non
     frame["has_hl_perp"] = _coerce_bool_series(frame["has_hl_perp"])
 
     table = pa.Table.from_pandas(frame, schema=UNLOCK_SCHEMA, preserve_index=False)
-    pq.write_table(table, target, compression=None)
+    pq.write_table(table, target, compression=None, use_dictionary=False, row_group_size=64)
     return target
 
 
