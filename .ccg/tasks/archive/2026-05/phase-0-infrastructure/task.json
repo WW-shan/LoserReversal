@@ -1,0 +1,23 @@
+{
+  "id": "phase-0-infrastructure",
+  "title": "Phase 0 — 数据 + 回测基础设施（所有 alpha phase 的公共地基）",
+  "status": "completed",
+  "strategy": "guided-develop",
+  "currentPhase": "completed",
+  "nextAction": "Archive CCG task",
+  "executionMode": "codex-builder",
+  "gate": null,
+  "branch": "main",
+  "scope": "phase-0-infrastructure",
+  "createdAt": "2026-05-21T20:21:54Z",
+  "overlays": ["superpowers:test-driven-development", "superpowers:verification-before-completion"],
+  "decisionGate": "基础设施可用（HL SDK 通、回测脚手架跑通 toy strategy、DuckDB 落地）即视为 Phase 0 完成",
+  "dependsOn": ["unlock-thesis-validation (archived, WEAK 3/5)"],
+  "deliverables": [
+    "src/infra/hyperliquid_client.py — HL info/exchange API wrapper",
+    "src/infra/fetchers/ — candles / fills / funding / unlocks (复用 unlock_validation)",
+    "src/infra/storage.py — DuckDB + Parquet 落盘",
+    "src/infra/backtest/ — Vectorbt 脚手架 + 风控 primitives",
+    "tests/infra/ — 每模块 TDD 覆盖"
+  ]
+}
