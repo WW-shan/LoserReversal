@@ -117,3 +117,21 @@ def test_run_pipeline_refreshes_cache_when_use_cache_is_false(mocker):
     fetch_candles.assert_called_once_with("SOL", "1d", start, end, client=client)
     write_candles.assert_called_once_with(fetched, "SOL", "1d")
     read_candles.assert_called_once_with("SOL", "1d", start=start, end=end)
+
+
+def test_run_pipeline_passes_signal_outputs_to_backtest(mocker):
+    candles = _candles()
+    expected = _result(candles.index)
+    entries = pd.Series([True, False, False], index=candles.index)
+    exits = pd.Series([False, False, True], index=candles.index)
+    start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    end = datetime(2026, 1, 3, tzinfo=timezone.utc)
+    config = PipelineConfig(symbol="BTC", interval="1d", start=start, end=end)
+    mocker.patch("infra.pipeline.read_candles", return_value=candles)
+    run_backtest = mocker.patch("infra.pipeline.run_backtest", return_value=expected)
+
+    actual = run_pipeline(config, lambda prices: (entries.reindex(prices.index), exits.reindex(prices.index)))
+
+    assert actual is expected
+    pd.testing.assert_series_equal(run_backtest.call_args.args[1], entries)
+    pd.testing.assert_series_equal(run_backtest.call_args.args[2], exits)
