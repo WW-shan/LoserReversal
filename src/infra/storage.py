@@ -108,6 +108,13 @@ def read_unlocks(path: Path | None = None, category: str | None = None) -> pd.Da
         return conn.execute(sql, params).df()
 
 
+def query(sql: str, **params: Any) -> pd.DataFrame:
+    with duckdb.connect(database=":memory:") as conn:
+        if params:
+            return conn.execute(sql, params).df()
+        return conn.execute(sql).df()
+
+
 def _write_time_indexed_frame(df: pd.DataFrame, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     frame = df.copy()

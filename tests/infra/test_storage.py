@@ -7,6 +7,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from infra.storage import (
+    query,
     read_candles,
     read_funding,
     read_unlocks,
@@ -117,3 +118,9 @@ def test_read_unlocks_filters_category(tmp_path: Path):
 
     assert len(actual) == int((expected["category"] == "airdrop").sum())
     assert set(actual["category"]) == {"airdrop"}
+
+
+def test_query_runs_parameterized_duckdb_sql():
+    actual = query("SELECT $value::INTEGER AS value", value=7)
+
+    assert actual.to_dict(orient="records") == [{"value": 7}]
