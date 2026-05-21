@@ -55,6 +55,15 @@ def fetch_candles(
 
     if frame.empty:
         empty_index = pd.DatetimeIndex([], name="timestamp", tz="UTC")
-        return pd.DataFrame(columns=["open", "high", "low", "close", "volume"], index=empty_index)
+        return pd.DataFrame(
+            {
+                "open": pd.Series(dtype="float64"),
+                "high": pd.Series(dtype="float64"),
+                "low": pd.Series(dtype="float64"),
+                "close": pd.Series(dtype="float64"),
+                "volume": pd.Series(dtype="float64"),
+            },
+            index=empty_index,
+        )
 
     return frame.set_index("timestamp").sort_index()

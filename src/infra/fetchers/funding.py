@@ -48,6 +48,12 @@ def fetch_funding(
 
     if frame.empty:
         empty_index = pd.DatetimeIndex([], name="timestamp", tz="UTC")
-        return pd.DataFrame(columns=["funding_rate", "premium"], index=empty_index)
+        return pd.DataFrame(
+            {
+                "funding_rate": pd.Series(dtype="float64"),
+                "premium": pd.Series(dtype="float64"),
+            },
+            index=empty_index,
+        )
 
     return frame.set_index("timestamp").sort_index()

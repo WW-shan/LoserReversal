@@ -62,3 +62,5 @@ def test_fetch_funding_accepts_string_times(mocker):
     assert isinstance(df.index, pd.DatetimeIndex)
     assert df.index.name == "timestamp"
     assert list(df.columns) == ["funding_rate", "premium"]
+    assert df.empty
+    assert all(dtype.kind == "f" for dtype in df.dtypes)
