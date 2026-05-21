@@ -57,12 +57,20 @@ reports/                 Generated analysis reports (gitignored)
 tests/                   Per-module test suites
 ```
 
-## Quick start (Phase 1 only — Phase 0 infra coming)
+## Quick start
 
 ```bash
 uv sync --group dev
-uv run pytest -v                  # 33 tests
+uv run pytest -v                    # full test suite
 uv run python -m unlock_validation  # end-to-end thesis check
+```
+
+## Phase 0 — Infrastructure (shipped)
+
+```bash
+uv run python -m scripts.seed_unlocks_parquet
+uv run python -m scripts.run_toy_backtest
+uv run python -m scripts.run_btc_sma_e2e [--days N]
 ```
 
 ## License
