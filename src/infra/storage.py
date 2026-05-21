@@ -40,6 +40,27 @@ def read_candles(
     )
 
 
+def write_funding(df: pd.DataFrame, symbol: str, path: Path | None = None) -> Path:
+    target = path or PARQUET_DIR / "funding" / f"{symbol}.parquet"
+    _write_time_indexed_frame(df, target)
+    return target
+
+
+def read_funding(
+    symbol: str,
+    start: datetime | str | None = None,
+    end: datetime | str | None = None,
+    path: Path | None = None,
+) -> pd.DataFrame:
+    source = path or PARQUET_DIR / "funding" / f"{symbol}.parquet"
+    return _read_time_indexed_frame(
+        source,
+        ["funding_rate", "premium"],
+        start=start,
+        end=end,
+    )
+
+
 def _write_time_indexed_frame(df: pd.DataFrame, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     frame = df.copy()

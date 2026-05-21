@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from infra.storage import read_candles, write_candles
+from infra.storage import read_candles, read_funding, write_candles, write_funding
 
 
 def test_write_and_read_candles_roundtrip(tmp_path: Path):
@@ -53,4 +53,26 @@ def test_read_candles_filters_by_start_and_end(tmp_path: Path):
     )
 
     assert len(actual) == 5
-    pd.testing.assert_frame_equal(actual, frame.loc["2026-01-03":"2026-01-07"], check_freq=False)
+    pd.testing.assert_frame_equal(
+        actual,
+        frame.loc["2026-01-03":"2026-01-07"],
+        check_freq=False,
+    )
+
+
+def test_write_and_read_funding_roundtrip(tmp_path: Path):
+    index = pd.date_range("2026-01-01", periods=3, freq="1h", tz="UTC", name="timestamp")
+    frame = pd.DataFrame(
+        {
+            "funding_rate": [0.0001, 0.0002, -0.0001],
+            "premium": [0.0003, 0.0004, -0.0002],
+        },
+        index=index,
+    )
+    path = tmp_path / "BTC.parquet"
+
+    written = write_funding(frame, "BTC", path=path)
+    actual = read_funding("BTC", path=path)
+
+    assert written == path
+    pd.testing.assert_frame_equal(actual, frame, check_freq=False)
