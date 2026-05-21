@@ -1,0 +1,245 @@
+{
+  "ok": true,
+  "error_type": "",
+  "error": "",
+  "session_id": "4af9e32cee9b",
+  "query": "long tail altcoin perpetual futures Hyperliquid new listing low cap microstructure inefficiency edge",
+  "platform": "",
+  "model": "grok-4.20-fast",
+  "primary_api_mode": "xai-responses",
+  "content": "**Hyperliquid is a leading decentralized Layer 1 blockchain optimized for high-performance, fully on-chain order book perpetual futures (and spot) trading.** It offers CEX-like speed/low latency with self-custody, no KYC, and deep liquidity on majors plus many altcoins. As of 2026, it processes billions in daily volume, dominates much of DeFi perps (often 30-80%+ market share depending on the period), and supports 100+ pairs with leverage up to 50x on some assets. [[1]](https://www.coingecko.com/en/exchanges/hyperliquid)\n\n**\"Long tail altcoin perps\"** refers to lower-liquidity, smaller market cap (\"low cap\") tokens' perpetual futures. These markets are thinner than BTC/ETH/SOL, leading to **pronounced microstructure inefficiencies** — exactly the kind of edge sophisticated traders hunt. [[2]](https://peoplereign.io/hyperliquid-fast-trading-strategies-and-insights/)\n\n### Key Context on New Listings & HIP-3\nHyperliquid has evolved toward more permissionless listings:\n- **Standard perps**: Community/validator-driven listings with announcements (and occasional delistings for low activity or risk). [[3]](https://app.hyperliquid.xyz/announcements)\n- **HIP-3 (Builder-Deployed Perpetuals, live since Oct 2025)**: Anyone staking ~500k HYPE (~$20-25M at recent prices) can deploy their own perp markets (or sub-DEXs) on HyperCore. This includes custom oracles, parameters, and fee shares for the deployer. It enables rapid addition of long-tail/exotic assets. Volume on HIP-3 markets has grown significantly (e.g., exceeding $10B cumulatively in some reports). [[4]](https://hyperliquid.gitbook.io/hyperliquid-docs/hyperliquid-improvement-proposals-hips/hip-3-builder-deployed-perpetuals)\n\nNew/low-cap listings often see initial hype/volatility but thin books, making them prone to **pumps/dumps, whale impacts, manipulation attempts** (e.g., the 2025 JELLY incident led to delisting and reimbursements), and rapid delistings if liquidity dries up. [[5]](https://www.kaiko.com/resources/defi-faces-new-test-as-low-liquidity-token-gets-manipulated)\n\n### Microstructure Inefficiencies & Trading Edges in Low-Cap Long-Tail Perps\nLow-cap alt perps on Hyperliquid (especially new/HIP-3) are inefficient due to:\n- **Thin order books**: Large orders (whales) cause outsized moves. Studies show whale activity concentrates in mid/low-cap like ARB/SOL (far more than BTC/ETH), with orders 5-95x median size injecting volatility. [[6]](https://medium.com/@gwrx2005/hyperliquids-trading-behavior-f867c897d970)\n- **High slippage & spread volatility**: New listings start with limited depth; liquidity providers (including Hyperliquidity mechanisms) can be overwhelmed.\n- **Funding rate dislocations**: Extreme sentiment leads to outsized funding (arbitrage ops between perp and spot/CEX).\n- **On-chain transparency + speed**: Full order book visibility + fast execution allows HFT/algo edges (order flow detection, TWAP execution, etc.). Public L2/L4 order book data is available for analysis. [[7]](https://zenodo.org/records/18184441)\n- **Liquidity shocks & cascades**: Low liquidity amplifies liquidations/ADL (auto-deleveraging) events. Historical examples show big inefficiencies during volatility. [[8]](https://arxiv.org/html/2512.01112v2)\n- **Manipulation & tail risks**: Pump-and-dump attempts or oracle exploits in very low-cap names; platforms respond with delistings. [[9]](https://decrypt.co/311713/hyperliquid-delists-solana-meme-coin-liquidation-crisis)\n\n**Potential edges** (high risk; requires sophistication, capital, and risk management):\n- **New listing momentum/scalping**: Monitor announcements for volume spikes. Enter early on hype but use tight stops/TWAP to manage slippage. Many see initial pumps followed by mean reversion. [[3]](https://app.hyperliquid.xyz/announcements)\n- **Order flow & microstructure trading**: Watch for whale flags (large relative orders), bid/ask imbalances, or thin-book absorption. Tools/APIs for real-time book data help. Mid-cap alts show highest whale impact. [[6]](https://medium.com/@gwrx2005/hyperliquids-trading-behavior-f867c897d970)\n- **Funding + basis arb**: Exploit funding rate extremes vs. spot/CEX prices, especially in volatile new perps.\n- **Volatility harvesting / mean reversion**: Thin books mean overreactions; pair with spot or cross-exchange hedges.\n- **HIP-3 specific**: Some builder markets may have unique parameters/liquidity incentives but higher operator risk.\n- **Algo execution**: Use native TWAP, post-only, etc., for large sizes without moving the market. Backtest on historical book data. [[10]](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/order-types)\n\n**Risks are substantial**:\n- Extreme volatility/liquidation cascades (low caps can drop 80%+ fast).\n- Delisting risk (positions settle at oracle price).\n- Manipulation/ADL haircuts.\n- Low overall liquidity for very tail assets — position sizing is critical.\n- HIP-3 deployer/oracle risk in exotic markets. [[11]](https://medium.com/@Jsquare_co/jsquare-research-why-exotic-hip-3-markets-dont-work-87c268309db1)\n\n### Practical Tips\n- **Monitor**: App.hyperliquid.xyz announcements, Discord/Telegram, on-chain tools (Dune, etc.), order book data feeds. [[12]](https://app.hyperliquid.xyz/)\n- **Start small**: Focus on somewhat liquid new/mid-caps first. Check OI, 24h volume, depth before sizing.\n- **Tools**: On-chain transparency favors data-driven algos. Public datasets exist for research. [[13]](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6465720)\n- **Risk mgmt**: Strict leverage control (lower on tail assets), isolated margin, stops, diversification. Understand funding impact notional and fees (maker rebates favorable).\n- **Broader strategy**: Combine with spot momentum, CEX listings for convergence, or macro narratives driving specific alts.\n\nThis space rewards speed, data analysis, and discipline over retail FOMO. Low-cap perps offer asymmetric edges but are closer to gambling without infrastructure. Always DYOR, trade responsibly, and consider the high failure rate of tail assets. Markets evolve quickly—check current app stats and docs for latest pairs/leverage.",
+  "sources": [
+    {
+      "url": "https://www.coingecko.com/en/exchanges/hyperliquid",
+      "title": "Hyperliquid (Futures) Statistics: Markets, Trading Volume & ..."
+    },
+    {
+      "url": "https://peoplereign.io/hyperliquid-fast-trading-strategies-and-insights/",
+      "title": "Hyperliquid Fast Trading Strategies and Key Insights"
+    },
+    {
+      "url": "https://app.hyperliquid.xyz/announcements",
+      "title": "Hyperliquid Announcements - Hyper Foundation"
+    },
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperliquid-improvement-proposals-hips/hip-3-builder-deployed-perpetuals",
+      "title": "HIP-3: Builder-deployed perpetuals - Hyperliquid Docs - GitBook"
+    },
+    {
+      "url": "https://www.kaiko.com/resources/defi-faces-new-test-as-low-liquidity-token-gets-manipulated",
+      "title": "DeFi Faces New Test as Low-liquidity Token Gets Manipulated"
+    },
+    {
+      "url": "https://medium.com/@gwrx2005/hyperliquids-trading-behavior-f867c897d970",
+      "title": "Hyperliquid's Trading Behavior. Abstract | by Jung-Hua Liu"
+    },
+    {
+      "url": "https://zenodo.org/records/18184441",
+      "title": "Level 4 Order Book Data from the Hyperliquid Exchange"
+    },
+    {
+      "url": "https://arxiv.org/html/2512.01112v2",
+      "title": "Autodeleveraging: Impossibilities and Optimization"
+    },
+    {
+      "url": "https://decrypt.co/311713/hyperliquid-delists-solana-meme-coin-liquidation-crisis",
+      "title": "Hyperliquid Delists Surging Solana Meme Coin to Avoid ..."
+    },
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/trading/order-types",
+      "title": "Order types | Hyperliquid Docs - GitBook"
+    },
+    {
+      "url": "https://medium.com/@Jsquare_co/jsquare-research-why-exotic-hip-3-markets-dont-work-87c268309db1",
+      "title": "Jsquare Research: Why Exotic HIP-3 Markets Don't Work"
+    },
+    {
+      "url": "https://app.hyperliquid.xyz/",
+      "title": "Hyperliquid"
+    },
+    {
+      "url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6465720",
+      "title": "Level 4 Order Book Data from the Hyperliquid Exchange"
+    },
+    {
+      "url": "https://cryptoslate.com/anyone-can-now-create-hyperliquid-perp-contracts-with-20m-is-defi-about-to-break",
+      "provider": "tavily",
+      "title": "Anyone can now create Hyperliquid perp contracts with $20M: Is DeFi about to break?",
+      "description": "CryptoSlate logo\nCryptoSlate logo\nGoogle logo\nGoogle logo\n\nHyperliquid's HIP-3 opens perpetual futures listing to anyone willing to stake $20 million. The question isn't whether this democratizes the DeFi, but whether the safeguards can handle what comes next.\n\nHyperliquid launched HIP-3 on mainnet in October 2025, introducing a model where any builder can deploy perpetual futures markets without committee approval.\n\nDeployers must stake 500,000 HYPE tokens, worth approximately $20 million at current prices, as collateral against any malicious behavior. [...] # Anyone can now create Hyperliquid perp contracts with $20M: Is DeFi about to break?\n\nListing anything is easy; risk and liquidity are hard, and here’s the model.Hyperliquid’s HIP-3 removes gatekeepers by letting anyone launch perpetuals if they stake $20 million. It’s either DeFi’s boldest safety experiment, or its next stress test.\n\nGino Matos\nGino Matos\na giant glass padlock of collateral at center with neon data arcs connecting isolated bubble-like perp markets guarded by validator shields over a sunlit skyline.\n\nCover art/illustration via CryptoSlate. Image includes combined content which may include AI-generated content.\n\nCryptoSlate logo\nCryptoSlate logo\nGoogle logo\nGoogle logo [...] Lessons from Mango and GMX directly informed these safeguards. Whether the combination of stake, isolation, and oversight can handle all edge cases remains to be proven through live markets.\n\nFor now, Hyperliquid offers a straightforward proposition: any asset can become a perpetual market if someone believes in it enough to risk $20 million.\n\nThe protocol bets that price is high enough to separate serious builders from reckless ones, and that layered defenses can catch what economic incentives miss.\n\nHyperliquid logo\nHyperliquid logo\nGino Matos\nGino Matos"
+    },
+    {
+      "url": "https://www.facebook.com/CoinMarketCap/posts/latest-hyperliquids-hype-token-rose-about-5-as-its-pre-ipo-perpetual-futures-mar/1401321508691905",
+      "provider": "tavily",
+      "title": "Hyperliquid's HYPE token rose about 5% as its pre-IPO perpetual ...",
+      "description": "'/%3E%3Cpath d='M16.0001 7.9996c0 4.418-3.5815 7.9996-7.9995 7.9996S.001 12.4176.001 7.9996 3.5825 0 8.0006 0C12.4186 0 16 3.5815 16 7.9996Z' fill='url(%23paint1_radial_15251_63610)'/%3E%3Cpath d='M16.0001 7.9996c0 4.418-3.5815 7.9996-7.9995 7.9996S.001 12.4176.001 7.9996 3.5825 0 8.0006 0C12.4186 0 16 3.5815 16 7.9996Z' fill='url(%23paint2_radial_15251_63610)' fill-opacity='.5'/%3E%3Cpath d='M7.3014 3.8662a.6974.6974 0 0 1 .6974-.6977c.6742 0 1.2207.5465 1.2207 1.2206v1.7464a.101.101 0 0 0 .101.101h1.7953c.992 0 1.7232.9273 1.4917 1.892l-.4572 1.9047a2.301 2.301 0 0 1-2.2374 1.764H6.9185a.5752.5752 0 0 1-.5752-.5752V7.7384c0-.4168.097-.8278.2834-1.2005l.2856-.5712a3.6878 3.6878 0 0 0 .3893-1.6509l-.0002-.4496ZM4.367 7a.767.767 0 0 0-.7669.767v3.2598a.767.767 0 0 0 [...] id='paint1_radial_15251_63610' cx='0' cy='0' r='1' gradientUnits='userSpaceOnUse' gradientTransform='matrix(0 7.9992 -7.99863 0 7.9986 7.9992)'%3E%3Cstop offset='.5637' stop-color='%23E11731' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='%23E11731' stop-opacity='.1'/%3E%3C/radialGradient%3E%3ClinearGradient id='paint0_linear_15251_63610' x1='2.3986' y1='2.4007' x2='13.5975' y2='13.5993' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%23FF74AE'/%3E%3Cstop offset='.5001' stop-color='%23FA2E3E'/%3E%3Cstop offset='1' stop-color='%23FF5758'/%3E%3C/linearGradient%3E%3CclipPath id='clip0_15251_63610'%3E%3Cpath fill='%23fff' d='M-.001.0009h15.9992v15.9984H-.001z'/%3E%3C/clipPath%3E%3C/defs%3E%3C/svg%3E) [...] 7a.767.767 0 0 0-.7669.767v3.2598a.767.767 0 0 0 .767.767h.767a.3835.3835 0 0 0 .3835-.3835V7.3835A.3835.3835 0 0 0 5.134 7h-.767Z' fill='%23fff'/%3E%3Cdefs%3E%3CradialGradient id='paint1_radial_15251_63610' cx='0' cy='0' r='1' gradientUnits='userSpaceOnUse' gradientTransform='rotate(90 .0005 8) scale(7.99958)'%3E%3Cstop offset='.5618' stop-color='%230866FF' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='%230866FF' stop-opacity='.1'/%3E%3C/radialGradient%3E%3CradialGradient id='paint2_radial_15251_63610' cx='0' cy='0' r='1' gradientUnits='userSpaceOnUse' gradientTransform='rotate(45 -4.5257 10.9237) scale(10.1818)'%3E%3Cstop offset='.3143' stop-color='%2302ADFC'/%3E%3Cstop offset='1' stop-color='%2302ADFC' stop-opacity='0'/%3E%3C/radialGradient%3E%3ClinearGradient"
+    },
+    {
+      "url": "https://medium.com/coinmonks/understanding-crypto-perpetual-futures-and-the-hyperliquid-craze-7d1c8b413444",
+      "provider": "tavily",
+      "title": "Understanding Crypto Perpetual Futures and the Hyperliquid Craze",
+      "description": "Get in touch with us today at nefture.com !\n\nPerpetuals are a double-edged sword, powerful for speculation, hedging, and arbitrage, but also drivers of volatility and sudden crashes. In a way that reshapes crypto markets by altering price mechanics through leverage and funding.\n\nHyperliquid amplifies both sides, offering institutional-grade speed and liquidity, but with extreme leverage and systemic risk.\n\nAs the latest hub for risky perpetuals, Hyperliquid is a catalyst for both explosive gains and flash crashes, so navigate it wisely!\n\n## About us [...] Source: Coinglass\n\n## Hyperliquid: The Perps DeFi King\n\nThis brings us to the meteoric rise of Hyperliquid, a platform that has not only thrived amid these chaotic dynamics but actively capitalized on them.\n\nFor years, centralized exchanges like Binance, Bybit, and OKX dominated the perpetual futures landscape, offering deep liquidity, high leverage, and fast execution.\n\nBut they also came with trade-offs: opaque liquidation mechanisms, withdrawal freezes, jurisdictional risks, and custodial limitations.\n\nHyperliquid turned this equation on its head.\n\n> _Launched in 2024 as a high-performance Layer-1 blockchain purpose-built for perpetual trading, it promised the speed and efficiency of a CEX with the transparency, custody, and composability of DeFi._ [...] Image 9\n\nSource: CoinMarketCap\n\nIf Hyperliquid captures 20% of Binance’s trading volume or cements its status as a top‑three Layer‑1 blockchain, some analysts argue that HYPE could realistically jump toward $50–100.\n\nAs we have seen HyperLiquid complex and murky DeFi architecture exposes investors to undue financial risks and missed trading opportunities.\n\nRisks on HyperLiquid are compounded — ranging from slippage-driven liquidations and overexposure to forced positions, to complex margin calls, fragmented data, and a lack of real-time market visibility that can obscure strategic decision-making and lead to suboptimal trades."
+    }
+  ],
+  "sources_count": 16,
+  "primary_sources": [
+    {
+      "url": "https://www.coingecko.com/en/exchanges/hyperliquid",
+      "title": "Hyperliquid (Futures) Statistics: Markets, Trading Volume & ..."
+    },
+    {
+      "url": "https://peoplereign.io/hyperliquid-fast-trading-strategies-and-insights/",
+      "title": "Hyperliquid Fast Trading Strategies and Key Insights"
+    },
+    {
+      "url": "https://app.hyperliquid.xyz/announcements",
+      "title": "Hyperliquid Announcements - Hyper Foundation"
+    },
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hyperliquid-improvement-proposals-hips/hip-3-builder-deployed-perpetuals",
+      "title": "HIP-3: Builder-deployed perpetuals - Hyperliquid Docs - GitBook"
+    },
+    {
+      "url": "https://www.kaiko.com/resources/defi-faces-new-test-as-low-liquidity-token-gets-manipulated",
+      "title": "DeFi Faces New Test as Low-liquidity Token Gets Manipulated"
+    },
+    {
+      "url": "https://medium.com/@gwrx2005/hyperliquids-trading-behavior-f867c897d970",
+      "title": "Hyperliquid's Trading Behavior. Abstract | by Jung-Hua Liu"
+    },
+    {
+      "url": "https://zenodo.org/records/18184441",
+      "title": "Level 4 Order Book Data from the Hyperliquid Exchange"
+    },
+    {
+      "url": "https://arxiv.org/html/2512.01112v2",
+      "title": "Autodeleveraging: Impossibilities and Optimization"
+    },
+    {
+      "url": "https://decrypt.co/311713/hyperliquid-delists-solana-meme-coin-liquidation-crisis",
+      "title": "Hyperliquid Delists Surging Solana Meme Coin to Avoid ..."
+    },
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/trading/order-types",
+      "title": "Order types | Hyperliquid Docs - GitBook"
+    },
+    {
+      "url": "https://medium.com/@Jsquare_co/jsquare-research-why-exotic-hip-3-markets-dont-work-87c268309db1",
+      "title": "Jsquare Research: Why Exotic HIP-3 Markets Don't Work"
+    },
+    {
+      "url": "https://app.hyperliquid.xyz/",
+      "title": "Hyperliquid"
+    },
+    {
+      "url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6465720",
+      "title": "Level 4 Order Book Data from the Hyperliquid Exchange"
+    }
+  ],
+  "primary_sources_count": 13,
+  "extra_sources": [
+    {
+      "url": "https://cryptoslate.com/anyone-can-now-create-hyperliquid-perp-contracts-with-20m-is-defi-about-to-break",
+      "provider": "tavily",
+      "title": "Anyone can now create Hyperliquid perp contracts with $20M: Is DeFi about to break?",
+      "description": "CryptoSlate logo\nCryptoSlate logo\nGoogle logo\nGoogle logo\n\nHyperliquid's HIP-3 opens perpetual futures listing to anyone willing to stake $20 million. The question isn't whether this democratizes the DeFi, but whether the safeguards can handle what comes next.\n\nHyperliquid launched HIP-3 on mainnet in October 2025, introducing a model where any builder can deploy perpetual futures markets without committee approval.\n\nDeployers must stake 500,000 HYPE tokens, worth approximately $20 million at current prices, as collateral against any malicious behavior. [...] # Anyone can now create Hyperliquid perp contracts with $20M: Is DeFi about to break?\n\nListing anything is easy; risk and liquidity are hard, and here’s the model.Hyperliquid’s HIP-3 removes gatekeepers by letting anyone launch perpetuals if they stake $20 million. It’s either DeFi’s boldest safety experiment, or its next stress test.\n\nGino Matos\nGino Matos\na giant glass padlock of collateral at center with neon data arcs connecting isolated bubble-like perp markets guarded by validator shields over a sunlit skyline.\n\nCover art/illustration via CryptoSlate. Image includes combined content which may include AI-generated content.\n\nCryptoSlate logo\nCryptoSlate logo\nGoogle logo\nGoogle logo [...] Lessons from Mango and GMX directly informed these safeguards. Whether the combination of stake, isolation, and oversight can handle all edge cases remains to be proven through live markets.\n\nFor now, Hyperliquid offers a straightforward proposition: any asset can become a perpetual market if someone believes in it enough to risk $20 million.\n\nThe protocol bets that price is high enough to separate serious builders from reckless ones, and that layered defenses can catch what economic incentives miss.\n\nHyperliquid logo\nHyperliquid logo\nGino Matos\nGino Matos"
+    },
+    {
+      "url": "https://www.facebook.com/CoinMarketCap/posts/latest-hyperliquids-hype-token-rose-about-5-as-its-pre-ipo-perpetual-futures-mar/1401321508691905",
+      "provider": "tavily",
+      "title": "Hyperliquid's HYPE token rose about 5% as its pre-IPO perpetual ...",
+      "description": "'/%3E%3Cpath d='M16.0001 7.9996c0 4.418-3.5815 7.9996-7.9995 7.9996S.001 12.4176.001 7.9996 3.5825 0 8.0006 0C12.4186 0 16 3.5815 16 7.9996Z' fill='url(%23paint1_radial_15251_63610)'/%3E%3Cpath d='M16.0001 7.9996c0 4.418-3.5815 7.9996-7.9995 7.9996S.001 12.4176.001 7.9996 3.5825 0 8.0006 0C12.4186 0 16 3.5815 16 7.9996Z' fill='url(%23paint2_radial_15251_63610)' fill-opacity='.5'/%3E%3Cpath d='M7.3014 3.8662a.6974.6974 0 0 1 .6974-.6977c.6742 0 1.2207.5465 1.2207 1.2206v1.7464a.101.101 0 0 0 .101.101h1.7953c.992 0 1.7232.9273 1.4917 1.892l-.4572 1.9047a2.301 2.301 0 0 1-2.2374 1.764H6.9185a.5752.5752 0 0 1-.5752-.5752V7.7384c0-.4168.097-.8278.2834-1.2005l.2856-.5712a3.6878 3.6878 0 0 0 .3893-1.6509l-.0002-.4496ZM4.367 7a.767.767 0 0 0-.7669.767v3.2598a.767.767 0 0 0 [...] id='paint1_radial_15251_63610' cx='0' cy='0' r='1' gradientUnits='userSpaceOnUse' gradientTransform='matrix(0 7.9992 -7.99863 0 7.9986 7.9992)'%3E%3Cstop offset='.5637' stop-color='%23E11731' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='%23E11731' stop-opacity='.1'/%3E%3C/radialGradient%3E%3ClinearGradient id='paint0_linear_15251_63610' x1='2.3986' y1='2.4007' x2='13.5975' y2='13.5993' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%23FF74AE'/%3E%3Cstop offset='.5001' stop-color='%23FA2E3E'/%3E%3Cstop offset='1' stop-color='%23FF5758'/%3E%3C/linearGradient%3E%3CclipPath id='clip0_15251_63610'%3E%3Cpath fill='%23fff' d='M-.001.0009h15.9992v15.9984H-.001z'/%3E%3C/clipPath%3E%3C/defs%3E%3C/svg%3E) [...] 7a.767.767 0 0 0-.7669.767v3.2598a.767.767 0 0 0 .767.767h.767a.3835.3835 0 0 0 .3835-.3835V7.3835A.3835.3835 0 0 0 5.134 7h-.767Z' fill='%23fff'/%3E%3Cdefs%3E%3CradialGradient id='paint1_radial_15251_63610' cx='0' cy='0' r='1' gradientUnits='userSpaceOnUse' gradientTransform='rotate(90 .0005 8) scale(7.99958)'%3E%3Cstop offset='.5618' stop-color='%230866FF' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='%230866FF' stop-opacity='.1'/%3E%3C/radialGradient%3E%3CradialGradient id='paint2_radial_15251_63610' cx='0' cy='0' r='1' gradientUnits='userSpaceOnUse' gradientTransform='rotate(45 -4.5257 10.9237) scale(10.1818)'%3E%3Cstop offset='.3143' stop-color='%2302ADFC'/%3E%3Cstop offset='1' stop-color='%2302ADFC' stop-opacity='0'/%3E%3C/radialGradient%3E%3ClinearGradient"
+    },
+    {
+      "url": "https://medium.com/coinmonks/understanding-crypto-perpetual-futures-and-the-hyperliquid-craze-7d1c8b413444",
+      "provider": "tavily",
+      "title": "Understanding Crypto Perpetual Futures and the Hyperliquid Craze",
+      "description": "Get in touch with us today at nefture.com !\n\nPerpetuals are a double-edged sword, powerful for speculation, hedging, and arbitrage, but also drivers of volatility and sudden crashes. In a way that reshapes crypto markets by altering price mechanics through leverage and funding.\n\nHyperliquid amplifies both sides, offering institutional-grade speed and liquidity, but with extreme leverage and systemic risk.\n\nAs the latest hub for risky perpetuals, Hyperliquid is a catalyst for both explosive gains and flash crashes, so navigate it wisely!\n\n## About us [...] Source: Coinglass\n\n## Hyperliquid: The Perps DeFi King\n\nThis brings us to the meteoric rise of Hyperliquid, a platform that has not only thrived amid these chaotic dynamics but actively capitalized on them.\n\nFor years, centralized exchanges like Binance, Bybit, and OKX dominated the perpetual futures landscape, offering deep liquidity, high leverage, and fast execution.\n\nBut they also came with trade-offs: opaque liquidation mechanisms, withdrawal freezes, jurisdictional risks, and custodial limitations.\n\nHyperliquid turned this equation on its head.\n\n> _Launched in 2024 as a high-performance Layer-1 blockchain purpose-built for perpetual trading, it promised the speed and efficiency of a CEX with the transparency, custody, and composability of DeFi._ [...] Image 9\n\nSource: CoinMarketCap\n\nIf Hyperliquid captures 20% of Binance’s trading volume or cements its status as a top‑three Layer‑1 blockchain, some analysts argue that HYPE could realistically jump toward $50–100.\n\nAs we have seen HyperLiquid complex and murky DeFi architecture exposes investors to undue financial risks and missed trading opportunities.\n\nRisks on HyperLiquid are compounded — ranging from slippage-driven liquidations and overexposure to forced positions, to complex margin calls, fragmented data, and a lack of real-time market visibility that can obscure strategic decision-making and lead to suboptimal trades."
+    }
+  ],
+  "extra_sources_count": 3,
+  "source_warning": "extra_sources are retrieved in parallel and are not automatically used to verify generated content; use fetch on key URLs for claim-level evidence.",
+  "routing_decision": {
+    "docs_intent": false,
+    "zh_current_intent": false,
+    "web_current_intent": false,
+    "fetch_intent": false,
+    "supplemental_paths": [],
+    "validation_level": "balanced",
+    "fallback_mode": "auto",
+    "providers": "auto",
+    "main_search_chain": [
+      "xai-responses"
+    ]
+  },
+  "providers_used": [
+    "xAI Responses",
+    "tavily"
+  ],
+  "provider_attempts": [
+    {
+      "capability": "main_search",
+      "provider": "xAI Responses",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 19825.71,
+      "result_count": 1
+    },
+    {
+      "capability": "web_search",
+      "provider": "tavily",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 22647.24,
+      "result_count": 3
+    }
+  ],
+  "fallback_used": false,
+  "validation_level": "balanced",
+  "minimum_profile_ok": true,
+  "capability_status": {
+    "main_search": {
+      "configured": [
+        "xai-responses"
+      ],
+      "fallback_chain": [
+        "xai-responses",
+        "openai-compatible"
+      ],
+      "ok": true
+    },
+    "web_search": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "zhipu",
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    },
+    "docs_search": {
+      "configured": [
+        "context7"
+      ],
+      "fallback_chain": [
+        "exa",
+        "context7"
+      ],
+      "ok": true
+    },
+    "web_fetch": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    }
+  },
+  "elapsed_ms": 22647.25
+}

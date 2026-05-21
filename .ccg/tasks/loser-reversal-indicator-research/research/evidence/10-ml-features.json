@@ -1,0 +1,205 @@
+{
+  "ok": true,
+  "error_type": "",
+  "error": "",
+  "session_id": "bac16efbdca9",
+  "query": "identify bad traders predict losing wallets machine learning features crypto on-chain behavioral PnL prediction",
+  "platform": "",
+  "model": "grok-4.20-fast",
+  "primary_api_mode": "xai-responses",
+  "content": "**Identifying \"bad traders\" (consistently unprofitable wallets) in crypto via machine learning involves using on-chain data, behavioral patterns, and transaction history to predict Profit and Loss (PnL) outcomes or classify wallets by performance.** [[1]](https://chainaware.ai/blog/ai-powered-blockchain-analysis-machine-learning-for-crypto-security-2026/) [[2]](https://chainaware.ai/blog/chainaware-wallet-auditor-how-to-use/)\n\nThis is an active area in on-chain analytics, fraud/risk detection, and trading signal tools. While most public research focuses on price prediction or illicit activity detection, wallet-level profitability classification and behavioral profiling are emerging, especially in tools like ChainAware and whale/copy-trading analyses. [[1]](https://chainaware.ai/blog/ai-powered-blockchain-analysis-machine-learning-for-crypto-security-2026/)\n\n### Key Challenges\n- **Labeling data**: True PnL requires linking wallets to realized profits/losses (e.g., via closed positions or transfer patterns). This is easier for CEX/DEX trades with outcomes but harder for long-term holders.\n- **Non-stationarity**: Crypto markets change rapidly; behaviors shift across bull/bear regimes.\n- **Anonymity and clustering**: Wallets can be controlled by the same entity; heuristics help but aren't perfect.\n- **Survivorship and selection bias**: Public datasets often over-represent active or labeled (e.g., illicit) wallets.\n\n### Common On-Chain and Behavioral Features for ML Models\nThese features help predict if a wallet/trader is likely to lose money or exhibit poor performance:\n\n**Transaction & Activity Features**:\n- Transaction count, frequency, and timing (e.g., high-frequency small trades often signal poor discipline).\n- Gas fees paid, failed tx ratio (indicates inefficiency or desperation).\n- Active addresses, session patterns, time-of-day activity. [[3]](https://medium.com/@gwrx2005/machine-learning-and-blockchain-an-integrated-framework-for-cryptocurrency-market-analysis-and-682869b67c1c)\n\n**Balance & Holding Features**:\n- Wallet age, balance age, realized/unrealized PnL proxies (e.g., via Spent Output Profit Ratio — SOPR).\n- HODL waves, coin age distribution (long-term holders vs. flippers).\n- Net flows (exchange inflows often precede sells/losses). [[4]](https://www.mdpi.com/2079-8954/13/6/474)\n\n**Behavioral/Risk Features** (from tools like ChainAware):\n- **Risk willingness**: Propensity for high-variance DeFi (e.g., leverage, exotic protocols).\n- **Experience level**: Sophistication tiers (newbie vs. expert) based on protocol diversity and history.\n- **Risk capability**: Ability to hold through volatility (drawdown tolerance).\n- Protocol diversity, transaction category breakdown (e.g., gambling vs. yield farming), predicted intentions/next actions.\n- AML status, trust score, path to known risky addresses. [[1]](https://chainaware.ai/blog/ai-powered-blockchain-analysis-machine-learning-for-crypto-security-2026/) [[2]](https://chainaware.ai/blog/chainaware-wallet-auditor-how-to-use/)\n\n**Market/Context Features**:\n- Trade size relative to balance/liquidity, momentum alignment (e.g., buying into pumps).\n- Order book/microstructure (for DEX), historical win/loss streaks. [[5]](https://medium.com/@gwrx2005/combining-simulation-and-machine-learning-analysis-of-whale-trading-on-hyperliquid-93f10d96941b)\n- Cross-chain or multi-protocol behavior.\n\n**Derived/Graph Features**:\n- Graph embeddings (wallet as node, tx as edges), neighborhood features, clustering (similar behavior groups).\n- Anomaly scores (deviation from profitable wallet patterns). [[6]](https://arxiv.org/html/2403.17081v1)\n\n### ML Approaches That Work Well\n- **Classification/Regression**: Predict binary (profitable/losing next period) or continuous PnL. Ensemble methods like **Random Forest**, **Gradient Boosting** (e.g., XGBoost, LightGBM), or **CatBoost** often excel due to feature importance insights. [[5]](https://medium.com/@gwrx2005/combining-simulation-and-machine-learning-analysis-of-whale-trading-on-hyperliquid-93f10d96941b)\n- **Sequence Models**: LSTM/GRU, Temporal Fusion Transformers (TFT), or CNN-LSTM for time-series wallet behavior. [[4]](https://www.mdpi.com/2079-8954/13/6/474)\n- **Graph ML**: GCNs for wallet networks and anomaly/illicit detection (extendable to poor performance). [[6]](https://arxiv.org/html/2403.17081v1)\n- **Clustering/Unsupervised**: Group wallets into \"good/bad\" cohorts via behavioral similarity (e.g., Nansen-style). [[7]](https://nansen.ai/post/ai-driven-onchain-analysis-tools-unlocking-next-gen-blockchain-insights)\n- **Hybrid**: Combine on-chain + off-chain (sentiment, news) + technical indicators.\n\n**Examples from Research/Practice**:\n- Whale trade outcome prediction (profit/loss) using Gradient Boosting reached ~89-90% accuracy with historical features, improving loss detection significantly. Key predictors: momentum, liquidity, history. [[5]](https://medium.com/@gwrx2005/combining-simulation-and-machine-learning-analysis-of-whale-trading-on-hyperliquid-93f10d96941b)\n- Behavioral profiling tools use 9-10 parameters (risk, experience, etc.) fed into ML for trust/intention scores. [[1]](https://chainaware.ai/blog/ai-powered-blockchain-analysis-machine-learning-for-crypto-security-2026/)\n- Broader on-chain ML for address classification, anomaly detection, and performance prediction. [[6]](https://arxiv.org/html/2403.17081v1)\n\n### Practical Implementation Steps\n1. **Data Sources**: Dune Analytics, Flipside, Nansen, Glassnode, Chainalysis, or direct node RPC for raw txs. Label via realized PnL heuristics or exchange APIs.\n2. **Feature Engineering**: Heavy emphasis here (often 70% of success). Create ratios, rolling stats, embeddings.\n3. **Model Training**: Use temporal splits (no future leakage). Evaluate on PnL/Sharpe of simulated trades, not just accuracy. Backtest rigorously.\n4. **Deployment**: Real-time monitoring (e.g., flag high-risk wallets). Tools like ChainAware provide ready auditors. [[2]](https://chainaware.ai/blog/chainaware-wallet-auditor-how-to-use/)\n\n**Caveats**: Past patterns don't guarantee future results. Many \"losing\" wallets are retail noise or noise traders; top performers may be sophisticated or lucky. Regulatory/ethical issues apply for scoring real users. Overfitting is common in volatile crypto data. [[8]](https://medium.com/@laostjen/machine-learning-models-that-actually-work-in-crypto-trading-78a6735b5639)\n\nThis approach powers risk scoring, copy-trading filters (avoid bad whales), fraud detection, and personalized tools. For production, combine ML with domain rules and human oversight. Start with public datasets or APIs from analytics platforms for prototyping.",
+  "sources": [
+    {
+      "url": "https://chainaware.ai/blog/ai-powered-blockchain-analysis-machine-learning-for-crypto-security-2026/",
+      "title": "AI-Powered Blockchain Analysis: Machine Learning for ..."
+    },
+    {
+      "url": "https://chainaware.ai/blog/chainaware-wallet-auditor-how-to-use/",
+      "title": "ChainAware Wallet Auditor: How to Use It — Complete Guide"
+    },
+    {
+      "url": "https://medium.com/@gwrx2005/machine-learning-and-blockchain-an-integrated-framework-for-cryptocurrency-market-analysis-and-682869b67c1c",
+      "title": "Machine Learning and Blockchain: An Integrated ..."
+    },
+    {
+      "url": "https://www.mdpi.com/2079-8954/13/6/474",
+      "title": "Temporal Fusion Transformer-Based Trading Strategy for ..."
+    },
+    {
+      "url": "https://medium.com/@gwrx2005/combining-simulation-and-machine-learning-analysis-of-whale-trading-on-hyperliquid-93f10d96941b",
+      "title": "Combining Simulation and Machine Learning Analysis of ..."
+    },
+    {
+      "url": "https://arxiv.org/html/2403.17081v1",
+      "title": "Machine Learning on Blockchain Data: A Systematic ..."
+    },
+    {
+      "url": "https://nansen.ai/post/ai-driven-onchain-analysis-tools-unlocking-next-gen-blockchain-insights",
+      "title": "AI-Driven Onchain Analysis Tools: Unlocking Next-Gen ..."
+    },
+    {
+      "url": "https://medium.com/@laostjen/machine-learning-models-that-actually-work-in-crypto-trading-78a6735b5639",
+      "title": "Machine Learning Models That Actually Work in Crypto ..."
+    },
+    {
+      "url": "https://rsisinternational.org/journals/ijrias/articles/development-of-bitcoin-closing-price-prediction-model-using-machine-learning",
+      "provider": "tavily",
+      "title": "Development of Bitcoin Closing Price Prediction Model Using Machine Learning – International Journal of Research and Innovation in Applied Science (IJRIAS)",
+      "description": "for traders and investors. The objectives are to develop the model, evaluate its performance using metrics like accuracy and F1-score, and compare it to state-of-the-art approaches. By applying ML to financial forecasting, this research enhances data science and blockchain technology, fostering innovation in the cryptocurrency ecosystem. [...] recall, and F1-scores above 0.89, outperforming baseline models. Back testing aligns with February 2025 market shifts. This research highlights ensemble learning’s efficacy in volatile cryptocurrency markets, offering traders a robust tool. [...] Feature importance (Figure 5.4) highlights the dominance of trend-following indicators like SMA\\_200, High, Open, and SMA\\_50. The model favors long- and medium-term trends over short-term or volume-based signals, aligning with widely used trading methods that rely on moving averages to interpret market sentiment and reduce noise.\n\nWith a 90.4% success rate, the model can be easily used in automated trading systems to help traders make smart choices, including safeguards like stop-loss to limit losses when predictions go wrong, and assist regulators in watching market steadiness to tackle risky trading, though users should be careful not to rely too much on it during wild market swings\n\nLimitations"
+    },
+    {
+      "url": "https://phemex.com/student-foundation/papers/machine-learning-crypto",
+      "provider": "tavily",
+      "title": "Effectiveness Of Machine Learning Algorithms In Cryptocurrency Price Forecasting - Phemex",
+      "description": "Features\n\nUSDⓈ-M Perpetual Perpetual Futures Using USDT or USDC as Margin\n\nCOIN-M Perpetual Perpetual Futures using Coin as the collateral\n\nCopy Trade Follow Top Traders and Copy Their Trades\n\nTrading Bots Automate Your Trading, 24/7\n\nMock Trading Learn How to Trade with Zero Risk\n\nExplore\n\nPhemex TradFi Image 8 Stocks & metals at crypto speed.\n\nOnchain Derivatives Trade High-Potential Coins with Leverage to Amplify Returns\n\nSpot\n\nPromotions\n\nImage 9 Prediction Market Is Live Image 10: menu tag Trade now and join The Prediction Championship for weekly PnL and ROI rewards\n\nUltimate Spot Trading Carnival! Image 11: menu tag Enjoy $70K in Massive Rewards!\n\nSpot\n\nSpot Trading Instantly Trade 508 Cryptos\n\nMargin Trading Multiply your profits with leverage [...] Nowadays there are numerous machine learning algorithm-based forecasting tools available that provide insights to traders or investors before they dive into crypto trading. The majority of frequent traders' decisions are based on a combination of forecasting results of algorithms and human analysis of the market and world events. Therefore, it’s important to analyze how effective machine learning algorithms are and what external factors could be used to improve price forecasting accuracy."
+    },
+    {
+      "url": "https://www.openware.com/news/articles/predictive-analytics-in-crypto-trading-tools-and-techniques",
+      "provider": "tavily",
+      "title": "Predictive Analytics in Crypto Trading: Tools and Techniques",
+      "description": "For example, suppose you are trading in Bitcoin. Here, looking at previous price trends and further considering metrics such as on-chain activity and news sentiment, it may be possible for a model to intimate that it might fall. With such aninsight, one can craft a strategy to avoid this loss, if not leveraging the shift for profit altogether.\n\nThis approach helps traders to identify patterns and correlations that are not obvious to the naked eye. Be it detecting a breakout trend or managing the risk in high volatility, predictive analytics changes raw data into actionable insight.\n\nPredictive Analysis in Crypto Trading\n\n### #Popular Techniques in Predictive Analytics\n\n##### #Machine Learning Models [...] ##### #On-chain Analytics\n\nOn-chain analytics reviews blockchain data concerning wallet activity, transaction volume, and token flow to give more context to market trends. Indicators like the number of active addresses or spikes in whale transactions tend to lead to great price movements.\n\nFor instance, if a predictive tool identifies a sudden surge in large Bitcoin transfers, this can be a sign of impending selling pressure, and traders can then position themselves accordingly.\n\nPredictive Analytics Tools in Crypto Trading\n\n##### #Trading Platforms with Integrated Analytics"
+    }
+  ],
+  "sources_count": 11,
+  "primary_sources": [
+    {
+      "url": "https://chainaware.ai/blog/ai-powered-blockchain-analysis-machine-learning-for-crypto-security-2026/",
+      "title": "AI-Powered Blockchain Analysis: Machine Learning for ..."
+    },
+    {
+      "url": "https://chainaware.ai/blog/chainaware-wallet-auditor-how-to-use/",
+      "title": "ChainAware Wallet Auditor: How to Use It — Complete Guide"
+    },
+    {
+      "url": "https://medium.com/@gwrx2005/machine-learning-and-blockchain-an-integrated-framework-for-cryptocurrency-market-analysis-and-682869b67c1c",
+      "title": "Machine Learning and Blockchain: An Integrated ..."
+    },
+    {
+      "url": "https://www.mdpi.com/2079-8954/13/6/474",
+      "title": "Temporal Fusion Transformer-Based Trading Strategy for ..."
+    },
+    {
+      "url": "https://medium.com/@gwrx2005/combining-simulation-and-machine-learning-analysis-of-whale-trading-on-hyperliquid-93f10d96941b",
+      "title": "Combining Simulation and Machine Learning Analysis of ..."
+    },
+    {
+      "url": "https://arxiv.org/html/2403.17081v1",
+      "title": "Machine Learning on Blockchain Data: A Systematic ..."
+    },
+    {
+      "url": "https://nansen.ai/post/ai-driven-onchain-analysis-tools-unlocking-next-gen-blockchain-insights",
+      "title": "AI-Driven Onchain Analysis Tools: Unlocking Next-Gen ..."
+    },
+    {
+      "url": "https://medium.com/@laostjen/machine-learning-models-that-actually-work-in-crypto-trading-78a6735b5639",
+      "title": "Machine Learning Models That Actually Work in Crypto ..."
+    }
+  ],
+  "primary_sources_count": 8,
+  "extra_sources": [
+    {
+      "url": "https://rsisinternational.org/journals/ijrias/articles/development-of-bitcoin-closing-price-prediction-model-using-machine-learning",
+      "provider": "tavily",
+      "title": "Development of Bitcoin Closing Price Prediction Model Using Machine Learning – International Journal of Research and Innovation in Applied Science (IJRIAS)",
+      "description": "for traders and investors. The objectives are to develop the model, evaluate its performance using metrics like accuracy and F1-score, and compare it to state-of-the-art approaches. By applying ML to financial forecasting, this research enhances data science and blockchain technology, fostering innovation in the cryptocurrency ecosystem. [...] recall, and F1-scores above 0.89, outperforming baseline models. Back testing aligns with February 2025 market shifts. This research highlights ensemble learning’s efficacy in volatile cryptocurrency markets, offering traders a robust tool. [...] Feature importance (Figure 5.4) highlights the dominance of trend-following indicators like SMA\\_200, High, Open, and SMA\\_50. The model favors long- and medium-term trends over short-term or volume-based signals, aligning with widely used trading methods that rely on moving averages to interpret market sentiment and reduce noise.\n\nWith a 90.4% success rate, the model can be easily used in automated trading systems to help traders make smart choices, including safeguards like stop-loss to limit losses when predictions go wrong, and assist regulators in watching market steadiness to tackle risky trading, though users should be careful not to rely too much on it during wild market swings\n\nLimitations"
+    },
+    {
+      "url": "https://phemex.com/student-foundation/papers/machine-learning-crypto",
+      "provider": "tavily",
+      "title": "Effectiveness Of Machine Learning Algorithms In Cryptocurrency Price Forecasting - Phemex",
+      "description": "Features\n\nUSDⓈ-M Perpetual Perpetual Futures Using USDT or USDC as Margin\n\nCOIN-M Perpetual Perpetual Futures using Coin as the collateral\n\nCopy Trade Follow Top Traders and Copy Their Trades\n\nTrading Bots Automate Your Trading, 24/7\n\nMock Trading Learn How to Trade with Zero Risk\n\nExplore\n\nPhemex TradFi Image 8 Stocks & metals at crypto speed.\n\nOnchain Derivatives Trade High-Potential Coins with Leverage to Amplify Returns\n\nSpot\n\nPromotions\n\nImage 9 Prediction Market Is Live Image 10: menu tag Trade now and join The Prediction Championship for weekly PnL and ROI rewards\n\nUltimate Spot Trading Carnival! Image 11: menu tag Enjoy $70K in Massive Rewards!\n\nSpot\n\nSpot Trading Instantly Trade 508 Cryptos\n\nMargin Trading Multiply your profits with leverage [...] Nowadays there are numerous machine learning algorithm-based forecasting tools available that provide insights to traders or investors before they dive into crypto trading. The majority of frequent traders' decisions are based on a combination of forecasting results of algorithms and human analysis of the market and world events. Therefore, it’s important to analyze how effective machine learning algorithms are and what external factors could be used to improve price forecasting accuracy."
+    },
+    {
+      "url": "https://www.openware.com/news/articles/predictive-analytics-in-crypto-trading-tools-and-techniques",
+      "provider": "tavily",
+      "title": "Predictive Analytics in Crypto Trading: Tools and Techniques",
+      "description": "For example, suppose you are trading in Bitcoin. Here, looking at previous price trends and further considering metrics such as on-chain activity and news sentiment, it may be possible for a model to intimate that it might fall. With such aninsight, one can craft a strategy to avoid this loss, if not leveraging the shift for profit altogether.\n\nThis approach helps traders to identify patterns and correlations that are not obvious to the naked eye. Be it detecting a breakout trend or managing the risk in high volatility, predictive analytics changes raw data into actionable insight.\n\nPredictive Analysis in Crypto Trading\n\n### #Popular Techniques in Predictive Analytics\n\n##### #Machine Learning Models [...] ##### #On-chain Analytics\n\nOn-chain analytics reviews blockchain data concerning wallet activity, transaction volume, and token flow to give more context to market trends. Indicators like the number of active addresses or spikes in whale transactions tend to lead to great price movements.\n\nFor instance, if a predictive tool identifies a sudden surge in large Bitcoin transfers, this can be a sign of impending selling pressure, and traders can then position themselves accordingly.\n\nPredictive Analytics Tools in Crypto Trading\n\n##### #Trading Platforms with Integrated Analytics"
+    }
+  ],
+  "extra_sources_count": 3,
+  "source_warning": "extra_sources are retrieved in parallel and are not automatically used to verify generated content; use fetch on key URLs for claim-level evidence.",
+  "routing_decision": {
+    "docs_intent": false,
+    "zh_current_intent": false,
+    "web_current_intent": false,
+    "fetch_intent": false,
+    "supplemental_paths": [],
+    "validation_level": "balanced",
+    "fallback_mode": "auto",
+    "providers": "auto",
+    "main_search_chain": [
+      "xai-responses"
+    ]
+  },
+  "providers_used": [
+    "xAI Responses",
+    "tavily"
+  ],
+  "provider_attempts": [
+    {
+      "capability": "main_search",
+      "provider": "xAI Responses",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 16599.47,
+      "result_count": 1
+    },
+    {
+      "capability": "web_search",
+      "provider": "tavily",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 19834.98,
+      "result_count": 3
+    }
+  ],
+  "fallback_used": false,
+  "validation_level": "balanced",
+  "minimum_profile_ok": true,
+  "capability_status": {
+    "main_search": {
+      "configured": [
+        "xai-responses"
+      ],
+      "fallback_chain": [
+        "xai-responses",
+        "openai-compatible"
+      ],
+      "ok": true
+    },
+    "web_search": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "zhipu",
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    },
+    "docs_search": {
+      "configured": [
+        "context7"
+      ],
+      "fallback_chain": [
+        "exa",
+        "context7"
+      ],
+      "ok": true
+    },
+    "web_fetch": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    }
+  },
+  "elapsed_ms": 19835.0
+}

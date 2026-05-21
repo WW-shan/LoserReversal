@@ -1,0 +1,583 @@
+{
+  "ok": true,
+  "error_type": "",
+  "error": "",
+  "session_id": "d58e3a44cf06",
+  "query": "vectorbt nautilus freqtrade hummingbot personal quant crypto backtest framework comparison 2025 2026",
+  "platform": "",
+  "model": "grok-4.20-fast",
+  "primary_api_mode": "xai-responses",
+  "content": "**Vectorbt, NautilusTrader, Freqtrade, and Hummingbot** are popular open-source Python-based tools for crypto trading strategy development and backtesting as of 2025–2026. They differ significantly in architecture, strengths, and ideal use cases. [[1]](https://www.youtube.com/watch?v=7LuRYNAAx6M)\n\n**Personal quant** setups often combine these (e.g., Vectorbt for rapid research + another for live execution) or use custom scripts.\n\n### Quick Overview\n- **Vectorbt (incl. Vectorbt Pro)**: Vectorized backtesting library focused on extreme speed and scalability for research/parameter optimization. Excellent for pandas/NumPy users testing many strategies/variations quickly on price data. [[2]](https://medium.com/@trading.dude/backtesting-with-vectorbt-a-beginners-guide-8b9c0e6a0167)\n- **NautilusTrader**: Production-grade, event-driven engine (Rust core, Python interface) emphasizing backtest-to-live parity with high realism (ticks, order books, nanosecond resolution). Suited for professional/systematic traders. [[3]](https://nautilustrader.io/)\n- **Freqtrade**: Full-featured crypto trading bot with strong backtesting, hyperopt (ML-powered optimization), and live trading on many exchanges. User-friendly for crypto spot/futures. [[4]](https://www.freqtrade.io/en/stable/backtesting/)\n- **Hummingbot**: Framework focused on market making, arbitrage, and custom strategies on CEX/DEX. Backtesting via dashboard or Quants Lab; more execution-oriented. [[5]](https://hummingbot.org/dashboard/backtest/)\n\n### Key Comparison (2025–2026 Context)\n\n**Backtesting Style & Performance**:\n- **Vectorbt**: Vectorized (broadcasting + Numba/Rust). Blazingly fast for thousands/millions of simulations, parameter sweeps, and multi-asset tests. Ideal for large datasets or broad optimization. Limitations in complex order book/microstructure realism. [[6]](https://vectorbt.dev/)\n- **NautilusTrader**: Event-driven, high-fidelity (ticks, order books). Slower than vectorized for simple sweeps but highly realistic and scalable for portfolios/multi-venue. Excellent backtest-live parity (same code/engine). [[3]](https://nautilustrader.io/)\n- **Freqtrade**: Candle-based backtesting with vectorized elements; supports recursive analysis, lookahead bias checks, and FreqAI (ML). Fast enough for most crypto use; strong reporting and hyperopt. [[7]](https://www.youtube.com/watch?v=aZ7V_PpYQJc)\n- **Hummingbot**: Dashboard/Quants Lab backtesting; improved speed in 2025 updates. Better for strategy validation than massive sweeps; more focused on specific bot types (e.g., market making). [[8]](https://hummingbot.substack.com/p/hummingbot-newsletter-mayjune-2025)\n\n**Live Trading & Production**:\n- Vectorbt: Primarily research; pair with brokers/exchanges manually or via extensions.\n- NautilusTrader: Strongest here — seamless transition, multi-venue, production features (risk, order management). [[9]](https://autotradelab.com/blog/backtrader-vs-nautilusttrader-vs-vectorbt-vs-zipline-reloaded)\n- Freqtrade: Excellent built-in dry/live modes, Telegram/UI, many exchange integrations.\n- Hummingbot: Strong for continuous strategies (MM, arb) on CEX/DEX; V2 strategies add modularity. [[10]](https://hummingbot.org/blog/introducing-v2-strategies/)\n\n**Crypto Focus & Features**:\n- All support major crypto pairs/exchanges (Binance, etc.).\n- Freqtrade & Hummingbot: Most \"out-of-the-box\" for crypto bots.\n- NautilusTrader: Broadest (crypto perps, futures, options, traditional assets).\n- Vectorbt: Flexible for any OHLCV data; great for custom indicators/portfolio analysis.\n\n**Ease of Use & Learning Curve**:\n- Freqtrade/Hummingbot: More beginner-friendly with configs, UIs, and docs for crypto.\n- Vectorbt: Pandas-friendly but requires coding comfort for advanced use.\n- NautilusTrader: Steeper (event-driven, configs) but powerful for serious users. [[9]](https://autotradelab.com/blog/backtrader-vs-nautilusttrader-vs-vectorbt-vs-zipline-reloaded)\n\n**Community & Maturity (2025–2026)**:\n- Freqtrade and Hummingbot: Large crypto communities, frequent updates.\n- NautilusTrader: Gaining traction for pro use; active development.\n- Vectorbt: Popular for research; Pro version adds advanced features.\n\n**Other Considerations**:\n- **Realism**: Nautilus > Freqtrade/Hummingbot (with proper setup) > Vectorbt (for simple price strategies).\n- **Optimization**: Vectorbt (speed) or Freqtrade (hyperopt/ML).\n- **Costs**: All core open-source/free; Vectorbt Pro is paid.\n- **Limitations**: Avoid over-optimizing (curve-fitting); always validate out-of-sample, account for fees/slippage/latency.\n\n### Recommendation by Use Case (2025–2026)\n- **Rapid research, parameter sweeps, multi-asset portfolios**: **Vectorbt** first (or Vectorbt Pro). [[11]](https://python.financial/)\n- **Production-grade, realistic backtest-to-live, multi-asset**: **NautilusTrader**. [[9]](https://autotradelab.com/blog/backtrader-vs-nautilusttrader-vs-vectorbt-vs-zipline-reloaded)\n- **Crypto-specific botting (spot/futures, easy live)**: **Freqtrade**.\n- **Market making/arbitrage on CEX/DEX**: **Hummingbot**.\n- **Personal quant hybrid**: Use Vectorbt for discovery/optimization → validate in Nautilus or Freqtrade for live. Many combine tools.\n\nFor the latest, check official GitHub/docs (e.g., nautilustrader.io, vectorbt.dev, freqtrade.io, hummingbot.org) as the ecosystem evolves quickly. Test with your own data/strategy, as performance depends heavily on implementation. Always paper trade before going live.",
+  "sources": [
+    {
+      "url": "https://www.youtube.com/watch?v=7LuRYNAAx6M",
+      "title": "I Tested 20 Algo Trading Frameworks So You Don't Have To"
+    },
+    {
+      "url": "https://medium.com/@trading.dude/backtesting-with-vectorbt-a-beginners-guide-8b9c0e6a0167",
+      "title": "Backtesting with VectorBT: A Beginner's Guide"
+    },
+    {
+      "url": "https://nautilustrader.io/",
+      "title": "NautilusTrader: The fastest, most reliable open-source trading ..."
+    },
+    {
+      "url": "https://www.freqtrade.io/en/stable/backtesting/",
+      "title": "Backtesting"
+    },
+    {
+      "url": "https://hummingbot.org/dashboard/backtest/",
+      "title": "Backtesting Strategies"
+    },
+    {
+      "url": "https://vectorbt.dev/",
+      "title": "VectorBT: Getting started"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=aZ7V_PpYQJc",
+      "title": "15 Important Freqtrade Features You Can't Miss in 2025!"
+    },
+    {
+      "url": "https://hummingbot.substack.com/p/hummingbot-newsletter-mayjune-2025",
+      "title": "May/June 2025 - Hummingbot Newsletter"
+    },
+    {
+      "url": "https://autotradelab.com/blog/backtrader-vs-nautilusttrader-vs-vectorbt-vs-zipline-reloaded",
+      "title": "Backtrader vs NautilusTrader vs VectorBT vs Zipline ..."
+    },
+    {
+      "url": "https://hummingbot.org/blog/introducing-v2-strategies/",
+      "title": "Introducing V2 Strategies"
+    },
+    {
+      "url": "https://python.financial/",
+      "title": "The Python Backtesting Landscape (2026): Choosing the ..."
+    },
+    {
+      "url": "https://waylandz.com/quant-book-en/Quant-Framework-Comparison",
+      "provider": "tavily",
+      "title": "Background: Quant Open-Source Framework Comparison | AI Quantitative Trading: From Zero to One",
+      "description": "## 6. Performance Comparison\n\n| Framework | Backtest Speed | Memory Usage | Learning Curve |\n ---  --- |\n| VectorBT | Very Fast | High | Steep |\n| Backtrader | Slow | Medium | Moderate |\n| Zipline | Medium | High | Steep |\n| FinRL | Slow | High | Steep |\n| Freqtrade | Medium | Low | Simple |\n\n## 7. Practical Recommendations\n\n1. Beginners: Start with Backtrader to understand event-driven architecture\n2. Rapid Iteration: Use VectorBT for parameter sweeps\n3. RL Research: FinRL provides a complete starting point\n4. Production Systems: Consider QuantConnect LEAN or build your own\n5. Cryptocurrency: Freqtrade is the easiest option\n\n## 8. Recommended Framework Combinations [...] ## 8. Recommended Framework Combinations\n\n| Phase | Recommended Combination |\n --- |\n| Learning Phase | Backtrader + yfinance |\n| Research Phase | VectorBT + Jupyter |\n| RL Research | FinRL + Stable-Baselines3 |\n| Live Trading Phase | Custom system or QuantConnect |\n\n> Core Principle: Frameworks are tools, not goals. Choose the framework that lets you validate ideas fastest, not the one with the most features.\n\nCite this chapter\n\n`Zhang, Wayland (2026). Background: Quant Open-Source Framework Comparison. In AI Quantitative Trading: From Zero to One. \n\n```\n@incollection{zhang2026quant_Quant_Framework_Comparison, author = {Zhang, Wayland}, title = {Background: Quant Open-Source Framework Comparison}, booktitle = {AI Quantitative Trading: From Zero to One}, year = {2026}, url = { }\n``` [...] ```\nWhat is your main goal? What  is  your  main  goal ? │ │ ├─ Quickly validate strategy ideas ├─  Quickly  validate  strategy  ideas │  └─ VectorBT (fastest) │   └─  VectorBT  (fastest) │ │ ├─ Complex strategy development ├─  Complex  strategy  development │  └─ Backtrader (flexible) │   └─  Backtrader  (flexible) │ │ ├─ Factor research ├─  Factor  research │  └─ Zipline + Alphalens │   └─  Zipline  +  Alphalens │ │ ├─ Reinforcement learning research ├─  Reinforcement  learning  research │  └─ FinRL (most complete) │   └─  FinRL  (most  complete) │ │ ├─ Crypto live trading ├─  Crypto  live  trading │  └─ Freqtrade (out-of-box) │   └─  Freqtrade  (out - of - box) │ │ └─ Multi-asset + live trading └─  Multi - asset  +  live  trading  └─ QuantConnect LEAN  └─  QuantConnect  LEAN \n```"
+    },
+    {
+      "url": "context7:/polakowo/vectorbt",
+      "title": "VectorBT",
+      "description": "vectorbt is a Python library for backtesting trading strategies with a focus on speed and ease of use, allowing users to test thousands of strategies with minimal code.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/vectorbt_dev",
+      "title": "vectorbt",
+      "description": "vectorbt is a Python package for high-performance quantitative analysis and backtesting of trading strategies, leveraging pandas, NumPy, and Numba for speed and interactive visualizations.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/freqtrade/freqtrade",
+      "title": "Freqtrade",
+      "description": "Freqtrade is a free and open-source crypto trading bot written in Python, supporting major exchanges and offering features like backtesting, plotting, money management, and strategy optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/freqtrade_io_en_stable",
+      "title": "Freqtrade",
+      "description": "Freqtrade is a free and open source cryptocurrency trading bot written in Python that supports major exchanges with backtesting, strategy optimization, and monitoring via Telegram or web UI.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/freqtrade_io_en_develop",
+      "title": "Freqtrade",
+      "description": "Freqtrade is a free and open source cryptocurrency trading bot written in Python that supports major exchanges and includes backtesting, strategy optimization, and control via Telegram or webUI.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/mystenlabs/nautilus",
+      "title": "Nautilus",
+      "description": "Nautilus is a framework for secure and verifiable off-chain computation on Sui, enabling developers to build hybrid applications with AWS Nitro Enclaves through reproducible builds and on-chain verification.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/subnauticamodding/nautilus",
+      "title": "Nautilus",
+      "description": "Nautilus is a modding library that enhances developer productivity for Subnautica mods by providing helper utilities for items, sprites, textures, audio, and configuration menus.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/backtestjs/framework",
+      "title": "Backtest JS Framework",
+      "description": "A comprehensive TypeScript framework for fetching historical candle data, backtesting trading strategies, and comparing results with support for Binance data and CSV imports.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hummingbot/hummingbot-site",
+      "title": "Hummingbot",
+      "description": "Hummingbot is an open-source framework that enables users to create and run algorithmic trading strategies across multiple exchanges and blockchains.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/hummingbot",
+      "title": "Hummingbot",
+      "description": "Hummingbot is a community-driven, open-source Python framework for building automated market making and algorithmic trading bots, designed to be modular and extensible for any strategy on any exchange and blockchain.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/tdl321/hummingbot",
+      "title": "Hummingbot",
+      "description": "Hummingbot is an open-source framework for designing and deploying automated trading strategies (bots) across various centralized and decentralized exchanges, aiming to democratize high-frequency trading.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hummingbot/hummingbot",
+      "title": "Hummingbot",
+      "description": "Open source software that helps you create and deploy high-frequency crypto trading bots",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/vectorbt_pro",
+      "title": "VectorBT PRO",
+      "description": "VectorBT PRO is a high-performance engine for backtesting, algorithmic trading, and quantitative research that uses vectorized array operations and Numba compilation for rapid parameter optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/llmstxt/vectorbt_pro_pvt_4f8d7c01_llms-full_txt",
+      "title": "VectorBT Pro",
+      "description": "VectorBT Pro is a high-performance Python library for backtesting, analyzing, and optimizing trading strategies using a vectorized approach and a scalable ecosystem.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/freqtrade/freqtrade-strategies",
+      "title": "Freqtrade Strategies",
+      "description": "A collection of free buy/sell trading strategies for Freqtrade, a Python-based cryptocurrency trading bot that supports backtesting and strategy optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/nautechsystems/nautilus_trader",
+      "title": "Nautilus Trader",
+      "description": "NautilusTrader is an open-source, high-performance, production-grade algorithmic trading platform for backtesting and live deployment of AI-first trading strategies across various asset classes.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/tyoverby/composition-comparison",
+      "title": "Composition Comparison",
+      "description": "This repository explores UI framework composition patterns by implementing a counter component in Bonsai, Elm, and React.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/tripolskypetr/backtest-kit",
+      "title": "Backtest Kit",
+      "description": "A TypeScript framework for backtesting and live trading strategies on multi-asset, crypto, forex or DEX, spot, futures with crash-safe persistence, signal validation, and AI optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hummingbot/deploy",
+      "title": "Hummingbot Deploy",
+      "description": "A project to deploy multiple Hummingbot trading bots using a centralized dashboard, Hummingbot API, PostgreSQL, and EMQX.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hummingbot/mcp",
+      "title": "Hummingbot MCP",
+      "description": "An MCP server that allows Claude and Gemini CLI to interact with Hummingbot for automated cryptocurrency trading across multiple exchanges.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hummingbot/gateway",
+      "title": "Hummingbot Gateway",
+      "description": "Hummingbot Gateway is a TypeScript-based REST API providing a unified interface for blockchain networks and decentralized exchanges, supporting multi-chain and various trading types.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/10mohi6/portfolio-backtest-python",
+      "title": "Portfolio Backtest",
+      "description": "A Python library for backtesting portfolio asset allocation strategies, including Tangency, Minimum Variance, Hierarchical Risk Parity, and CVaR optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/bartonguestier1725-collab/backtest-engine",
+      "title": "Backtest Engine",
+      "description": "A Numba JIT-accelerated backtesting engine for trading strategies that provides 10-50x speedup with technical indicators, Monte Carlo drawdown analysis, and walk-forward validation.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hummingbot/hummingbot-api",
+      "title": "Hummingbot API",
+      "description": "A comprehensive RESTful API framework for managing trading operations across multiple exchanges, enabling centralized control of trading functionalities, account management, and automated strategies.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/help_solidworks_2026_english",
+      "title": "SOLIDWORKS 2026",
+      "description": "SOLIDWORKS 2026 is a professional 3D CAD software for product design, simulation, and manufacturing that enables engineers and designers to create complex mechanical designs.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/goldmansachs/gs-quant",
+      "title": "GS Quant",
+      "description": "GS Quant is a Python toolkit for quantitative finance, accelerating the development of trading strategies and risk management solutions with a focus on derivative products.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/help_autodesk_view_acd_2025_enu",
+      "title": "AutoCAD 2025",
+      "description": "AutoCAD 2025 is a professional computer-aided design (CAD) software for 2D and 3D drafting, design, and documentation, providing tools for architectural design, engineering, and construction.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/ninjazan420/cve-2025-52691-poc-smartermail-authentication-bypass-exploit-wt-2026-0001",
+      "title": "CVE-2025-52691 / WT-2026-0001 SmarterMail Exploit",
+      "description": "A proof-of-concept exploit combining CVE-2025-52691 (Pre-Auth RCE) and WT-2026-0001 (Authentication Bypass) to achieve remote code execution on vulnerable SmarterMail instances.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/help_autodesk_view_acd_2026_enu",
+      "title": "AutoCAD 2026",
+      "description": "AutoCAD 2026 is a professional CAD software suite for design, drafting, and modeling with specialized toolsets for architecture, MEP, mechanical, electrical, plant 3D, map, and raster design.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/llmquant/quant-wiki",
+      "title": "Quant Wiki",
+      "description": "We are committed to the open-sourcing quantitative knowledge, aiming to bridge the information gap between the domestic and international quantitative finance industries.我们致力于量化知识的开源与汉化，打破国内外量化金融行业信息差。",
+      "provider": "context7"
+    }
+  ],
+  "sources_count": 42,
+  "primary_sources": [
+    {
+      "url": "https://www.youtube.com/watch?v=7LuRYNAAx6M",
+      "title": "I Tested 20 Algo Trading Frameworks So You Don't Have To"
+    },
+    {
+      "url": "https://medium.com/@trading.dude/backtesting-with-vectorbt-a-beginners-guide-8b9c0e6a0167",
+      "title": "Backtesting with VectorBT: A Beginner's Guide"
+    },
+    {
+      "url": "https://nautilustrader.io/",
+      "title": "NautilusTrader: The fastest, most reliable open-source trading ..."
+    },
+    {
+      "url": "https://www.freqtrade.io/en/stable/backtesting/",
+      "title": "Backtesting"
+    },
+    {
+      "url": "https://hummingbot.org/dashboard/backtest/",
+      "title": "Backtesting Strategies"
+    },
+    {
+      "url": "https://vectorbt.dev/",
+      "title": "VectorBT: Getting started"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=aZ7V_PpYQJc",
+      "title": "15 Important Freqtrade Features You Can't Miss in 2025!"
+    },
+    {
+      "url": "https://hummingbot.substack.com/p/hummingbot-newsletter-mayjune-2025",
+      "title": "May/June 2025 - Hummingbot Newsletter"
+    },
+    {
+      "url": "https://autotradelab.com/blog/backtrader-vs-nautilusttrader-vs-vectorbt-vs-zipline-reloaded",
+      "title": "Backtrader vs NautilusTrader vs VectorBT vs Zipline ..."
+    },
+    {
+      "url": "https://hummingbot.org/blog/introducing-v2-strategies/",
+      "title": "Introducing V2 Strategies"
+    },
+    {
+      "url": "https://python.financial/",
+      "title": "The Python Backtesting Landscape (2026): Choosing the ..."
+    }
+  ],
+  "primary_sources_count": 11,
+  "extra_sources": [
+    {
+      "url": "https://waylandz.com/quant-book-en/Quant-Framework-Comparison",
+      "provider": "tavily",
+      "title": "Background: Quant Open-Source Framework Comparison | AI Quantitative Trading: From Zero to One",
+      "description": "## 6. Performance Comparison\n\n| Framework | Backtest Speed | Memory Usage | Learning Curve |\n ---  --- |\n| VectorBT | Very Fast | High | Steep |\n| Backtrader | Slow | Medium | Moderate |\n| Zipline | Medium | High | Steep |\n| FinRL | Slow | High | Steep |\n| Freqtrade | Medium | Low | Simple |\n\n## 7. Practical Recommendations\n\n1. Beginners: Start with Backtrader to understand event-driven architecture\n2. Rapid Iteration: Use VectorBT for parameter sweeps\n3. RL Research: FinRL provides a complete starting point\n4. Production Systems: Consider QuantConnect LEAN or build your own\n5. Cryptocurrency: Freqtrade is the easiest option\n\n## 8. Recommended Framework Combinations [...] ## 8. Recommended Framework Combinations\n\n| Phase | Recommended Combination |\n --- |\n| Learning Phase | Backtrader + yfinance |\n| Research Phase | VectorBT + Jupyter |\n| RL Research | FinRL + Stable-Baselines3 |\n| Live Trading Phase | Custom system or QuantConnect |\n\n> Core Principle: Frameworks are tools, not goals. Choose the framework that lets you validate ideas fastest, not the one with the most features.\n\nCite this chapter\n\n`Zhang, Wayland (2026). Background: Quant Open-Source Framework Comparison. In AI Quantitative Trading: From Zero to One. \n\n```\n@incollection{zhang2026quant_Quant_Framework_Comparison, author = {Zhang, Wayland}, title = {Background: Quant Open-Source Framework Comparison}, booktitle = {AI Quantitative Trading: From Zero to One}, year = {2026}, url = { }\n``` [...] ```\nWhat is your main goal? What  is  your  main  goal ? │ │ ├─ Quickly validate strategy ideas ├─  Quickly  validate  strategy  ideas │  └─ VectorBT (fastest) │   └─  VectorBT  (fastest) │ │ ├─ Complex strategy development ├─  Complex  strategy  development │  └─ Backtrader (flexible) │   └─  Backtrader  (flexible) │ │ ├─ Factor research ├─  Factor  research │  └─ Zipline + Alphalens │   └─  Zipline  +  Alphalens │ │ ├─ Reinforcement learning research ├─  Reinforcement  learning  research │  └─ FinRL (most complete) │   └─  FinRL  (most  complete) │ │ ├─ Crypto live trading ├─  Crypto  live  trading │  └─ Freqtrade (out-of-box) │   └─  Freqtrade  (out - of - box) │ │ └─ Multi-asset + live trading └─  Multi - asset  +  live  trading  └─ QuantConnect LEAN  └─  QuantConnect  LEAN \n```"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=7LuRYNAAx6M",
+      "provider": "tavily",
+      "title": "I Tested 20 Algo Trading Frameworks So You Don't Have To",
+      "description": ". GitHub repo with the code - if it doesn't show up properly, go to my profile on GitHub with the username vinzenzu. The repo is called trading-framework-comparison.  Timestamps: 0:00 Intro 01:15 - recommended frameworks 02:50 - dead frameworks 03:36 - niche frameworks 04:50 - inadvisable frameworks 05:28 - rules of thumb 07:09 - code - FreqTrade 10:06 - code - VectorBT 12:53 - code - NautilusTrader 16:23 - code - QuantConnect 19:57 - code - LumiBot 22:45 - code comparison 28:02 - MetaTrader 30:14 - decision matric 31:43 - honorable mentions ↓ 31:46 - Trading View 32:17 - QuantRocket 32:42 - StrateQueue 33:51 - 5 trends to watch 35:44 - conclusion ⚡ What's covered: \n   Freqtrade vs NautilusTrader vs QuantConnect LEAN - which to use and when"
+    },
+    {
+      "url": "context7:/polakowo/vectorbt",
+      "title": "VectorBT",
+      "description": "vectorbt is a Python library for backtesting trading strategies with a focus on speed and ease of use, allowing users to test thousands of strategies with minimal code.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/vectorbt_dev",
+      "title": "vectorbt",
+      "description": "vectorbt is a Python package for high-performance quantitative analysis and backtesting of trading strategies, leveraging pandas, NumPy, and Numba for speed and interactive visualizations.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/freqtrade/freqtrade",
+      "title": "Freqtrade",
+      "description": "Freqtrade is a free and open-source crypto trading bot written in Python, supporting major exchanges and offering features like backtesting, plotting, money management, and strategy optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/freqtrade_io_en_stable",
+      "title": "Freqtrade",
+      "description": "Freqtrade is a free and open source cryptocurrency trading bot written in Python that supports major exchanges with backtesting, strategy optimization, and monitoring via Telegram or web UI.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/freqtrade_io_en_develop",
+      "title": "Freqtrade",
+      "description": "Freqtrade is a free and open source cryptocurrency trading bot written in Python that supports major exchanges and includes backtesting, strategy optimization, and control via Telegram or webUI.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/mystenlabs/nautilus",
+      "title": "Nautilus",
+      "description": "Nautilus is a framework for secure and verifiable off-chain computation on Sui, enabling developers to build hybrid applications with AWS Nitro Enclaves through reproducible builds and on-chain verification.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/subnauticamodding/nautilus",
+      "title": "Nautilus",
+      "description": "Nautilus is a modding library that enhances developer productivity for Subnautica mods by providing helper utilities for items, sprites, textures, audio, and configuration menus.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/backtestjs/framework",
+      "title": "Backtest JS Framework",
+      "description": "A comprehensive TypeScript framework for fetching historical candle data, backtesting trading strategies, and comparing results with support for Binance data and CSV imports.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hummingbot/hummingbot-site",
+      "title": "Hummingbot",
+      "description": "Hummingbot is an open-source framework that enables users to create and run algorithmic trading strategies across multiple exchanges and blockchains.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/hummingbot",
+      "title": "Hummingbot",
+      "description": "Hummingbot is a community-driven, open-source Python framework for building automated market making and algorithmic trading bots, designed to be modular and extensible for any strategy on any exchange and blockchain.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/tdl321/hummingbot",
+      "title": "Hummingbot",
+      "description": "Hummingbot is an open-source framework for designing and deploying automated trading strategies (bots) across various centralized and decentralized exchanges, aiming to democratize high-frequency trading.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hummingbot/hummingbot",
+      "title": "Hummingbot",
+      "description": "Open source software that helps you create and deploy high-frequency crypto trading bots",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/vectorbt_pro",
+      "title": "VectorBT PRO",
+      "description": "VectorBT PRO is a high-performance engine for backtesting, algorithmic trading, and quantitative research that uses vectorized array operations and Numba compilation for rapid parameter optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/llmstxt/vectorbt_pro_pvt_4f8d7c01_llms-full_txt",
+      "title": "VectorBT Pro",
+      "description": "VectorBT Pro is a high-performance Python library for backtesting, analyzing, and optimizing trading strategies using a vectorized approach and a scalable ecosystem.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/freqtrade/freqtrade-strategies",
+      "title": "Freqtrade Strategies",
+      "description": "A collection of free buy/sell trading strategies for Freqtrade, a Python-based cryptocurrency trading bot that supports backtesting and strategy optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/nautechsystems/nautilus_trader",
+      "title": "Nautilus Trader",
+      "description": "NautilusTrader is an open-source, high-performance, production-grade algorithmic trading platform for backtesting and live deployment of AI-first trading strategies across various asset classes.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/tyoverby/composition-comparison",
+      "title": "Composition Comparison",
+      "description": "This repository explores UI framework composition patterns by implementing a counter component in Bonsai, Elm, and React.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/tripolskypetr/backtest-kit",
+      "title": "Backtest Kit",
+      "description": "A TypeScript framework for backtesting and live trading strategies on multi-asset, crypto, forex or DEX, spot, futures with crash-safe persistence, signal validation, and AI optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hummingbot/deploy",
+      "title": "Hummingbot Deploy",
+      "description": "A project to deploy multiple Hummingbot trading bots using a centralized dashboard, Hummingbot API, PostgreSQL, and EMQX.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hummingbot/mcp",
+      "title": "Hummingbot MCP",
+      "description": "An MCP server that allows Claude and Gemini CLI to interact with Hummingbot for automated cryptocurrency trading across multiple exchanges.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hummingbot/gateway",
+      "title": "Hummingbot Gateway",
+      "description": "Hummingbot Gateway is a TypeScript-based REST API providing a unified interface for blockchain networks and decentralized exchanges, supporting multi-chain and various trading types.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/10mohi6/portfolio-backtest-python",
+      "title": "Portfolio Backtest",
+      "description": "A Python library for backtesting portfolio asset allocation strategies, including Tangency, Minimum Variance, Hierarchical Risk Parity, and CVaR optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/bartonguestier1725-collab/backtest-engine",
+      "title": "Backtest Engine",
+      "description": "A Numba JIT-accelerated backtesting engine for trading strategies that provides 10-50x speedup with technical indicators, Monte Carlo drawdown analysis, and walk-forward validation.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hummingbot/hummingbot-api",
+      "title": "Hummingbot API",
+      "description": "A comprehensive RESTful API framework for managing trading operations across multiple exchanges, enabling centralized control of trading functionalities, account management, and automated strategies.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/help_solidworks_2026_english",
+      "title": "SOLIDWORKS 2026",
+      "description": "SOLIDWORKS 2026 is a professional 3D CAD software for product design, simulation, and manufacturing that enables engineers and designers to create complex mechanical designs.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/goldmansachs/gs-quant",
+      "title": "GS Quant",
+      "description": "GS Quant is a Python toolkit for quantitative finance, accelerating the development of trading strategies and risk management solutions with a focus on derivative products.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/help_autodesk_view_acd_2025_enu",
+      "title": "AutoCAD 2025",
+      "description": "AutoCAD 2025 is a professional computer-aided design (CAD) software for 2D and 3D drafting, design, and documentation, providing tools for architectural design, engineering, and construction.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/ninjazan420/cve-2025-52691-poc-smartermail-authentication-bypass-exploit-wt-2026-0001",
+      "title": "CVE-2025-52691 / WT-2026-0001 SmarterMail Exploit",
+      "description": "A proof-of-concept exploit combining CVE-2025-52691 (Pre-Auth RCE) and WT-2026-0001 (Authentication Bypass) to achieve remote code execution on vulnerable SmarterMail instances.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/help_autodesk_view_acd_2026_enu",
+      "title": "AutoCAD 2026",
+      "description": "AutoCAD 2026 is a professional CAD software suite for design, drafting, and modeling with specialized toolsets for architecture, MEP, mechanical, electrical, plant 3D, map, and raster design.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/llmquant/quant-wiki",
+      "title": "Quant Wiki",
+      "description": "We are committed to the open-sourcing quantitative knowledge, aiming to bridge the information gap between the domestic and international quantitative finance industries.我们致力于量化知识的开源与汉化，打破国内外量化金融行业信息差。",
+      "provider": "context7"
+    }
+  ],
+  "extra_sources_count": 32,
+  "source_warning": "extra_sources are retrieved in parallel and are not automatically used to verify generated content; use fetch on key URLs for claim-level evidence.",
+  "routing_decision": {
+    "docs_intent": true,
+    "zh_current_intent": false,
+    "web_current_intent": false,
+    "fetch_intent": false,
+    "supplemental_paths": [
+      "docs_search"
+    ],
+    "validation_level": "balanced",
+    "fallback_mode": "auto",
+    "providers": "auto",
+    "main_search_chain": [
+      "xai-responses"
+    ]
+  },
+  "providers_used": [
+    "xAI Responses",
+    "tavily",
+    "context7"
+  ],
+  "provider_attempts": [
+    {
+      "capability": "main_search",
+      "provider": "xAI Responses",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 15138.62,
+      "result_count": 1
+    },
+    {
+      "capability": "web_search",
+      "provider": "tavily",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 18506.3,
+      "result_count": 2
+    },
+    {
+      "capability": "docs_search",
+      "provider": "context7",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 1381.52,
+      "result_count": 30
+    }
+  ],
+  "fallback_used": false,
+  "validation_level": "balanced",
+  "minimum_profile_ok": true,
+  "capability_status": {
+    "main_search": {
+      "configured": [
+        "xai-responses"
+      ],
+      "fallback_chain": [
+        "xai-responses",
+        "openai-compatible"
+      ],
+      "ok": true
+    },
+    "web_search": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "zhipu",
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    },
+    "docs_search": {
+      "configured": [
+        "context7"
+      ],
+      "fallback_chain": [
+        "exa",
+        "context7"
+      ],
+      "ok": true
+    },
+    "web_fetch": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    }
+  },
+  "elapsed_ms": 19888.0
+}

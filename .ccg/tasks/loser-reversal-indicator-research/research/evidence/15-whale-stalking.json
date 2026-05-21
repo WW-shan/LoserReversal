@@ -1,0 +1,207 @@
+{
+  "ok": true,
+  "error_type": "",
+  "error": "",
+  "session_id": "58cec6809124",
+  "query": "stalking individual whale wallet Hyperliquid James Wynn precise trades anticipate exit liquidation game theory",
+  "platform": "",
+  "model": "grok-4.20-fast",
+  "primary_api_mode": "xai-responses",
+  "content": "**James Wynn (aka @JamesWynnReal or \"moonpig\") is a high-profile, pseudonymous Hyperliquid trader known for extreme high-leverage (often 40x) directional bets on BTC, PEPE, and other assets.** He rose to fame turning small capital (hundreds of thousands) into tens of millions via early PEPE and aggressive perps trading, peaking with ~$87M profits before multiple massive drawdowns and liquidations exceeding $100M total losses. [[1]](https://finance.yahoo.com/news/hyperliquid-whale-james-wynn-closes-104755579.html)\n\nHis primary tracked wallet is **0x5078c2fbea2b2ad61bc840bc023e35fce56bedb6**. Hyperliquid is a decentralized perpetuals exchange with fully public on-chain positions, making \"stalking\" straightforward via dashboards (no private info needed). [[2]](https://www.theblock.co/post/355669/hyperliquid-whale-turns-bearish-flipping-1-billion-btc-position-from-long-to-short)\n\n### Real-Time Tracking Tools\nUse these public dashboards for precise, live position data (size, leverage, entry, PnL, liq price, funding):\n\n- **CoinGlass Hyperliquid Whale Page** for this wallet: https://www.coinglass.com/hyperliquid/0x5078c2fbea2b2ad61bc840bc023e35fce56bedb6 (shows positions, PnL history, etc.). [[3]](https://www.coinglass.com/hyperliquid/0x5078c2fbea2b2ad61bc840bc023e35fce56bedb6)\n- **Hypurrscan**: https://hypurrscan.io/address/[wallet] — detailed txs, positions, and history.\n- **Hyperdash.info**: Strong for trader-specific views and PnL.\n- **Lookonchain** (on X): Frequently posts real-time alerts on his moves.\n- Others: HyperTracker.io, CoinAnk liquidation map, WhaleStreet Telegram alerts for whales.\n\nPositions update on-chain in real time. Set alerts on these tools or follow Lookonchain/@JamesWynnReal for notifications. As of recent data, his activity has scaled down significantly after big losses—he often restarts with small deposits (thousands of USDC via referrals) and quickly gets liquidated. [[4]](https://fr.tradingview.com/news/coinpedia:b72dc0907094b:0-gambling-with-a-timer-james-wynn-returns-to-hyperliquid-with-a-40x-bitcoin-short/)\n\n### Trading Style and Patterns\n- **High-risk profile**: Heavy 20-40x leverage cross-margin bets. Builds large notionals (hundreds of millions to $1.27B peak on BTC long) quickly, often all-in style. Wins big on momentum (e.g., PEPE early entry), but volatility wipes him out. [[5]](https://www.tradingview.com/news/cointelegraph:069f153c4094b:0-hyperliquid-trader-james-wynn-goes-all-in-on-1-25b-bitcoin-long/)\n- **Frequent liquidations**: Hundreds historically (e.g., 9 in days, 6 in 2 weeks in some streaks). He has been liquidated on both massive longs and shorts. Liquidations often cluster when price moves 2-3% against him at high lev. [[6]](https://www.dlnews.com/articles/defi/hyperliquid-trader-james-wynn-liquidated-nine-times/)\n- **Transparency as a double-edged sword**: He (or his followers) posts positions publicly, drawing attention. This creates a \"main character\" effect—traders watch and sometimes hunt his obvious stop/liquidation levels. [[7]](https://thedefiant.io/news/defi/hyperliquid-whale-james-wynn-loses-usd47-million-in-a-week)\n- **Recent behavior (into 2026)**: Smaller restarts with fresh capital, flipping long/short on BTC, mixing in memecoins (PEPE, etc.). Quick entries/exits or adds, but pattern repeats toward liquidation. Has closed profitable BTC trades and rotated (e.g., to ETH). [[1]](https://finance.yahoo.com/news/hyperliquid-whale-james-wynn-closes-104755579.html)\n\n### Anticipating Exits and Liquidations: Game Theory Angle\nHyperliquid's public nature turns trading into a **multi-player game** with incomplete information and reflexivity:\n\n1. **Information Asymmetry & Signaling**:\n   - Wynn's positions are common knowledge. Large size signals conviction but also vulnerability → others (smaller traders, bots, counterparties) can position against him (e.g., front-run adds, hunt liq levels by pushing price toward his liquidation price). [[8]](https://www.prestolabs.io/research/how-to-lose-85mm-james-wynns-1-27b-btc-long)\n   - His public posts amplify this—creates self-fulfilling pressure or squeezes.\n\n2. **Liquidation Dynamics**:\n   - At 40x, a ~2.5% adverse move can fully liquidate. Funding rates, cascading liqs, and orderbook depth matter. Watch distance to liq price on dashboards. Exits often happen in clips (TWAP-like) to minimize slippage, but panic/unwind can be visible on-chain. [[9]](https://cryptorank.io/news/feed/d5279-james-wynn-liquidation-leaves-100m-account-nearly-wiped-out)\n   - Game theory: If many know his liq level, rational players may coordinate (or frontrun) to push price there for profit, especially in thin markets. Conversely, if he's right on direction, momentum chasers pile in.\n\n3. **Exit Anticipation**:\n   - **Profit-taking**: Partial closes on unrealized gains (seen in BTC flips). Monitor PnL spikes + position reductions.\n   - **Capitulation**: Full unwind or liq when underwater. History shows repeated cycles of deposit → build → liq → repeat with smaller size.\n   - **Rotation**: Shifts to alts/memes (PEPE, ETH) after BTC moves.\n   - **Indicators**: On-chain inflows from Binance/CEX, referral claims (small restarts), Twitter activity. Cross-reference with BTC price action and funding rates.\n\n4. **Broader Strategy Risks**:\n   - **Reflexivity**: His trades influenced Hyperliquid volume/attention but also invited predation. Platform handled $B+ sizes without breaking, but individual accounts don't. [[8]](https://www.prestolabs.io/research/how-to-lose-85mm-james-wynns-1-27b-btc-long)\n   - **Zero-sum perps**: Every win has a loser; high lev amplifies. Memecoin maxi background adds emotional/conviction bias.\n   - **Survival bias warning**: Early wins made him famous; long-term track record is heavy losses. Copying is high-risk (many \"new James Wynns\" appear and blow up).\n\n**Bottom line**: Track via the wallet dashboards above for precise real-time data—no advanced \"stalking\" needed due to on-chain transparency. His style is predictable in risk (over-leverage + public) but timing exits relies on watching price vs. his liq/entry levels + on-chain flows. This is speculative gambling, not sustainable alpha for most—use for sentiment/contrarian signals at best, never copy size/leverage. Always DYOR; markets can liquidate anyone.",
+  "sources": [
+    {
+      "url": "https://finance.yahoo.com/news/hyperliquid-whale-james-wynn-closes-104755579.html",
+      "title": "Hyperliquid Whale James Wynn Closes BTC Trade, Goes ..."
+    },
+    {
+      "url": "https://www.theblock.co/post/355669/hyperliquid-whale-turns-bearish-flipping-1-billion-btc-position-from-long-to-short",
+      "title": "Hyperliquid whale turns bearish, flipping $1 billion BTC ..."
+    },
+    {
+      "url": "https://www.coinglass.com/hyperliquid/0x5078c2fbea2b2ad61bc840bc023e35fce56bedb6",
+      "title": "Hyperliquid Whale Address Details, Perpetual Position ..."
+    },
+    {
+      "url": "https://fr.tradingview.com/news/coinpedia:b72dc0907094b:0-gambling-with-a-timer-james-wynn-returns-to-hyperliquid-with-a-40x-bitcoin-short/",
+      "title": "James Wynn Returns to Hyperliquid With a 40x Bitcoin Short"
+    },
+    {
+      "url": "https://www.tradingview.com/news/cointelegraph:069f153c4094b:0-hyperliquid-trader-james-wynn-goes-all-in-on-1-25b-bitcoin-long/",
+      "title": "Hyperliquid trader James Wynn goes 'all-in' on $1.25B ..."
+    },
+    {
+      "url": "https://www.dlnews.com/articles/defi/hyperliquid-trader-james-wynn-liquidated-nine-times/",
+      "title": "Hyperliquid trader James Wynn was liquidated nine times ..."
+    },
+    {
+      "url": "https://thedefiant.io/news/defi/hyperliquid-whale-james-wynn-loses-usd47-million-in-a-week",
+      "title": "Hyperliquid Whale James Wynn Loses $47 Million in a Week"
+    },
+    {
+      "url": "https://www.prestolabs.io/research/how-to-lose-85mm-james-wynns-1-27b-btc-long",
+      "title": "How To Lose $85MM: James Wynn's $1.27B BTC Long"
+    },
+    {
+      "url": "https://cryptorank.io/news/feed/d5279-james-wynn-liquidation-leaves-100m-account-nearly-wiped-out",
+      "title": "James Wynn Liquidation Leaves $100M Account Nearly ..."
+    },
+    {
+      "url": "https://www.binance.com/en/square/post/26977521172817",
+      "provider": "tavily",
+      "title": "Hyperliquid whale, James Wynn is back with new PEPE positions",
+      "description": "Wynn bets on the PEPE market run\n\nJames Wynn made a concentrated bet on KPEPE-USD through five long entries starting from 18,153 to over 6 million units, opened within a 95-minute window. Entry prices were between $0.011999 and $0.012015, and trade values were from $217 to more than $72,000.\n\nAnother screenshot from Lookonchain, timestamped later the same day, updated Wynn’s total portfolio value to $12,011.35, with his PEPE-related perpetual contract clocking $12,007.89.\n\nHis long position on KPEPE-USD had grown to 851,765 tokens, at $0.01201. With the token trading at $0.00001221 at the time of capture, Wynn’s portfolio had counted an unrealized gain of $1,708.16. Yet, the leveraged trader faces a funding rate risk of -7.22% and a liquidation price of $0.00001137. [...] According to Coingecko updates, PEPE is trading at $0.00001213, 3.7% less than its value 24 hours ago. The token’s intraday lows came close to Wynn’s liquidation level, at $0.00001175.\n\nRecord losses did not keep Wynn out of markets for long\n\nJames Wynn was the most talked about X account in May 2025 when his trading choices led to one of the heaviest collapses in the Hyperliquid trading community. He saw $100 million in long-Bitcoin positions wiped out when BTC’s price dropped below $105,000, equivalent to 949 BTC.\n\nShortly before the liquidation, Wynn had posted on X that he did not practice risk management and didn’t consider himself a professional. In a now-deleted message, he asserted: [...] “I’m effectively gambling, and I stand to lose everything. I strongly advise people against what I’m doing.”\n\nWynn doubled down on his long bets days later with another $100 million bet on Bitcoin, while accusing market makers of targeting his trades to force liquidations. The trader turned to the crypto community for donations to keep his positions alive, and at least 24 addresses responded with funds.\n\nNot long after receiving community support, Wynn announced he had liquidated 240 BTC, worth approximately $25 million at the time, to improve the viability of his remaining positions.\n\nCrypto market now in the red, pullback precedes CPI data release"
+    },
+    {
+      "url": "https://www.dlnews.com/articles/defi/hyperliquid-trader-james-wynn-liquidated-nine-times",
+      "provider": "tavily",
+      "title": "Hyperliquid trader James Wynn was liquidated nine times losing over $1m - DL News",
+      "description": "In the last two weeks, Wynn deposited over $1.2 million into Hyperliquid. Through a series of highly leveraged trades, he lost almost the entirety of his deposits, getting liquidated nine times in the process.\n\nHe placed bets worth 10 times the amount he put in, trading Bitcoin, Ethereum, Pepe, and Doge.\n\nWynn’s liquidations come after the trader made audacious bets that have led to tens of millions of dollars in losses. Overall, he is down almost $22 million on a single wallet since he started trading on the platform.\n\nWhen using leverage, the trader borrows money to place a bet larger than the amount he initially placed into the trade. If the trade goes in the wrong direction, the trader’s collateral is automatically sold by the exchange to cover the loss of the leveraged position. [...] On July 15, Wynn deposited $466,000 from Binance into Hyperliquid, immediately placing $20 million worth of leveraged long positions on Bitcoin. Within hours, the position was partially liquidated, resulting in a loss of $46,000.\n\nHowever, he kept the position open and eventually closed it in the green. Throughout the month, Wynn deposited a total of about $1.3 million into Hyperliquid, placing a mix of profitable and unprofitable trades. On July 20th, his account reached an unrealised profit of about $750,000.\n\n“Shit’s about to get real this week. For the record, I’m overly exposed,” said Wynn on July 27. [...] ## James Wynn’s lore\n\nWynn originally gained a following on X for trading memecoins, making a public call for Pepe to hit a $4.2 billion market value when it was trading at only $4.2 million. Claiming to have made eight figures, he took his profits and turned to leverage trading.\n\nWhile Wynn was relatively unknown at the time, he gained mainstream attention in May when he entered a highly leveraged Bitcoin long. During the month, he added to a $20 million position worth 40 times larger than the amount he put in.\n\nThe position reached a value of over $1 billion at the peak with an unrealised profit of over $100 million. However, shortly after the price of Bitcoin slid, triggering liquidations that led to a loss of $13 million."
+    }
+  ],
+  "sources_count": 11,
+  "primary_sources": [
+    {
+      "url": "https://finance.yahoo.com/news/hyperliquid-whale-james-wynn-closes-104755579.html",
+      "title": "Hyperliquid Whale James Wynn Closes BTC Trade, Goes ..."
+    },
+    {
+      "url": "https://www.theblock.co/post/355669/hyperliquid-whale-turns-bearish-flipping-1-billion-btc-position-from-long-to-short",
+      "title": "Hyperliquid whale turns bearish, flipping $1 billion BTC ..."
+    },
+    {
+      "url": "https://www.coinglass.com/hyperliquid/0x5078c2fbea2b2ad61bc840bc023e35fce56bedb6",
+      "title": "Hyperliquid Whale Address Details, Perpetual Position ..."
+    },
+    {
+      "url": "https://fr.tradingview.com/news/coinpedia:b72dc0907094b:0-gambling-with-a-timer-james-wynn-returns-to-hyperliquid-with-a-40x-bitcoin-short/",
+      "title": "James Wynn Returns to Hyperliquid With a 40x Bitcoin Short"
+    },
+    {
+      "url": "https://www.tradingview.com/news/cointelegraph:069f153c4094b:0-hyperliquid-trader-james-wynn-goes-all-in-on-1-25b-bitcoin-long/",
+      "title": "Hyperliquid trader James Wynn goes 'all-in' on $1.25B ..."
+    },
+    {
+      "url": "https://www.dlnews.com/articles/defi/hyperliquid-trader-james-wynn-liquidated-nine-times/",
+      "title": "Hyperliquid trader James Wynn was liquidated nine times ..."
+    },
+    {
+      "url": "https://thedefiant.io/news/defi/hyperliquid-whale-james-wynn-loses-usd47-million-in-a-week",
+      "title": "Hyperliquid Whale James Wynn Loses $47 Million in a Week"
+    },
+    {
+      "url": "https://www.prestolabs.io/research/how-to-lose-85mm-james-wynns-1-27b-btc-long",
+      "title": "How To Lose $85MM: James Wynn's $1.27B BTC Long"
+    },
+    {
+      "url": "https://cryptorank.io/news/feed/d5279-james-wynn-liquidation-leaves-100m-account-nearly-wiped-out",
+      "title": "James Wynn Liquidation Leaves $100M Account Nearly ..."
+    }
+  ],
+  "primary_sources_count": 9,
+  "extra_sources": [
+    {
+      "url": "https://www.binance.com/en/square/post/26977521172817",
+      "provider": "tavily",
+      "title": "Hyperliquid whale, James Wynn is back with new PEPE positions",
+      "description": "Wynn bets on the PEPE market run\n\nJames Wynn made a concentrated bet on KPEPE-USD through five long entries starting from 18,153 to over 6 million units, opened within a 95-minute window. Entry prices were between $0.011999 and $0.012015, and trade values were from $217 to more than $72,000.\n\nAnother screenshot from Lookonchain, timestamped later the same day, updated Wynn’s total portfolio value to $12,011.35, with his PEPE-related perpetual contract clocking $12,007.89.\n\nHis long position on KPEPE-USD had grown to 851,765 tokens, at $0.01201. With the token trading at $0.00001221 at the time of capture, Wynn’s portfolio had counted an unrealized gain of $1,708.16. Yet, the leveraged trader faces a funding rate risk of -7.22% and a liquidation price of $0.00001137. [...] According to Coingecko updates, PEPE is trading at $0.00001213, 3.7% less than its value 24 hours ago. The token’s intraday lows came close to Wynn’s liquidation level, at $0.00001175.\n\nRecord losses did not keep Wynn out of markets for long\n\nJames Wynn was the most talked about X account in May 2025 when his trading choices led to one of the heaviest collapses in the Hyperliquid trading community. He saw $100 million in long-Bitcoin positions wiped out when BTC’s price dropped below $105,000, equivalent to 949 BTC.\n\nShortly before the liquidation, Wynn had posted on X that he did not practice risk management and didn’t consider himself a professional. In a now-deleted message, he asserted: [...] “I’m effectively gambling, and I stand to lose everything. I strongly advise people against what I’m doing.”\n\nWynn doubled down on his long bets days later with another $100 million bet on Bitcoin, while accusing market makers of targeting his trades to force liquidations. The trader turned to the crypto community for donations to keep his positions alive, and at least 24 addresses responded with funds.\n\nNot long after receiving community support, Wynn announced he had liquidated 240 BTC, worth approximately $25 million at the time, to improve the viability of his remaining positions.\n\nCrypto market now in the red, pullback precedes CPI data release"
+    },
+    {
+      "url": "https://thedefiant.io/news/defi/hyperliquid-whale-james-wynn-loses-usd47-million-in-a-week",
+      "provider": "tavily",
+      "title": "Hyperliquid Whale James Wynn Loses $47 Million in a Week - \"The Defiant\"",
+      "description": "Advertisement\n\n# Hyperliquid Whale James Wynn Loses $47 Million in a Week\n\nHyperliquid Whale James Wynn Loses $47 Million in a Week\n\nA pseudonymous trader named James Wynn has been in the spotlight over the last week after publicly sharing his billion-dollar trading positions and liquidation levels, as well as huge gains and losses.\n\nWynn made headlines for his massive $1.2 billion long position in Bitcoin last week, which briefly took his account to an all-time high of $87 million in profit. However, after a series of losing trades, Wynn is now down $47 million over the last week.\n\nJames Wynn P&L - Hypurrscan\n\nWynn has been the center of attention since his run began, and now traders are seemingly hunting his stop losses and liquidation levels for sport."
+    },
+    {
+      "url": "https://www.dlnews.com/articles/defi/hyperliquid-trader-james-wynn-liquidated-nine-times",
+      "provider": "tavily",
+      "title": "Hyperliquid trader James Wynn was liquidated nine times losing over $1m - DL News",
+      "description": "In the last two weeks, Wynn deposited over $1.2 million into Hyperliquid. Through a series of highly leveraged trades, he lost almost the entirety of his deposits, getting liquidated nine times in the process.\n\nHe placed bets worth 10 times the amount he put in, trading Bitcoin, Ethereum, Pepe, and Doge.\n\nWynn’s liquidations come after the trader made audacious bets that have led to tens of millions of dollars in losses. Overall, he is down almost $22 million on a single wallet since he started trading on the platform.\n\nWhen using leverage, the trader borrows money to place a bet larger than the amount he initially placed into the trade. If the trade goes in the wrong direction, the trader’s collateral is automatically sold by the exchange to cover the loss of the leveraged position. [...] On July 15, Wynn deposited $466,000 from Binance into Hyperliquid, immediately placing $20 million worth of leveraged long positions on Bitcoin. Within hours, the position was partially liquidated, resulting in a loss of $46,000.\n\nHowever, he kept the position open and eventually closed it in the green. Throughout the month, Wynn deposited a total of about $1.3 million into Hyperliquid, placing a mix of profitable and unprofitable trades. On July 20th, his account reached an unrealised profit of about $750,000.\n\n“Shit’s about to get real this week. For the record, I’m overly exposed,” said Wynn on July 27. [...] ## James Wynn’s lore\n\nWynn originally gained a following on X for trading memecoins, making a public call for Pepe to hit a $4.2 billion market value when it was trading at only $4.2 million. Claiming to have made eight figures, he took his profits and turned to leverage trading.\n\nWhile Wynn was relatively unknown at the time, he gained mainstream attention in May when he entered a highly leveraged Bitcoin long. During the month, he added to a $20 million position worth 40 times larger than the amount he put in.\n\nThe position reached a value of over $1 billion at the peak with an unrealised profit of over $100 million. However, shortly after the price of Bitcoin slid, triggering liquidations that led to a loss of $13 million."
+    }
+  ],
+  "extra_sources_count": 3,
+  "source_warning": "extra_sources are retrieved in parallel and are not automatically used to verify generated content; use fetch on key URLs for claim-level evidence.",
+  "routing_decision": {
+    "docs_intent": false,
+    "zh_current_intent": false,
+    "web_current_intent": false,
+    "fetch_intent": false,
+    "supplemental_paths": [],
+    "validation_level": "balanced",
+    "fallback_mode": "auto",
+    "providers": "auto",
+    "main_search_chain": [
+      "xai-responses"
+    ]
+  },
+  "providers_used": [
+    "xAI Responses",
+    "tavily"
+  ],
+  "provider_attempts": [
+    {
+      "capability": "main_search",
+      "provider": "xAI Responses",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 15589.42,
+      "result_count": 1
+    },
+    {
+      "capability": "web_search",
+      "provider": "tavily",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 19100.92,
+      "result_count": 3
+    }
+  ],
+  "fallback_used": false,
+  "validation_level": "balanced",
+  "minimum_profile_ok": true,
+  "capability_status": {
+    "main_search": {
+      "configured": [
+        "xai-responses"
+      ],
+      "fallback_chain": [
+        "xai-responses",
+        "openai-compatible"
+      ],
+      "ok": true
+    },
+    "web_search": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "zhipu",
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    },
+    "docs_search": {
+      "configured": [
+        "context7"
+      ],
+      "fallback_chain": [
+        "exa",
+        "context7"
+      ],
+      "ok": true
+    },
+    "web_fetch": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    }
+  },
+  "elapsed_ms": 19100.95
+}

@@ -1,0 +1,561 @@
+{
+  "ok": true,
+  "error_type": "",
+  "error": "",
+  "session_id": "b1b01a010527",
+  "query": "token unlock event crypto price reaction empirical study backtest pre-unlock drop post-unlock rebound",
+  "platform": "",
+  "model": "grok-4.20-fast",
+  "primary_api_mode": "xai-responses",
+  "content": "**Empirical studies and backtests consistently show that token unlock events in crypto typically generate negative price pressure, with pre-unlock drops due to anticipation/selling and often limited or temporary post-unlock rebounds followed by further weakness.** [[1]](https://keyrock.com/from-locked-to-liquidity-what-16000-token-unlocks-teach-us/)\n\n### Key Empirical Findings\nLarge-scale analyses confirm predictable patterns around unlocks (releases of previously locked/vested tokens into circulation, increasing supply):\n\n- **Keyrock (16,000+ unlock events)**: \n  - ~**90% of unlocks** create negative price pressure, across sizes and types.\n  - Impacts often begin **~30 days before** the event (anticipatory selling, hedging).\n  - Bigger unlocks → sharper drops (2.4x the impact) and higher volatility.\n  - **Team unlocks** are worst (~-25% average crashes, often unsophisticated selling).\n  - **Ecosystem development** unlocks are least damaging or even slightly positive (~+1.18%).\n  - Investor unlocks show more controlled (sophisticated) selling.\n  - Post-unlock: Prices often stabilize within ~14 days, returning toward neutral, but overall trajectory remains negative in most cases.\n\n- **The Tie (350,000+ unlock events across 100+ tokens)**: Coins decline in the lead-up. For large unlocks (>100% of average daily volume), there can be a quick post-unlock rebound (relief that no immediate flood occurred), but prices then fall deeper within two weeks. Trading volume spikes significantly. [[2]](https://finance.yahoo.com/news/large-crypto-token-unlocks-drive-113315940.html)\n\n- **6th Man Ventures (5,000+ unlocks)**: Smaller unlocks (<1% of circulating supply) have minimal impact. Larger ones (>1%) correlate with bigger price drops. Prices were often higher pre-unlock (possible run-up) but showed downward pressure afterward; fully vested tokens or those with more private allocations performed relatively better. [[3]](https://6thman.ventures/writing/token-unlocks)\n\nOther analyses (e.g., Smartkarma, various trackers) echo that large unlocks (>1% supply) concentrate impact in the week before/after, with pre-emptive selling common. [[4]](https://www.smartkarma.com/insights/the-impact-of-token-unlock-events-on-cryptocurrency-prices-an-empirical-analysis)\n\n### Typical Price Reaction Pattern (Pre-Drop, Post-Rebound)\n1. **Pre-unlock (especially 30–7 days before)**: Consistent drawdowns as traders, hedgers, and speculators front-run expected supply. Retail anticipation accelerates this in the final week. [[1]](https://keyrock.com/from-locked-to-liquidity-what-16000-token-unlocks-teach-us/)\n2. **On/Immediate post-unlock**: Volatility spikes; possible short-term relief rebound if hedging absorbed supply or if the unlock is smaller than feared.\n3. **1–2 weeks post**: Often further weakness or stabilization below pre-event levels, as actual selling materializes (especially from teams/investors). Recovery depends on fundamentals, market sentiment, and what the unlocked tokens fund (e.g., ecosystem growth vs. insider cash-outs). [[2]](https://finance.yahoo.com/news/large-crypto-token-unlocks-drive-113315940.html)\n\n**Notable exceptions**: Strong narratives, bullish catalysts, high demand (e.g., staking/usage), or effective hedging/OTC can mute or reverse the effect. Prices in mature/fully vested projects may react less. [[5]](https://cryptorank.io/insights/research/how-to-market-play-token-unlocks)\n\n### Factors Influencing Severity\n- **Unlock size relative to circulating supply and daily volume**: Huge (>10%) or those >> ADV cause more pain. Ratio > supply absorption capacity is key. [[1]](https://keyrock.com/from-locked-to-liquidity-what-16000-token-unlocks-teach-us/)\n- **Recipient type**: Team/insiders → highest sell pressure; ecosystem/community → better.\n- **Vesting structure**: Cliffs (large batch) vs. linear (gradual).\n- **Market context**: Bull markets or strong fundamentals absorb supply better.\n- **Project stage**: Early/high FDV with low circulation → more dilution risk.\n\n### Practical Backtest/Trading Implications\n- **Bearish bias**: Treat major unlocks as events to hedge or avoid new longs. Shorting or reducing exposure pre-unlock is a common strategy.\n- **Opportunities**: Buy post-dip in strong projects once selling exhausts (after ~2 weeks stabilization), especially if oversold.\n- **Monitoring**: Use tools like Tokenomist, CryptoRank, or DefiLlama for schedules. Assess % of supply unlocked, recipient details, and historical reactions for the specific token. [[6]](https://tokenomist.ai/)\n\nThese patterns stem from basic supply-demand: sudden (or anticipated) supply increases without matching demand create downward pressure. However, they are probabilistic—not guaranteed—due to broader market factors, hedging, and sentiment. Always combine with project fundamentals and macro conditions. For the latest data, check ongoing trackers as the market evolves.",
+  "sources": [
+    {
+      "url": "https://keyrock.com/from-locked-to-liquidity-what-16000-token-unlocks-teach-us/",
+      "title": "From Locked to Liquidity: What 16000+ Token Unlocks ..."
+    },
+    {
+      "url": "https://finance.yahoo.com/news/large-crypto-token-unlocks-drive-113315940.html",
+      "title": "Large Crypto Token Unlocks Drive Prices Lower Within ..."
+    },
+    {
+      "url": "https://6thman.ventures/writing/token-unlocks",
+      "title": "We Analyzed 5000 Token Unlocks — This Is What We Found"
+    },
+    {
+      "url": "https://www.smartkarma.com/insights/the-impact-of-token-unlock-events-on-cryptocurrency-prices-an-empirical-analysis",
+      "title": "The Impact of Token Unlock Events on Cryptocurrency Prices"
+    },
+    {
+      "url": "https://cryptorank.io/insights/research/how-to-market-play-token-unlocks",
+      "title": "How to Market Play Token Unlocks?"
+    },
+    {
+      "url": "https://tokenomist.ai/",
+      "title": "Token Unlocks | Vesting Schedules & Release Data"
+    },
+    {
+      "url": "https://www.chaincatcher.com/en/article/2155856",
+      "provider": "tavily",
+      "title": "In-depth exploration of token unlocking: What is the most important factor affecting price changes? - ChainCatcher",
+      "description": "Ecosystem Development Unlocks\n\nIn ecosystem development, a unique trend is observed: a slight price decline in the 30 days before the unlock, followed by an immediate positive price impact after the unlock. Unlike other types of unlocks, ecosystem development unlocks typically guide tokens into plans that create long-term value and strengthen the protocol.\n\nWhy do prices rebound (and often rise) after the unlock? [...] ### Conclusion\n\nToken unlocks are an essential mechanism in the crypto ecosystem for funding development, incentivizing participation, and rewarding contributors. However, their intervals, scales, and recipient categories are key factors determining their price impact. Understanding what these impacts are and why they occur helps facilitate better trading and assists protocols in better structuring their unlocks.\n\nThe analysis of over 16,000 unlock events across 40 tokens in this article highlights key trends: [...] #### The Divide Between Cliffs and Linear Unlocks\n\nWhat is clearer in the data is the behavioral characteristics of larger-scale unlocks before the event occurs. In the 30 days leading up to the event, prices typically show a continuous decline, accelerating in the last week. After the unlock, prices often stabilize within about 14 days, returning to neutral levels.\n\nThis price behavior can be attributed to two main phenomena:"
+    },
+    {
+      "url": "https://www.gate.com/learn/articles/the-impact-of-token-unlocking-on-prices/4838",
+      "provider": "tavily",
+      "title": "The Impact of Token Unlocking on Prices | Gate Learn",
+      "description": "WLD Price Trends\n\nIn terms of price, WLD, which had long underperformed relative to BTC, experienced a substantial rally starting about a week before the unlocking event. Its price surged nearly 80% over three days, resulting in liquidations for many short traders driven by the unlocking event.\n\nOne reason for this could be Worldcoin’s announcement at the time to significantly extend the current unlocking timeline. This adjustment further reduced the amount of tokens unlocked in each period during this phase. The price rebound validates the earlier point that the unlocking rate can significantly affect token prices. [...] ### Token Unlocking Generally Leads to Price Drops\n\nTheoretically, after tokens are unlocked, the circulating supply increases. In the absence of other bullish or bearish events, the overall market capitalization of the token remains unchanged. The increase in circulating supply dilutes token value, typically leading to a decline in token price.\n\n  \nDYDX Token Unlocking Path\n\nIn January 2023, dYdX announced a delay in its originally scheduled token unlock of 150 million DYDX tokens (valued at over $200 million) from February 3, 2023, to December 1, 2023. Following the announcement, the price of DYDX surged nearly 25% on the same day and gained an additional 20% the next day, marking a significant rally.\n\n  \nDYDX Price Trend After Unlocking [...] ### Airdrops: A Special Case of Unlocking\n\nAs a unique form of unlocking, Airdrops are often the first unlock event following a Token Generation Event (TGE). The unlock volume is often close to or even equal to the token’s circulating supply. Consequently, price declines post-airdrop are generally more severe and long-lasting.\n\nWhile airdrop-induced price drops can also stem from other factors, such as the composition of token holders (e.g., many participants looking to sell immediately), the sheer increase in circulating supply amplifies the negative impact.\n\n  \nEIGEN Token Price Trends"
+    },
+    {
+      "url": "https://www.onesafe.io/blog/how-token-unlock-events-influence-cryptocurrency-prices",
+      "provider": "tavily",
+      "title": "What is the Impact of Token Unlock Events on Cryptocurrency Prices? - OneSafe Blog",
+      "description": "In essence, token unlock events are those moments when previously locked tokens are released into the market. Think of it as a floodgate opening. It can lead to short-term impacts on the price of cryptocurrencies. When a big chunk of an asset is released, it generally creates more supply. If demand remains the same, you will often see downward pressure on prices.\n\nFor example, ONDO had a huge unlock event in January 2025 when 1.94 billion tokens were released into circulation, which was over 130% of its entire circulating supply. This increase in supply can lead to market volatility. Some early investors or insiders might sell those tokens to realize profits, adding more selling pressure."
+    },
+    {
+      "url": "context7:/revenuecat/slide-to-unlock",
+      "title": "Slide to Unlock",
+      "description": "Slide to Unlock is a fully customizable slide-to-unlock UI component for Jetpack Compose and Kotlin Multiplatform that provides an engaging gesture-based interaction for user actions.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/revisit-studies/study",
+      "title": "Study",
+      "description": "reVISit Study is an interactive, web-based platform for creating and conducting user studies using a custom DSL for study setups and various stimuli.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/tripolskypetr/backtest-kit",
+      "title": "Backtest Kit",
+      "description": "A TypeScript framework for backtesting and live trading strategies on multi-asset, crypto, forex or DEX, spot, futures with crash-safe persistence, signal validation, and AI optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/10mohi6/portfolio-backtest-python",
+      "title": "Portfolio Backtest",
+      "description": "A Python library for backtesting portfolio asset allocation strategies, including Tangency, Minimum Variance, Hierarchical Risk Parity, and CVaR optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/bartonguestier1725-collab/backtest-engine",
+      "title": "Backtest Engine",
+      "description": "A Numba JIT-accelerated backtesting engine for trading strategies that provides 10-50x speedup with technical indicators, Monte Carlo drawdown analysis, and walk-forward validation.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/litteice/gpf_study",
+      "title": "GPF Study",
+      "description": "GPF Study provides relevant documentation and example code for GPF.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/stolinski/drop-in",
+      "title": "Drop In",
+      "description": "Drop In is a framework designed to help developers quickly build local-first applications, particularly with Zero, offering features like a CSS system, UI elements, authentication, and Drizzle-based database integration.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/pre-commit",
+      "title": "pre-commit",
+      "description": "A framework for managing and maintaining multi-language pre-commit hooks that automatically run code linters and checks before every commit.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/pre-commit/pre-commit.com",
+      "title": "pre-commit",
+      "description": "Pre-commit is a framework for managing and executing pre-commit hooks, automating code quality checks before commits.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/bible-study_mctx_ai",
+      "title": "Bible Study",
+      "description": "Bible Study is a tool for studying Scripture in its original languages, tracing themes across both testaments, and comparing five translations with semantic search, cross-references, and word studies.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/pre-commit/pre-commit",
+      "title": "Pre-commit",
+      "description": "A framework for managing and maintaining multi-language pre-commit hooks to automate code quality checks before commits.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/llmstxt/21_dev_data_event_llms_txt",
+      "title": "Event",
+      "description": "Event is a Swift package providing async TCP client/server primitives and event-loop dispatch backed by libevent's platform-optimal I/O multiplexers (kqueue on Apple, epoll on Linux).",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/dtyxs/pre-dpo",
+      "title": "Pre-DPO",
+      "description": "Pre-DPO is a simple yet effective DPO-based training paradigm that enhances preference optimization performance by leveraging a guiding reference model.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/nkaz001/hftbacktest",
+      "title": "HFT Backtest",
+      "description": "HFT Backtest is a high-frequency trading backtesting framework designed for developing trading and market-making strategies with accurate feed/order latency simulation and order queue position modeling.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/cryptopp_ref",
+      "title": "Crypto++",
+      "description": "Crypto++ is a free C++ class library of cryptographic schemes providing implementations of block ciphers, stream ciphers, hash functions, public-key cryptography, and more.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/t3rminus/canada-post",
+      "title": "Canada Post",
+      "description": "A straightforward wrapper for the Canada Post API, handling basic rating, non-contract shipments, and tracking.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/ansys/pydpf-post",
+      "title": "PyDPF-Post",
+      "description": "PyDPF-Post is a high-level, physics-oriented Python library for postprocessing simulation data from Ansys and third-party result files using the Ansys Data Processing Framework.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/upload-post_api_reference",
+      "title": "Upload-Post",
+      "description": "Upload-Post is an API that enables programmatic uploading of videos, photos, and text posts to multiple social media platforms like TikTok, Instagram, and X, along with user profile management.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/weidai11/cryptopp",
+      "title": "Crypto++",
+      "description": "free C++ class library of cryptographic schemes",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hohoemi-rabo/post-craft",
+      "title": "Post Craft",
+      "description": "A Next.js project bootstrapped with create-next-app, providing a foundation for building web applications with features like `next/font` for optimized typography.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/abcdstudy",
+      "title": "ABCD Study",
+      "description": "The Adolescent Brain Cognitive Development Study is a longitudinal research initiative providing comprehensive data on brain development, cognitive abilities, and behavioral outcomes in adolescents, with tools for data access, exploration, and analysis.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/ajakka/react-native-reaction-bubble",
+      "title": "React Native Reaction Bubble",
+      "description": "A React Native component that recreates the WhatsApp reactions bubble UI, built with Reanimated 3 for smooth animations.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/juneandgreen/sm-crypto",
+      "title": "SM-Crypto",
+      "description": "sm-crypto provides JavaScript implementations for Chinese national cryptographic algorithms SM2, SM3, and SM4, supporting key generation, encryption/decryption, and signature/verification.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/lorenzwalthert/precommit",
+      "title": "Pre-Commit",
+      "description": "Pre-Commit is an R package providing useful git hooks for code quality checks like formatting, linting, and spell checking.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/readme_priceapi",
+      "title": "Price API",
+      "description": "Price API is an e-commerce market data API that provides current and real-time pricing information, product data, and competitive insights by scraping major retailers, marketplaces, and price comparison sites.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/oslo-project/crypto",
+      "title": "Oslo Crypto",
+      "description": "A very basic, runtime-agnostic crypto library",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/llmstxt/raw_githubusercontent_rusty-trading_crypto-exchange-docs_refs_heads_main_bybit_llms_txt",
+      "title": "Bybit Crypto Loan and Leverage Token API",
+      "description": "Provides API endpoints and documentation for querying crypto loan repayment history and redeeming leverage tokens on the Bybit exchange.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/dromara/sa-token",
+      "title": "Sa-Token",
+      "description": "Sa-Token is a lightweight Java permission authentication framework that simplifies and elegantly handles authentication, authorization, SSO, OAuth2.0, and microservice security.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/pmndrs/postprocessing",
+      "title": "Post Processing",
+      "description": "A post processing library for three.js that introduces passes and effects for fullscreen image manipulation.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/luminati-io/bright-data-web-unlocker-nodejs-project",
+      "title": "Bright Data Web Unlocker Node.js Project",
+      "description": "A Node.js example project demonstrating how to use Bright Data's Web Unlocker API to bypass anti-bot protection and CAPTCHAs on websites.",
+      "provider": "context7"
+    }
+  ],
+  "sources_count": 39,
+  "primary_sources": [
+    {
+      "url": "https://keyrock.com/from-locked-to-liquidity-what-16000-token-unlocks-teach-us/",
+      "title": "From Locked to Liquidity: What 16000+ Token Unlocks ..."
+    },
+    {
+      "url": "https://finance.yahoo.com/news/large-crypto-token-unlocks-drive-113315940.html",
+      "title": "Large Crypto Token Unlocks Drive Prices Lower Within ..."
+    },
+    {
+      "url": "https://6thman.ventures/writing/token-unlocks",
+      "title": "We Analyzed 5000 Token Unlocks — This Is What We Found"
+    },
+    {
+      "url": "https://www.smartkarma.com/insights/the-impact-of-token-unlock-events-on-cryptocurrency-prices-an-empirical-analysis",
+      "title": "The Impact of Token Unlock Events on Cryptocurrency Prices"
+    },
+    {
+      "url": "https://cryptorank.io/insights/research/how-to-market-play-token-unlocks",
+      "title": "How to Market Play Token Unlocks?"
+    },
+    {
+      "url": "https://tokenomist.ai/",
+      "title": "Token Unlocks | Vesting Schedules & Release Data"
+    }
+  ],
+  "primary_sources_count": 6,
+  "extra_sources": [
+    {
+      "url": "https://www.chaincatcher.com/en/article/2155856",
+      "provider": "tavily",
+      "title": "In-depth exploration of token unlocking: What is the most important factor affecting price changes? - ChainCatcher",
+      "description": "Ecosystem Development Unlocks\n\nIn ecosystem development, a unique trend is observed: a slight price decline in the 30 days before the unlock, followed by an immediate positive price impact after the unlock. Unlike other types of unlocks, ecosystem development unlocks typically guide tokens into plans that create long-term value and strengthen the protocol.\n\nWhy do prices rebound (and often rise) after the unlock? [...] ### Conclusion\n\nToken unlocks are an essential mechanism in the crypto ecosystem for funding development, incentivizing participation, and rewarding contributors. However, their intervals, scales, and recipient categories are key factors determining their price impact. Understanding what these impacts are and why they occur helps facilitate better trading and assists protocols in better structuring their unlocks.\n\nThe analysis of over 16,000 unlock events across 40 tokens in this article highlights key trends: [...] #### The Divide Between Cliffs and Linear Unlocks\n\nWhat is clearer in the data is the behavioral characteristics of larger-scale unlocks before the event occurs. In the 30 days leading up to the event, prices typically show a continuous decline, accelerating in the last week. After the unlock, prices often stabilize within about 14 days, returning to neutral levels.\n\nThis price behavior can be attributed to two main phenomena:"
+    },
+    {
+      "url": "https://www.gate.com/learn/articles/the-impact-of-token-unlocking-on-prices/4838",
+      "provider": "tavily",
+      "title": "The Impact of Token Unlocking on Prices | Gate Learn",
+      "description": "WLD Price Trends\n\nIn terms of price, WLD, which had long underperformed relative to BTC, experienced a substantial rally starting about a week before the unlocking event. Its price surged nearly 80% over three days, resulting in liquidations for many short traders driven by the unlocking event.\n\nOne reason for this could be Worldcoin’s announcement at the time to significantly extend the current unlocking timeline. This adjustment further reduced the amount of tokens unlocked in each period during this phase. The price rebound validates the earlier point that the unlocking rate can significantly affect token prices. [...] ### Token Unlocking Generally Leads to Price Drops\n\nTheoretically, after tokens are unlocked, the circulating supply increases. In the absence of other bullish or bearish events, the overall market capitalization of the token remains unchanged. The increase in circulating supply dilutes token value, typically leading to a decline in token price.\n\n  \nDYDX Token Unlocking Path\n\nIn January 2023, dYdX announced a delay in its originally scheduled token unlock of 150 million DYDX tokens (valued at over $200 million) from February 3, 2023, to December 1, 2023. Following the announcement, the price of DYDX surged nearly 25% on the same day and gained an additional 20% the next day, marking a significant rally.\n\n  \nDYDX Price Trend After Unlocking [...] ### Airdrops: A Special Case of Unlocking\n\nAs a unique form of unlocking, Airdrops are often the first unlock event following a Token Generation Event (TGE). The unlock volume is often close to or even equal to the token’s circulating supply. Consequently, price declines post-airdrop are generally more severe and long-lasting.\n\nWhile airdrop-induced price drops can also stem from other factors, such as the composition of token holders (e.g., many participants looking to sell immediately), the sheer increase in circulating supply amplifies the negative impact.\n\n  \nEIGEN Token Price Trends"
+    },
+    {
+      "url": "https://www.onesafe.io/blog/how-token-unlock-events-influence-cryptocurrency-prices",
+      "provider": "tavily",
+      "title": "What is the Impact of Token Unlock Events on Cryptocurrency Prices? - OneSafe Blog",
+      "description": "In essence, token unlock events are those moments when previously locked tokens are released into the market. Think of it as a floodgate opening. It can lead to short-term impacts on the price of cryptocurrencies. When a big chunk of an asset is released, it generally creates more supply. If demand remains the same, you will often see downward pressure on prices.\n\nFor example, ONDO had a huge unlock event in January 2025 when 1.94 billion tokens were released into circulation, which was over 130% of its entire circulating supply. This increase in supply can lead to market volatility. Some early investors or insiders might sell those tokens to realize profits, adding more selling pressure."
+    },
+    {
+      "url": "context7:/revenuecat/slide-to-unlock",
+      "title": "Slide to Unlock",
+      "description": "Slide to Unlock is a fully customizable slide-to-unlock UI component for Jetpack Compose and Kotlin Multiplatform that provides an engaging gesture-based interaction for user actions.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/revisit-studies/study",
+      "title": "Study",
+      "description": "reVISit Study is an interactive, web-based platform for creating and conducting user studies using a custom DSL for study setups and various stimuli.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/tripolskypetr/backtest-kit",
+      "title": "Backtest Kit",
+      "description": "A TypeScript framework for backtesting and live trading strategies on multi-asset, crypto, forex or DEX, spot, futures with crash-safe persistence, signal validation, and AI optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/10mohi6/portfolio-backtest-python",
+      "title": "Portfolio Backtest",
+      "description": "A Python library for backtesting portfolio asset allocation strategies, including Tangency, Minimum Variance, Hierarchical Risk Parity, and CVaR optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/bartonguestier1725-collab/backtest-engine",
+      "title": "Backtest Engine",
+      "description": "A Numba JIT-accelerated backtesting engine for trading strategies that provides 10-50x speedup with technical indicators, Monte Carlo drawdown analysis, and walk-forward validation.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/litteice/gpf_study",
+      "title": "GPF Study",
+      "description": "GPF Study provides relevant documentation and example code for GPF.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/stolinski/drop-in",
+      "title": "Drop In",
+      "description": "Drop In is a framework designed to help developers quickly build local-first applications, particularly with Zero, offering features like a CSS system, UI elements, authentication, and Drizzle-based database integration.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/pre-commit",
+      "title": "pre-commit",
+      "description": "A framework for managing and maintaining multi-language pre-commit hooks that automatically run code linters and checks before every commit.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/pre-commit/pre-commit.com",
+      "title": "pre-commit",
+      "description": "Pre-commit is a framework for managing and executing pre-commit hooks, automating code quality checks before commits.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/bible-study_mctx_ai",
+      "title": "Bible Study",
+      "description": "Bible Study is a tool for studying Scripture in its original languages, tracing themes across both testaments, and comparing five translations with semantic search, cross-references, and word studies.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/pre-commit/pre-commit",
+      "title": "Pre-commit",
+      "description": "A framework for managing and maintaining multi-language pre-commit hooks to automate code quality checks before commits.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/llmstxt/21_dev_data_event_llms_txt",
+      "title": "Event",
+      "description": "Event is a Swift package providing async TCP client/server primitives and event-loop dispatch backed by libevent's platform-optimal I/O multiplexers (kqueue on Apple, epoll on Linux).",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/dtyxs/pre-dpo",
+      "title": "Pre-DPO",
+      "description": "Pre-DPO is a simple yet effective DPO-based training paradigm that enhances preference optimization performance by leveraging a guiding reference model.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/nkaz001/hftbacktest",
+      "title": "HFT Backtest",
+      "description": "HFT Backtest is a high-frequency trading backtesting framework designed for developing trading and market-making strategies with accurate feed/order latency simulation and order queue position modeling.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/cryptopp_ref",
+      "title": "Crypto++",
+      "description": "Crypto++ is a free C++ class library of cryptographic schemes providing implementations of block ciphers, stream ciphers, hash functions, public-key cryptography, and more.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/t3rminus/canada-post",
+      "title": "Canada Post",
+      "description": "A straightforward wrapper for the Canada Post API, handling basic rating, non-contract shipments, and tracking.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/ansys/pydpf-post",
+      "title": "PyDPF-Post",
+      "description": "PyDPF-Post is a high-level, physics-oriented Python library for postprocessing simulation data from Ansys and third-party result files using the Ansys Data Processing Framework.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/upload-post_api_reference",
+      "title": "Upload-Post",
+      "description": "Upload-Post is an API that enables programmatic uploading of videos, photos, and text posts to multiple social media platforms like TikTok, Instagram, and X, along with user profile management.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/weidai11/cryptopp",
+      "title": "Crypto++",
+      "description": "free C++ class library of cryptographic schemes",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hohoemi-rabo/post-craft",
+      "title": "Post Craft",
+      "description": "A Next.js project bootstrapped with create-next-app, providing a foundation for building web applications with features like `next/font` for optimized typography.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/abcdstudy",
+      "title": "ABCD Study",
+      "description": "The Adolescent Brain Cognitive Development Study is a longitudinal research initiative providing comprehensive data on brain development, cognitive abilities, and behavioral outcomes in adolescents, with tools for data access, exploration, and analysis.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/ajakka/react-native-reaction-bubble",
+      "title": "React Native Reaction Bubble",
+      "description": "A React Native component that recreates the WhatsApp reactions bubble UI, built with Reanimated 3 for smooth animations.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/juneandgreen/sm-crypto",
+      "title": "SM-Crypto",
+      "description": "sm-crypto provides JavaScript implementations for Chinese national cryptographic algorithms SM2, SM3, and SM4, supporting key generation, encryption/decryption, and signature/verification.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/lorenzwalthert/precommit",
+      "title": "Pre-Commit",
+      "description": "Pre-Commit is an R package providing useful git hooks for code quality checks like formatting, linting, and spell checking.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/readme_priceapi",
+      "title": "Price API",
+      "description": "Price API is an e-commerce market data API that provides current and real-time pricing information, product data, and competitive insights by scraping major retailers, marketplaces, and price comparison sites.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/oslo-project/crypto",
+      "title": "Oslo Crypto",
+      "description": "A very basic, runtime-agnostic crypto library",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/llmstxt/raw_githubusercontent_rusty-trading_crypto-exchange-docs_refs_heads_main_bybit_llms_txt",
+      "title": "Bybit Crypto Loan and Leverage Token API",
+      "description": "Provides API endpoints and documentation for querying crypto loan repayment history and redeeming leverage tokens on the Bybit exchange.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/dromara/sa-token",
+      "title": "Sa-Token",
+      "description": "Sa-Token is a lightweight Java permission authentication framework that simplifies and elegantly handles authentication, authorization, SSO, OAuth2.0, and microservice security.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/pmndrs/postprocessing",
+      "title": "Post Processing",
+      "description": "A post processing library for three.js that introduces passes and effects for fullscreen image manipulation.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/luminati-io/bright-data-web-unlocker-nodejs-project",
+      "title": "Bright Data Web Unlocker Node.js Project",
+      "description": "A Node.js example project demonstrating how to use Bright Data's Web Unlocker API to bypass anti-bot protection and CAPTCHAs on websites.",
+      "provider": "context7"
+    }
+  ],
+  "extra_sources_count": 33,
+  "source_warning": "extra_sources are retrieved in parallel and are not automatically used to verify generated content; use fetch on key URLs for claim-level evidence.",
+  "routing_decision": {
+    "docs_intent": true,
+    "zh_current_intent": false,
+    "web_current_intent": false,
+    "fetch_intent": false,
+    "supplemental_paths": [
+      "docs_search"
+    ],
+    "validation_level": "balanced",
+    "fallback_mode": "auto",
+    "providers": "auto",
+    "main_search_chain": [
+      "xai-responses"
+    ]
+  },
+  "providers_used": [
+    "xAI Responses",
+    "tavily",
+    "context7"
+  ],
+  "provider_attempts": [
+    {
+      "capability": "main_search",
+      "provider": "xAI Responses",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 23579.81,
+      "result_count": 1
+    },
+    {
+      "capability": "web_search",
+      "provider": "tavily",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 26719.35,
+      "result_count": 3
+    },
+    {
+      "capability": "docs_search",
+      "provider": "context7",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 1562.68,
+      "result_count": 30
+    }
+  ],
+  "fallback_used": false,
+  "validation_level": "balanced",
+  "minimum_profile_ok": true,
+  "capability_status": {
+    "main_search": {
+      "configured": [
+        "xai-responses"
+      ],
+      "fallback_chain": [
+        "xai-responses",
+        "openai-compatible"
+      ],
+      "ok": true
+    },
+    "web_search": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "zhipu",
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    },
+    "docs_search": {
+      "configured": [
+        "context7"
+      ],
+      "fallback_chain": [
+        "exa",
+        "context7"
+      ],
+      "ok": true
+    },
+    "web_fetch": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    }
+  },
+  "elapsed_ms": 28282.27
+}

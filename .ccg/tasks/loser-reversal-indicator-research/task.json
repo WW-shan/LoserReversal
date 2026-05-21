@@ -1,0 +1,13 @@
+{
+  "id": "loser-reversal-indicator-research",
+  "title": "研究：基于链上亏损散户地址的反向指标策略可行性",
+  "status": "completed",
+  "strategy": "deep-research",
+  "currentPhase": "4-discuss",
+  "nextAction": "研究完成，等待用户讨论或决定 MVP 实施",
+  "status": "completed",
+  "gate": null,
+  "branch": "none (not a git repo)",
+  "scope": "loser-reversal-indicator-research",
+  "createdAt": "2026-05-21T11:11:59Z"
+}

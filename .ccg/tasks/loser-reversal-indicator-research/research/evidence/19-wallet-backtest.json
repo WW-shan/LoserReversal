@@ -1,0 +1,215 @@
+{
+  "ok": true,
+  "error_type": "",
+  "error": "",
+  "session_id": "4452380c5ec6",
+  "query": "individual wallet trade history time series backtest crypto track specific address PnL replay",
+  "platform": "",
+  "model": "grok-4.20-fast",
+  "primary_api_mode": "xai-responses",
+  "content": "**For tracking a specific crypto wallet address's trade history as a time series, calculating PnL (Profit & Loss), backtesting/replaying trades, and performing analysis, several specialized tools and platforms excel at this.** [[1]](https://nansen.ai/post/understanding-nansens-pnl-tracking-a-guide-for-crypto-traders)\n\nThese handle on-chain data from explorers (raw tx history) to enriched analytics (PnL, time-series charts, smart money insights). Nansen, Arkham, Dune Analytics, Zerion, and DeBank stand out for individual wallet analysis. [[2]](https://zerion.io/crypto-wallet-tracker)\n\n### Top Platforms for Wallet-Specific Analysis\n- **Nansen (Best for PnL & Smart Money Tracking)**: Enter any wallet address into the Wallet Profiler or Portfolio dashboard. It tracks **every wallet's PnL** across supported chains (EVM + Solana), from the first to the latest trade. Features include realized/unrealized PnL, cost basis tracking (updates on transfers), transaction history, holdings, and performance metrics. Filter by timeframes, tokens, or leaderboards. Ideal for replaying/analyzing trade sequences via detailed history. [[1]](https://nansen.ai/post/understanding-nansens-pnl-tracking-a-guide-for-crypto-traders)\n- **Arkham Intelligence**: Paste any address for portfolio breakdowns, balance history over time, PnL (realized/unrealized), inflows/outflows, counterparties, and visualizations. Strong for cross-chain tracking and entity-linked insights (e.g., whale behavior). Includes historical performance charts. [[3]](https://apify.com/muhammetakkurtt/arkham-intelligence-wallet-data-scraper)\n- **Dune Analytics (Custom & Free Dashboards)**: Community dashboards let you input a wallet address for token-specific or overall PnL, trade history, win rates, and time-series views. Examples: Pump.fun analyzers, Solana wallet PnL scanners, or alpha wallet trackers. Use SQL for custom time-series queries and backtesting-style replay. Great for Solana/Ethereum. [[4]](https://dune.com/apeteam/pnl-track)\n- **Zerion**: Connect or enter wallet addresses across 40+ chains. Provides real-time balances, transaction history, DeFi positions, NFTs, and portfolio performance with historical charts and PnL summaries. [[2]](https://zerion.io/crypto-wallet-tracker)\n- **Others**: CoinStats or Delta for portfolio views with PnL; blockchain explorers (Etherscan, Solscan) for raw tx history (manual PnL calculation). [[5]](https://coinledger.io/tools/best-crypto-portfolio-tracker)\n\n**Free tiers** exist for basic lookups; paid plans unlock deeper PnL, alerts, and multi-wallet tracking.\n\n### Time-Series & Replay/Backtest Capabilities\nMost tools provide **historical transaction exports** or charts for time-series analysis (e.g., cumulative PnL over time, trade timestamps, price at execution). [[6]](https://zerion.io/blog/top-10-crypto-wallet-data-apis-2025-guide/)\n\n- **Replay Trades**: Export tx data (CSV/JSON via APIs or dashboards) and simulate in code. Tools like Nansen/Dune show sequential trades for manual or scripted replay. [[7]](https://nansen.ai/post/how-to-track-crypto-wallets-across-multiple-blockchains-with-nansen)\n- **Backtesting Strategies on Wallet Data**: Replay a wallet's trades to test \"what if\" scenarios (e.g., different entry/exit rules). Use the wallet's actual history as a signal source.\n\n### Building Custom Time-Series Backtests (Code Approach)\nFor full control, fetch data via APIs and analyze in Python:\n\n1. **Data Sources/APIs**:\n   - Zerion, Moralis, or Helius (Solana) for enriched tx history with prices. [[6]](https://zerion.io/blog/top-10-crypto-wallet-data-apis-2025-guide/)\n   - Etherscan/BscScan/Solscan APIs for raw data.\n   - CoinGecko or similar for historical prices.\n\n2. **Python Tools**:\n   - Use `pandas` for time-series (resample trades, calculate cumulative PnL).\n   - `backtesting.py` or vectorbt for strategy replay/backtesting on the wallet's trade data.\n   - Example flow: Fetch txs → Enrich with prices → Compute realized PnL per trade (sell price - cost basis) → Plot equity curve. [[8]](https://www.coingecko.com/learn/crypto-backtesting-python)\n\nOpen-source examples exist on GitHub (e.g., wallet trade trackers). [[9]](https://github.com/0xTaoDev/Wallet-Trades-Tracker)\n\n**Libraries**: Pandas + NumPy for analysis; Plotly/Matplotlib for charts; Backtesting.py for simulations. [[10]](https://www.youtube.com/watch?v=T3PT4eV8xFU)\n\n### Key Metrics to Track\n- **Realized PnL**: Closed trades.\n- **Unrealized PnL**: Current holdings.\n- **Time-Series**: Cumulative returns, drawdowns, trade frequency, hold times, Sharpe ratio (some tools auto-compute).\n- **Replay Insights**: Win rate, avg. profit/trade, exposure over time.\n\n**Limitations**: Accurate PnL needs proper cost-basis handling (FIFO/LIFO); transfers between wallets complicate it—tools like Nansen automate this. DEX trades are well-covered; CEX may need manual import. [[1]](https://nansen.ai/post/understanding-nansens-pnl-tracking-a-guide-for-crypto-traders)\n\n**Start Here**: Try Nansen or Arkham Wallet Profiler with your target address for instant insights. For custom backtests, use Dune + Python export. Paid analytics platforms offer the most seamless experience for ongoing tracking.\n\nIf you provide a specific chain (e.g., Ethereum, Solana) or wallet address (for public analysis), or clarify \"backtest\" intent (e.g., strategy testing vs. trade replay), I can refine recommendations or guide a specific setup.",
+  "sources": [
+    {
+      "url": "https://nansen.ai/post/understanding-nansens-pnl-tracking-a-guide-for-crypto-traders",
+      "title": "Nansen AI"
+    },
+    {
+      "url": "https://zerion.io/crypto-wallet-tracker",
+      "title": "Crypto Wallet Tracker & Portfolio Tracking"
+    },
+    {
+      "url": "https://apify.com/muhammetakkurtt/arkham-intelligence-wallet-data-scraper",
+      "title": "Arkham Intelligence Wallet Data Scraper"
+    },
+    {
+      "url": "https://dune.com/apeteam/pnl-track",
+      "title": "PNL track - Dune"
+    },
+    {
+      "url": "https://coinledger.io/tools/best-crypto-portfolio-tracker",
+      "title": "7 Best Crypto Portfolio Trackers (2026)"
+    },
+    {
+      "url": "https://zerion.io/blog/top-10-crypto-wallet-data-apis-2025-guide/",
+      "title": "Best Crypto Wallet Data APIs | 2025 Update"
+    },
+    {
+      "url": "https://nansen.ai/post/how-to-track-crypto-wallets-across-multiple-blockchains-with-nansen",
+      "title": "How to Track Crypto Wallets Across Multiple Blockchains ..."
+    },
+    {
+      "url": "https://www.coingecko.com/learn/crypto-backtesting-python",
+      "title": "Crypto Backtesting Using Python with Source Code"
+    },
+    {
+      "url": "https://github.com/0xTaoDev/Wallet-Trades-Tracker",
+      "title": "0xTaoDev/Wallet-Trades-Tracker"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=T3PT4eV8xFU",
+      "title": "Backtesting.py (1/2) - Backtest Trading Strategies in Python"
+    },
+    {
+      "url": "https://blog.amberdata.io/how-to-use-data-to-backtest-crypto-trading-strategies",
+      "provider": "tavily",
+      "title": "How to Use Data to Backtest Crypto Trading Strategies",
+      "description": "We provide you with the data and infrastructure to drive algo trading strategies on DEXs, CEXs, spot markets, and derivatives exchanges. With our on-chain data and trade/time data series, you can build a crypto alpha generation platform to develop quantitative financial models or trading strategies that generate consistent alpha, and backtest everything before you deploy capital.\n\nWe collect data from hundreds of centralized and decentralized exchanges. See our DEX coverage here.\n\nThis means we can help you obtain the data for every protocol we support as far back as you want to go. We also offer lenses into some of the top protocols, which gives the time series and analytical ability to dig into all activity on a protocol, a pool, or a user's participation. [...] Let's take this in two parts. Backtesting crypto trading strategies is similar to backtesting in equity trading but with some significant additional complications. Typically, you would first define your specific strategy, be it a pairs trade (which is quite popular in crypto), a rebalance, or a buy/sell based on directional indicators/triggers."
+    },
+    {
+      "url": "https://www.diva-portal.org/smash/get/diva2:1811957/FULLTEXT02.pdf",
+      "provider": "tavily",
+      "title": "[PDF] CryptoCurrency Time Series analysis - DiVA portal",
+      "description": "13 14 Chapter 2. Background 2.2 Time Series Analysis Time series analysis is a speciﬁc way of analyzing a sequence of data points col-lected over an interval of time. In this analysis, it needs a large amount of data to ensure consistency and reliability. This large amount of data mainly helps in train-ing the developed system and getting more accuracy in results . The important feature of this analysis is to forecast future data based on historical data. Industries like ﬁnance, retail, and economics use this analysis frequently as they change in day-to-day life. Many applications are using this analysis for forecasting future prices like weather forecasting, automated stock trading, stock exchange, etc. [...] used this time series analysis with diﬀerent algorithms like Binary Auto Regressive Tree (BART), XGBoost, Auto Regressive Integrated Moving Average (ARIMA), Autore-gressive Fractionally Integrated Moving Average (ARFIMA), Long Short Term Mem-ory (LSTM), random forest, FBprohpet, and bidirectional LSTM algorithms. [...] cryptocurrencies like XRP. whereas, in our forecasting of time series analysis, we considered trading pairs of crypto coins like \"KRAKEN-SPOT-BTC-USD\", \"FTXUS-SPOT-BTC-USD\" etc."
+    }
+  ],
+  "sources_count": 12,
+  "primary_sources": [
+    {
+      "url": "https://nansen.ai/post/understanding-nansens-pnl-tracking-a-guide-for-crypto-traders",
+      "title": "Nansen AI"
+    },
+    {
+      "url": "https://zerion.io/crypto-wallet-tracker",
+      "title": "Crypto Wallet Tracker & Portfolio Tracking"
+    },
+    {
+      "url": "https://apify.com/muhammetakkurtt/arkham-intelligence-wallet-data-scraper",
+      "title": "Arkham Intelligence Wallet Data Scraper"
+    },
+    {
+      "url": "https://dune.com/apeteam/pnl-track",
+      "title": "PNL track - Dune"
+    },
+    {
+      "url": "https://coinledger.io/tools/best-crypto-portfolio-tracker",
+      "title": "7 Best Crypto Portfolio Trackers (2026)"
+    },
+    {
+      "url": "https://zerion.io/blog/top-10-crypto-wallet-data-apis-2025-guide/",
+      "title": "Best Crypto Wallet Data APIs | 2025 Update"
+    },
+    {
+      "url": "https://nansen.ai/post/how-to-track-crypto-wallets-across-multiple-blockchains-with-nansen",
+      "title": "How to Track Crypto Wallets Across Multiple Blockchains ..."
+    },
+    {
+      "url": "https://www.coingecko.com/learn/crypto-backtesting-python",
+      "title": "Crypto Backtesting Using Python with Source Code"
+    },
+    {
+      "url": "https://github.com/0xTaoDev/Wallet-Trades-Tracker",
+      "title": "0xTaoDev/Wallet-Trades-Tracker"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=T3PT4eV8xFU",
+      "title": "Backtesting.py (1/2) - Backtest Trading Strategies in Python"
+    }
+  ],
+  "primary_sources_count": 10,
+  "extra_sources": [
+    {
+      "url": "https://nansen.ai/post/understanding-nansens-pnl-tracking-a-guide-for-crypto-traders",
+      "provider": "tavily",
+      "title": "Nansen",
+      "description": "# Understanding Nansen's PnL Tracking: A Guide for Crypto Traders\n\nWe allow you to track every wallet’s PnL— from the most recent trade back to the very first, providing an unmatched view into the profitability of wallets across the crypto ecosystem on our supported chains.\n\nWritten by\n\nNansen Team\n\nRead Time\n\n5 min read\n\nPosted on\n\nAre you struggling to track crypto profits and losses across different wallets?\n\nNansen's PnL feature can make that significantly easier.\n\nWe allow you to track every wallet’s PnL— from the most recent trade back to the very first, providing an unmatched view into the profitability of wallets across the crypto ecosystem on our supported chains.\n\n## Why Nansen's PnL Tracking Matters\n\nSo then, what makes it special? [...] ## Key Takeaways\n\n Nansen tracks both DEX trades and transfers for complete PnL analysis\n Cost basis updates automatically with every transaction\n Transfer tracking ensures accurate multi-wallet portfolio analysis\n All wallets on EVM-compatible chains (Ethereum, Polygon, Arbitrum, etc.) are automatically pooled together, giving you a comprehensive view of performance across the entire EVM ecosystem.\n Solana wallet activities are tracked separately, allowing you to clearly understand performance on this unique ecosystem.\n\nReady to start tracking wallets like a pro?\n\nTry Nansen's PnL tracking features, surfacing the signals and creating winners.\n\nAbout the Author\n\n#### Nansen Team\n\nMore about\n\nNext Post\n\nUnderstanding Nansen's PnL Tracking: A Guide for Crypto Traders\n\nNext Post [...] Research\n\n1 min read\n\nMantle Q1 2026 Report\n\nWritten by\n\nNansen Team\n\nPosted on\n\nResearch\n\n1 min read\n\nTRON Q1 2026 Report\n\nWritten by\n\nNansen Team\n\nPosted on\n\nResearch\n\n1 min read\n\nTRON Q1 2026 Report\n\nWritten by\n\nNansen Team\n\nPosted on\n\n# Understanding Nansen's PnL Tracking: A Guide for Crypto Traders\n\nWritten by\n\nNansen Team\n\nRead Time\n\n5 min read\n\nPosted on\n\nAre you struggling to track crypto profits and losses across different wallets?\n\nNansen's PnL feature can make that significantly easier.\n\nWe allow you to track every wallet’s PnL— from the most recent trade back to the very first, providing an unmatched view into the profitability of wallets across the crypto ecosystem on our supported chains.\n\n## Why Nansen's PnL Tracking Matters\n\nSo then, what makes it special?"
+    },
+    {
+      "url": "https://blog.amberdata.io/how-to-use-data-to-backtest-crypto-trading-strategies",
+      "provider": "tavily",
+      "title": "How to Use Data to Backtest Crypto Trading Strategies",
+      "description": "We provide you with the data and infrastructure to drive algo trading strategies on DEXs, CEXs, spot markets, and derivatives exchanges. With our on-chain data and trade/time data series, you can build a crypto alpha generation platform to develop quantitative financial models or trading strategies that generate consistent alpha, and backtest everything before you deploy capital.\n\nWe collect data from hundreds of centralized and decentralized exchanges. See our DEX coverage here.\n\nThis means we can help you obtain the data for every protocol we support as far back as you want to go. We also offer lenses into some of the top protocols, which gives the time series and analytical ability to dig into all activity on a protocol, a pool, or a user's participation. [...] Let's take this in two parts. Backtesting crypto trading strategies is similar to backtesting in equity trading but with some significant additional complications. Typically, you would first define your specific strategy, be it a pairs trade (which is quite popular in crypto), a rebalance, or a buy/sell based on directional indicators/triggers."
+    },
+    {
+      "url": "https://www.diva-portal.org/smash/get/diva2:1811957/FULLTEXT02.pdf",
+      "provider": "tavily",
+      "title": "[PDF] CryptoCurrency Time Series analysis - DiVA portal",
+      "description": "13 14 Chapter 2. Background 2.2 Time Series Analysis Time series analysis is a speciﬁc way of analyzing a sequence of data points col-lected over an interval of time. In this analysis, it needs a large amount of data to ensure consistency and reliability. This large amount of data mainly helps in train-ing the developed system and getting more accuracy in results . The important feature of this analysis is to forecast future data based on historical data. Industries like ﬁnance, retail, and economics use this analysis frequently as they change in day-to-day life. Many applications are using this analysis for forecasting future prices like weather forecasting, automated stock trading, stock exchange, etc. [...] used this time series analysis with diﬀerent algorithms like Binary Auto Regressive Tree (BART), XGBoost, Auto Regressive Integrated Moving Average (ARIMA), Autore-gressive Fractionally Integrated Moving Average (ARFIMA), Long Short Term Mem-ory (LSTM), random forest, FBprohpet, and bidirectional LSTM algorithms. [...] cryptocurrencies like XRP. whereas, in our forecasting of time series analysis, we considered trading pairs of crypto coins like \"KRAKEN-SPOT-BTC-USD\", \"FTXUS-SPOT-BTC-USD\" etc."
+    }
+  ],
+  "extra_sources_count": 3,
+  "source_warning": "extra_sources are retrieved in parallel and are not automatically used to verify generated content; use fetch on key URLs for claim-level evidence.",
+  "routing_decision": {
+    "docs_intent": false,
+    "zh_current_intent": false,
+    "web_current_intent": false,
+    "fetch_intent": false,
+    "supplemental_paths": [],
+    "validation_level": "balanced",
+    "fallback_mode": "auto",
+    "providers": "auto",
+    "main_search_chain": [
+      "xai-responses"
+    ]
+  },
+  "providers_used": [
+    "xAI Responses",
+    "tavily"
+  ],
+  "provider_attempts": [
+    {
+      "capability": "main_search",
+      "provider": "xAI Responses",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 27443.45,
+      "result_count": 1
+    },
+    {
+      "capability": "web_search",
+      "provider": "tavily",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 30242.32,
+      "result_count": 3
+    }
+  ],
+  "fallback_used": false,
+  "validation_level": "balanced",
+  "minimum_profile_ok": true,
+  "capability_status": {
+    "main_search": {
+      "configured": [
+        "xai-responses"
+      ],
+      "fallback_chain": [
+        "xai-responses",
+        "openai-compatible"
+      ],
+      "ok": true
+    },
+    "web_search": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "zhipu",
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    },
+    "docs_search": {
+      "configured": [
+        "context7"
+      ],
+      "fallback_chain": [
+        "exa",
+        "context7"
+      ],
+      "ok": true
+    },
+    "web_fetch": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    }
+  },
+  "elapsed_ms": 30242.36
+}

@@ -1,0 +1,245 @@
+{
+  "ok": true,
+  "error_type": "",
+  "error": "",
+  "session_id": "7b1cd67af7ca",
+  "query": "Hyperliquid worst trader bottom traders fade contrarian indicator perpetuals losing positions liquidation",
+  "platform": "",
+  "model": "grok-4.20-fast",
+  "primary_api_mode": "xai-responses",
+  "content": "**Hyperliquid is a leading decentralized perpetuals (perps) exchange on its own L1, with on-chain order books, high leverage (often 20-50x+), and transparent trader data.** This makes it ideal for tracking \"smart money,\" liquidations, and contrarian plays. Your query focuses on **bottom/worst traders** (heavy losers), **fading** them (trading the opposite side), and using losing positions/liquidations as indicators. [[1]](https://app.hyperliquid.xyz/leaderboard) [[2]](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/contract-specifications)\n\n### Key Context: Most Traders Lose Money\n- Roughly **75-86% of Hyperliquid traders** are unprofitable or in losing positions at any time. Only a small percentage (e.g., ~14% in one analysis) show net gains. [[3]](https://www.techflowpost.com/en-US/article/31657) [[4]](https://beincrypto.com/hyperliquid-traders-profitability/)\n- High leverage amplifies this: small adverse moves trigger liquidations, wiping out accounts. Top traders can rack up $100M+ profits before massive reversals and rekt status. [[5]](https://www.bitget.com/news/detail/12560605177924)\n- **Contrarian angle (\"fade the bottom traders\")**: Crowded losing positions or visible heavy shorts/longs from underperformers can signal potential reversals, especially if leverage is extreme. Liquidations often fuel squeezes (e.g., cascading longs fuel upside). However, this is risky—markets can stay irrational longer than accounts stay solvent.\n\n### Tools for Tracking Worst Traders, Losing Positions, and Liquidations\n1. **Official Hyperliquid Leaderboard** (app.hyperliquid.xyz/leaderboard): Shows top PNL/ROI by time frame (24h, 7d, 30d, all-time). Sort or view lower ranks for big losers (negative PNL). Transparent wallet addresses. [[1]](https://app.hyperliquid.xyz/leaderboard)\n\n2. **Hyperdash** (hyperdash.com or similar): Excellent for PnL distribution, \"Rekt\" wallets (-$1M+), position sentiment (bullish/bearish by PNL tiers), and explorer tools. Tracks extremely unprofitable traders and aggregate long/short exposure. [[6]](https://hyperdash.com/explore)\n\n3. **Other trackers**:\n   - Dexly, Nansen, or Allium for leaderboards and liquidations. [[7]](https://whaleportal.com/blog/best-hyperliquid-tools/)\n   - On-chain explorers for specific wallet positions and open interest.\n   - YouTube/community videos on tracking best/worst traders (e.g., for spotting blow-ups). [[8]](https://www.youtube.com/watch?v=S1y91Zq0YhQ)\n\n**Liquidation data**: Public via Hyperliquid dashboards or Allium (hyperliquid.allium.so/liquidations). Shows users, margin/notional liquidated, and per-asset counts. High liquidation clusters often mark local tops/bottoms. [[9]](https://hyperliquid.allium.so/liquidations)\n\n### Notable \"Bottom Trader\" Examples & Patterns\nMany former leaderboard stars become cautionary tales after leverage blow-ups: [[5]](https://www.bitget.com/news/detail/12560605177924) [[10]](https://cryptorank.io/news/feed/e6a35-high-leverage-trading-cost-7-traders-fortune)\n- **BitcoinOG/1011short**, James Wynn, AguilaTrades, Machi Big Brother, Anti-CZ Whale: Turned $30M–$140M+ profits into massive losses or full liquidations.\n- James Wynn: Repeated high-leverage fades (e.g., against BTC moves) leading to multiple wipeouts. [[11]](https://www.tradingview.com/news/newsbtc:fdc522902094b:0-this-bitcoin-trader-lost-millions-in-2-weeks-here-s-how/)\n- Others: \"14-Win-Streak Trader,\" various whales losing $10M–$100M+ in reversals.\n\n**Patterns for contrarian use**:\n- **Crowded losing side** → Potential for squeeze if sentiment flips (e.g., heavy leveraged shorts get squeezed on upside).\n- **High liquidation volume** → Often exhausts one side, creating reversal setups.\n- **Whale herding** → Studies show mixed herding/contrarian behavior; selective following of large, profitable whales can work, but broad copying loses. [[12]](https://medium.com/@gwrx2005/combining-simulation-and-machine-learning-analysis-of-whale-trading-on-hyperliquid-93f10d96941b)\n- Fading extreme retail/degen leverage has edge in volatile perps but requires tight risk management.\n\n**Caveats**: Past performance (even big losses) doesn't predict future. Transparency helps, but frontrunning, manipulation risks, and oracle issues exist. Most \"worst traders\" lose due to over-leverage/emotion—not reliable mechanical signals. 75%+ lose overall, so blind fading is dangerous. [[3]](https://www.techflowpost.com/en-US/article/31657)\n\n### Practical Contrarian Approach\n- Monitor aggregate losing positions via Hyperdash (e.g., \"Rekt\" or very unprofitable buckets). [[6]](https://hyperdash.com/explore)\n- Watch liquidation leaderboards for spikes in one direction.\n- Cross-reference with open interest, funding rates, and price action.\n- Use stops, lower leverage, and confirm with broader market context. Consider copy-trading selective winners or reverse-copying clear degens via tools like BitMEX copy features. [[13]](https://www.bitmex.com/app/leaderboard/copy-leader/hyperliquid)\n\nHyperliquid's on-chain nature is a goldmine for this strategy, but **trade responsibly**—perps are zero-sum with high wipeout rates. Check live data on the official leaderboard and Hyperdash for current bottom traders and liquidations.",
+  "sources": [
+    {
+      "url": "https://app.hyperliquid.xyz/leaderboard",
+      "title": "Leaderboard"
+    },
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/trading/contract-specifications",
+      "title": "Contract specifications - Hyperliquid Docs - GitBook"
+    },
+    {
+      "url": "https://www.techflowpost.com/en-US/article/31657",
+      "title": "Data: 75% of Hyperliquid Traders Are Losing Money ..."
+    },
+    {
+      "url": "https://beincrypto.com/hyperliquid-traders-profitability/",
+      "title": "Why 86% of Hyperliquid Traders Are Facing Losses"
+    },
+    {
+      "url": "https://www.bitget.com/news/detail/12560605177924",
+      "title": "Eight Top Hyperliquid Traders Wiped Out After Massive ..."
+    },
+    {
+      "url": "https://hyperdash.com/explore",
+      "title": "Explore"
+    },
+    {
+      "url": "https://whaleportal.com/blog/best-hyperliquid-tools/",
+      "title": "Best Hyperliquid Tools for Traders (2026 Guide)"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=S1y91Zq0YhQ",
+      "title": "How to Track the Best (and Worst Traders) on Hyperliquid ..."
+    },
+    {
+      "url": "https://hyperliquid.allium.so/liquidations",
+      "title": "Liquidations"
+    },
+    {
+      "url": "https://cryptorank.io/news/feed/e6a35-high-leverage-trading-cost-7-traders-fortune",
+      "title": "Extreme leverage wipes out millions for seven traders"
+    },
+    {
+      "url": "https://www.tradingview.com/news/newsbtc:fdc522902094b:0-this-bitcoin-trader-lost-millions-in-2-weeks-here-s-how/",
+      "title": "This Bitcoin Trader Lost Millions In 2 Weeks, Here's How"
+    },
+    {
+      "url": "https://medium.com/@gwrx2005/combining-simulation-and-machine-learning-analysis-of-whale-trading-on-hyperliquid-93f10d96941b",
+      "title": "Combining Simulation and Machine Learning Analysis of ..."
+    },
+    {
+      "url": "https://www.bitmex.com/app/leaderboard/copy-leader/hyperliquid",
+      "title": "Copy Leader Leaderboard"
+    },
+    {
+      "url": "https://www.bitget.com/news/detail/12560605010983",
+      "provider": "tavily",
+      "title": "The largest liquidation in crypto history: Who suffered the most losses? Hyperliquid, the \"new star of perpetual contracts,\" is the hardest hit. | Bitget News",
+      "description": "Written by: Long Yue, Wallstreetcn\n\nThe crypto market went through a “bloodbath” over the weekend, with bitcoin plummeting from its all-time high of $126,000 to near $100,000. Nearly $20 billion in leveraged positions were wiped out, and more than 1.6 million traders were liquidated. The worst hit was the perpetual contract exchange Hyperliquid, where assets in over a thousand wallets were reduced to zero and more than $10 billion in positions were liquidated, far exceeding Binance’s $2.4 billion. Its auto-deleveraging mechanism was blamed for exacerbating the market crash. [...] Spencer Hallarn, Global Head of OTC Trading at crypto investment firm GSR, said: “This mechanism can create complex problems, especially for participants with more complex portfolios.” It may cause the hedged positions of quantitative market makers to be closed out prematurely, thus destabilizing their overall portfolios.\n\n## Winners and Losers: Who Profited from the Crash?\n\nHowever, this disaster was not bad news for everyone. According to CoinDesk, data shows that the top 100 traders on Hyperliquid collectively made $1.69 billion, while the top 100 losing traders lost $743 million. This means a net profit of $951 million, concentrated in the hands of a few highly leveraged short sellers. [...] The biggest winner was a trader with wallet address 0x5273…065f, who made over $700 million by shorting. The biggest loser, an account named “TheWhiteWhale,” lost $625,000. In addition, a community treasury called Hyperliquid Provider (HLP) profited over $30 million in this sell-off by taking over and closing out losing positions.\n\n## Aftershocks Remain: Will Bitcoin Fall Below $100,000?\n\nAlthough the market has begun to recover some lost ground after the weekend’s plunge, the full impact of the event may take days or even weeks to fully emerge.\n\nEdward Chin, CEO of crypto hedge fund Parataxis, said, “I suspect that in the coming days or weeks, we’ll hear about some funds blowing up or market makers taking heavy losses.”"
+    },
+    {
+      "url": "https://www.binance.com/en/square/post/21481674483769",
+      "provider": "tavily",
+      "title": "Hyperliquid Loses 4 Million USD: Mysterious Trader Makes 1.8 Million USD from ETH – Hack or High-Level Trick | Anh_ba_Cong - COLE on Binance Square",
+      "description": "Shocking Trade: Whales Win Big, HLP Loses Heavily\n\nThe wallet '0xf3f4' opened a long position in Ether ($ETH ) worth 340 million USD on Hyperliquid, using a perpetual futures contract with high leverage. Initially, this position brought in 8 million USD in unrealized profit. But instead of taking profits, the trader withdrew all collateral, causing the position to be liquidated. According to Kasper Vandeloock, a crypto trading advisor, due to the massive liquidation size, Hyperliquid's HLP pool had to take over the position at a price of 1,915 USD/ETH, resulting in a temporary loss exceeding 4 million USD when the current ETH price is 1,760 USD (11/03). [...] Perp\n\n0.34885\n\n-0.66%\n\nTrader's Perspective\n\nOn Binance:\n\n ETH/USDT: Monitor support at 1,750 USD for bottom fishing, or resistance at 1,800 USD if recovering.\n HYPE: Volatility around 14 USD presents a short-term opportunity, but be cautious of news from Hyperliquid.\n\nConclusion: Skill or Luck?\n\nHyperliquid denies a hack, but the '0xf3f4' incident making 1.8 million USD from a 340 million USD ETH position shows the fragility of high-leverage platforms. For Binance users, this is a warning about DeFi risks and an opportunity to capitalize on volatility. Will the mysterious trader reappear, or will Hyperliquid tightly lock this 'gap'? The answer lies in the next trades.\n\nRisk warning: Crypto investment is highly risky due to price volatility. Only invest what you are willing to lose. [...] BNB\n\nBNB\n\n662.93\n\n+1.13%\n\nWhat is HLP? Hidden Risks\n\nHLP is the market-making tool on Hyperliquid, allowing users to deposit USDC to earn profits from transaction fees and automated strategies. HLP typically stands opposite to traders: if the trader loses, HLP wins. But when a savvy trader like '0xf3f4' manipulates the system – withdrawing collateral to push HLP into a bad position – this pool can incur significant losses. DeFiyst, an anonymous trader, compared the incident to the GMX event in 2022, when a trader exploited asset pricing to profit 500,000-700,000 USD (according to Joshua Lim, Arbelos Markets).\n\nHyperliquid in the Eye of the Storm"
+    },
+    {
+      "url": "https://blog.amberdata.io/liquidations-on-perpetual-futures-contracts-as-a-leading-indicator-of-market-movement",
+      "provider": "tavily",
+      "title": "Liquidations On Perpetual Futures Contracts As a Leading Indicator ...",
+      "description": "Liquidation on perpetual futures contracts occurs when the trader’s position reaches a certain loss [...] Liquidation events happen when the trader's positions reach a certain loss level, and if the trader fails to meet the minimum margin requirements, their position may be liquidated. Analyzing liquidation data can provide valuable insights into potential short-term market moves, and serve as a leading indicator for market condition changes."
+    }
+  ],
+  "sources_count": 16,
+  "primary_sources": [
+    {
+      "url": "https://app.hyperliquid.xyz/leaderboard",
+      "title": "Leaderboard"
+    },
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/trading/contract-specifications",
+      "title": "Contract specifications - Hyperliquid Docs - GitBook"
+    },
+    {
+      "url": "https://www.techflowpost.com/en-US/article/31657",
+      "title": "Data: 75% of Hyperliquid Traders Are Losing Money ..."
+    },
+    {
+      "url": "https://beincrypto.com/hyperliquid-traders-profitability/",
+      "title": "Why 86% of Hyperliquid Traders Are Facing Losses"
+    },
+    {
+      "url": "https://www.bitget.com/news/detail/12560605177924",
+      "title": "Eight Top Hyperliquid Traders Wiped Out After Massive ..."
+    },
+    {
+      "url": "https://hyperdash.com/explore",
+      "title": "Explore"
+    },
+    {
+      "url": "https://whaleportal.com/blog/best-hyperliquid-tools/",
+      "title": "Best Hyperliquid Tools for Traders (2026 Guide)"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=S1y91Zq0YhQ",
+      "title": "How to Track the Best (and Worst Traders) on Hyperliquid ..."
+    },
+    {
+      "url": "https://hyperliquid.allium.so/liquidations",
+      "title": "Liquidations"
+    },
+    {
+      "url": "https://cryptorank.io/news/feed/e6a35-high-leverage-trading-cost-7-traders-fortune",
+      "title": "Extreme leverage wipes out millions for seven traders"
+    },
+    {
+      "url": "https://www.tradingview.com/news/newsbtc:fdc522902094b:0-this-bitcoin-trader-lost-millions-in-2-weeks-here-s-how/",
+      "title": "This Bitcoin Trader Lost Millions In 2 Weeks, Here's How"
+    },
+    {
+      "url": "https://medium.com/@gwrx2005/combining-simulation-and-machine-learning-analysis-of-whale-trading-on-hyperliquid-93f10d96941b",
+      "title": "Combining Simulation and Machine Learning Analysis of ..."
+    },
+    {
+      "url": "https://www.bitmex.com/app/leaderboard/copy-leader/hyperliquid",
+      "title": "Copy Leader Leaderboard"
+    }
+  ],
+  "primary_sources_count": 13,
+  "extra_sources": [
+    {
+      "url": "https://www.bitget.com/news/detail/12560605010983",
+      "provider": "tavily",
+      "title": "The largest liquidation in crypto history: Who suffered the most losses? Hyperliquid, the \"new star of perpetual contracts,\" is the hardest hit. | Bitget News",
+      "description": "Written by: Long Yue, Wallstreetcn\n\nThe crypto market went through a “bloodbath” over the weekend, with bitcoin plummeting from its all-time high of $126,000 to near $100,000. Nearly $20 billion in leveraged positions were wiped out, and more than 1.6 million traders were liquidated. The worst hit was the perpetual contract exchange Hyperliquid, where assets in over a thousand wallets were reduced to zero and more than $10 billion in positions were liquidated, far exceeding Binance’s $2.4 billion. Its auto-deleveraging mechanism was blamed for exacerbating the market crash. [...] Spencer Hallarn, Global Head of OTC Trading at crypto investment firm GSR, said: “This mechanism can create complex problems, especially for participants with more complex portfolios.” It may cause the hedged positions of quantitative market makers to be closed out prematurely, thus destabilizing their overall portfolios.\n\n## Winners and Losers: Who Profited from the Crash?\n\nHowever, this disaster was not bad news for everyone. According to CoinDesk, data shows that the top 100 traders on Hyperliquid collectively made $1.69 billion, while the top 100 losing traders lost $743 million. This means a net profit of $951 million, concentrated in the hands of a few highly leveraged short sellers. [...] The biggest winner was a trader with wallet address 0x5273…065f, who made over $700 million by shorting. The biggest loser, an account named “TheWhiteWhale,” lost $625,000. In addition, a community treasury called Hyperliquid Provider (HLP) profited over $30 million in this sell-off by taking over and closing out losing positions.\n\n## Aftershocks Remain: Will Bitcoin Fall Below $100,000?\n\nAlthough the market has begun to recover some lost ground after the weekend’s plunge, the full impact of the event may take days or even weeks to fully emerge.\n\nEdward Chin, CEO of crypto hedge fund Parataxis, said, “I suspect that in the coming days or weeks, we’ll hear about some funds blowing up or market makers taking heavy losses.”"
+    },
+    {
+      "url": "https://www.binance.com/en/square/post/21481674483769",
+      "provider": "tavily",
+      "title": "Hyperliquid Loses 4 Million USD: Mysterious Trader Makes 1.8 Million USD from ETH – Hack or High-Level Trick | Anh_ba_Cong - COLE on Binance Square",
+      "description": "Shocking Trade: Whales Win Big, HLP Loses Heavily\n\nThe wallet '0xf3f4' opened a long position in Ether ($ETH ) worth 340 million USD on Hyperliquid, using a perpetual futures contract with high leverage. Initially, this position brought in 8 million USD in unrealized profit. But instead of taking profits, the trader withdrew all collateral, causing the position to be liquidated. According to Kasper Vandeloock, a crypto trading advisor, due to the massive liquidation size, Hyperliquid's HLP pool had to take over the position at a price of 1,915 USD/ETH, resulting in a temporary loss exceeding 4 million USD when the current ETH price is 1,760 USD (11/03). [...] Perp\n\n0.34885\n\n-0.66%\n\nTrader's Perspective\n\nOn Binance:\n\n ETH/USDT: Monitor support at 1,750 USD for bottom fishing, or resistance at 1,800 USD if recovering.\n HYPE: Volatility around 14 USD presents a short-term opportunity, but be cautious of news from Hyperliquid.\n\nConclusion: Skill or Luck?\n\nHyperliquid denies a hack, but the '0xf3f4' incident making 1.8 million USD from a 340 million USD ETH position shows the fragility of high-leverage platforms. For Binance users, this is a warning about DeFi risks and an opportunity to capitalize on volatility. Will the mysterious trader reappear, or will Hyperliquid tightly lock this 'gap'? The answer lies in the next trades.\n\nRisk warning: Crypto investment is highly risky due to price volatility. Only invest what you are willing to lose. [...] BNB\n\nBNB\n\n662.93\n\n+1.13%\n\nWhat is HLP? Hidden Risks\n\nHLP is the market-making tool on Hyperliquid, allowing users to deposit USDC to earn profits from transaction fees and automated strategies. HLP typically stands opposite to traders: if the trader loses, HLP wins. But when a savvy trader like '0xf3f4' manipulates the system – withdrawing collateral to push HLP into a bad position – this pool can incur significant losses. DeFiyst, an anonymous trader, compared the incident to the GMX event in 2022, when a trader exploited asset pricing to profit 500,000-700,000 USD (according to Joshua Lim, Arbelos Markets).\n\nHyperliquid in the Eye of the Storm"
+    },
+    {
+      "url": "https://blog.amberdata.io/liquidations-on-perpetual-futures-contracts-as-a-leading-indicator-of-market-movement",
+      "provider": "tavily",
+      "title": "Liquidations On Perpetual Futures Contracts As a Leading Indicator ...",
+      "description": "Liquidation on perpetual futures contracts occurs when the trader’s position reaches a certain loss [...] Liquidation events happen when the trader's positions reach a certain loss level, and if the trader fails to meet the minimum margin requirements, their position may be liquidated. Analyzing liquidation data can provide valuable insights into potential short-term market moves, and serve as a leading indicator for market condition changes."
+    }
+  ],
+  "extra_sources_count": 3,
+  "source_warning": "extra_sources are retrieved in parallel and are not automatically used to verify generated content; use fetch on key URLs for claim-level evidence.",
+  "routing_decision": {
+    "docs_intent": false,
+    "zh_current_intent": false,
+    "web_current_intent": false,
+    "fetch_intent": false,
+    "supplemental_paths": [],
+    "validation_level": "balanced",
+    "fallback_mode": "auto",
+    "providers": "auto",
+    "main_search_chain": [
+      "xai-responses"
+    ]
+  },
+  "providers_used": [
+    "xAI Responses",
+    "tavily"
+  ],
+  "provider_attempts": [
+    {
+      "capability": "main_search",
+      "provider": "xAI Responses",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 24531.8,
+      "result_count": 1
+    },
+    {
+      "capability": "web_search",
+      "provider": "tavily",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 26853.29,
+      "result_count": 3
+    }
+  ],
+  "fallback_used": false,
+  "validation_level": "balanced",
+  "minimum_profile_ok": true,
+  "capability_status": {
+    "main_search": {
+      "configured": [
+        "xai-responses"
+      ],
+      "fallback_chain": [
+        "xai-responses",
+        "openai-compatible"
+      ],
+      "ok": true
+    },
+    "web_search": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "zhipu",
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    },
+    "docs_search": {
+      "configured": [
+        "context7"
+      ],
+      "fallback_chain": [
+        "exa",
+        "context7"
+      ],
+      "ok": true
+    },
+    "web_fetch": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    }
+  },
+  "elapsed_ms": 26853.31
+}

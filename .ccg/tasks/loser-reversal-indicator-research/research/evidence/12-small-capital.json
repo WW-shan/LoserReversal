@@ -1,0 +1,587 @@
+{
+  "ok": true,
+  "error_type": "",
+  "error": "",
+  "session_id": "aaadcfac3454",
+  "query": "small retail trader   starting capital perpetual crypto realistic profit expectation drawdown stories",
+  "platform": "",
+  "model": "grok-4.20-fast",
+  "primary_api_mode": "xai-responses",
+  "content": "**Realistic expectations for small retail traders in perpetual crypto futures (perps) are generally low to negative for most participants, with high risk of significant drawdowns or account wipeouts.** Perpetual futures allow leveraged betting on crypto prices (like BTC or ETH) without expiry, using margin and funding rates. They amplify both gains and losses dramatically due to volatility. [[1]](https://metamask.io/news/guide-to-crypto-perpetual-futures-for-beginners)\n\n### Starting Capital Recommendations\n- **Technical minimum**: As low as $100–500 on platforms like Binance, Bybit, etc., thanks to high leverage (up to 100x+ in some cases). [[2]](https://www.goatfundedtrader.com/blog/how-much-money-do-you-need-to-start-trading-futures)\n- **Practical/recommended for small retail**: **$1,000–$5,000+** to allow proper risk management. With smaller amounts, even modest adverse moves can trigger liquidation, leaving no room for learning or recovery. Micro contracts or low-leverage setups help, but you still need buffer for fees, funding rates, and volatility. [[3]](https://audacity.capital/trading-guides/how-much-money-do-you-need-to-start-trading-futures/)\n\nStart small, use demo accounts, and only risk what you can afford to lose entirely.\n\n### Realistic Profit Expectations\nMost retail traders in futures (including crypto perps) **lose money overall**. Studies and broker data show:\n- Median retail futures traders experience small net losses (hundreds of dollars per trading \"event\"), with many appearing for only a handful of trades. [[4]](https://www.cftc.gov/sites/default/files/2024-11/Retail_Traders_Futures_V2_new_ada.pdf)\n- ~70–80%+ of retail accounts are unprofitable over time (similar to forex/equities; crypto perps are often worse due to higher leverage/volatility). Platforms like GMX show net trader losses cumulatively. [[5]](https://ambergroup.medium.com/crypto-derivatives-part-1-perpetual-growth-1b15354b865f)\n- **Survivors/profitable traders**: Rare (often cited as 1–10% consistently profitable long-term). They focus on strict risk management rather than chasing big wins.\n\n**Monthly returns**:\n- **Beginners/small accounts**: Realistic target for consistency is **1–5% per month** (compounded) after fees/funding, not the 20–100%+ hype from influencers/YouTube. Many aim for 1–2% monthly initially. [[6]](https://www.binance.com/en/blog/futures/421499824684902224)\n- With good risk management (e.g., 0.5–1% risk per trade), a skilled trader might scale slowly. $1k account risking 1% ($10/trade) needs high win rate + favorable R:R to grow meaningfully.\n- High-leverage \"moonshots\" can yield 50%+ in a good trade but often lead to blowups. Compounding wins while surviving drawdowns is the real challenge. [[7]](https://www.youtube.com/watch?v=7g0XKSEjnT8)\n\nProfits are eroded by funding rates (especially in ranging/sideways markets), fees, slippage, and emotional decisions. Long-term buy-and-hold spot often outperforms active perp trading for most.\n\n### Drawdowns and Common Stories\n**Drawdowns are severe and frequent** in perps due to leverage:\n- A 5–10% adverse move on 10x leverage can wipe 50–100% of margin → liquidation. Higher leverage (20–125x) liquidates on even smaller moves (e.g., <1%). [[8]](https://blog.sei.io/trading/perps/perpetual-futures-vs-traditional-futures/)\n- Billions in liquidations occur during volatile periods (e.g., flash crashes, news events). One bad streak or revenge trade often cascades. [[9]](https://mudrex.com/learn/best-way-to-trade-bitcoin-futures/)\n\n**Typical retail stories** (from forums, studies, trader reports):\n- Quick wins early (e.g., catching a trend with leverage → doubling small account), followed by overconfidence and bigger positions → major loss or full wipeout.\n- Multiple small losses + one big liquidation erasing weeks/months of gains.\n- \"I started with $500, turned it to $2k in a week, then blew it on one over-leveraged short during a squeeze.\"\n- Persistent drawdowns from holding through funding payments or ignoring stop-losses. Many quit after 70–90%+ losses. [[10]](https://wazirx.com/blog/who-should-avoid-crypto-futures/)\n- Larger accounts ($10k+) fare better for surviving volatility but still see 20–50% drawdowns in bad periods.\n\nCFTC-style data on futures shows symmetrical P&L distribution around small median losses, with winners skewed (a few big winners, many small losers). [[4]](https://www.cftc.gov/sites/default/files/2024-11/Retail_Traders_Futures_V2_new_ada.pdf)\n\n### Key Advice for Small Retail Traders\n- **Risk management first**: Never risk >1% of account per trade. Use stop-losses, isolated margin, and low leverage (5–10x max to start). Position size conservatively.\n- Focus on high-probability setups, backtest, and journal trades. Treat it like a skill/business, not gambling.\n- Expect a long learning curve (months/years) with initial losses as tuition.\n- Consider alternatives: Spot/DCA for most capital, or paper trade extensively before real money.\n- Taxes, emotional toll, and opportunity cost matter—crypto perps are 24/7 and addictive.\n\n**Bottom line**: For small accounts, perpetual crypto trading is high-risk with realistic odds heavily against consistent profits. Most small retail traders lose capital; the few who succeed emphasize discipline over prediction. Start tiny, prioritize survival and education over quick riches. If possible, build skills in lower-leverage environments first.",
+  "sources": [
+    {
+      "url": "https://metamask.io/news/guide-to-crypto-perpetual-futures-for-beginners",
+      "title": "Crypto perpetual futures for beginners"
+    },
+    {
+      "url": "https://www.goatfundedtrader.com/blog/how-much-money-do-you-need-to-start-trading-futures",
+      "title": "How Much Money Do You Need To Start Trading Futures?"
+    },
+    {
+      "url": "https://audacity.capital/trading-guides/how-much-money-do-you-need-to-start-trading-futures/",
+      "title": "How Much Money Do You Need to Start Trading Futures ..."
+    },
+    {
+      "url": "https://www.cftc.gov/sites/default/files/2024-11/Retail_Traders_Futures_V2_new_ada.pdf",
+      "title": "Retail Traders in Futures Markets"
+    },
+    {
+      "url": "https://ambergroup.medium.com/crypto-derivatives-part-1-perpetual-growth-1b15354b865f",
+      "title": "Crypto Derivatives Part 1: Perpetual Growth | by Amber Group"
+    },
+    {
+      "url": "https://www.binance.com/en/blog/futures/421499824684902224",
+      "title": "How to Trade Futures with a Small Account"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=7g0XKSEjnT8",
+      "title": "How I'd Trade Futures With Just $1000 (Beginner-Friendly ..."
+    },
+    {
+      "url": "https://blog.sei.io/trading/perps/perpetual-futures-vs-traditional-futures/",
+      "title": "Perpetual Futures vs. Traditional Futures: Crypto Trader Guide"
+    },
+    {
+      "url": "https://mudrex.com/learn/best-way-to-trade-bitcoin-futures/",
+      "title": "Best Way to Trade Bitcoin Futures (2025): Strategies, Risks ..."
+    },
+    {
+      "url": "https://wazirx.com/blog/who-should-avoid-crypto-futures/",
+      "title": "Is Crypto Futures Trading Right for You? Who Should ..."
+    },
+    {
+      "url": "https://coinmarketman.com/blog/retail-trading-crypto-data",
+      "provider": "tavily",
+      "title": "15 Surprising Statistics About Retail Traders",
+      "description": "The global day trading community is estimated to be 9.6 million people.\n For younger traders in this category of traders, crypto is the preferred market.\n In an average year, profitable day traders account for 1.6% of all traders.\n Roughly 89% of day traders use technical analysis as part of their trading strategies.\n According to one study, the average day trader traded on 43 days of the year.\n\n### How long do retail traders last?\n\nRetail trading is not easy, but exactly how difficult is it? Here is some data on trader survival rates. [...] Nearly 40% of retail traders day trade for only one month.\n The average retail day trader loses money for six months before quitting.\n 97% of day traders lose money in less than a year.\n Within three years, only 13% of retail continues to day trade.\n After five years, only 7% of retail day traders remain.\n\n### How much money do retail traders have?\n\n Nearly 17% of day traders can earn minimum wage from their trading.\n Retail day traders who live in the US earn roughly $56 per hour from their trading.\n The average day trader enjoys a 10% return rate.\n But only about 1% of all day traders are able to predictably profit net of fees.\n\n### How much leverage do crypto traders use? [...] 🇬🇧 EN\n\nLaunch App\n\nHome>Blog>15 Surprising Statistics About Retail Traders\n\n15 Surprising Statistics About Retail Traders \n\n# 15 Surprising Statistics About Retail Traders\n\nBy CMM Team - 04-Sep-2023\n\nTrading is not an easy hobby or profession.\n\nRegardless of whether a retail trader is active in stocks, currencies, commodities, or crypto, making a living as a retail market participant is immensely challenging. For successful traders, the victory of overcoming these odds is extremely satisfying. But the numbers don’t lie – most traders fail. This article is a simple compilation of a variety of retail trading statistics for consideration by any readers who may be considering making trading their new hobby or full-time career."
+    },
+    {
+      "url": "https://www.fortraders.com/blog/trade-small-capital",
+      "provider": "tavily",
+      "title": "How to Trade with Small Capital in 2025 | For Traders",
+      "description": "One major issue is the disproportionate impact of transaction costs and slippage. For example, a $10 commission on a $500 trade eats up a much larger percentage of your capital compared to a bigger trade. Recovering from losses is another tough challenge. If your account takes a 50% hit, you’ll need a 100% gain just to get back to where you started. The odds are already stacked against small-capital traders, with research showing that 51% of retail investor accounts lose money when trading CFDs with certain providers. Highly volatile instruments like cryptocurrencies and Contracts for Difference (CFDs) can amplify these risks, especially for beginners. [...] Start by determining realistic profit targets. For example, if you're trading with $2,000, aim for monthly gains in the range of 5% to 10%. These targets should align with your trading strategy, current market conditions, and your level of experience.\n\nNext, establish a maximum drawdown limit - the total amount you're willing to lose before stepping back to reassess. For most small-capital traders, a 5% drawdown is a reasonable starting point. If your account drops by that amount, pause, figure out what went wrong, and adjust your strategy.\n\nTo manage individual trades, the 3-5-7 rule is a practical framework:\n\nThis approach ensures that even if you hit a rough patch, your account won't be wiped out, while your winning trades still have the potential for meaningful returns. [...] For Traders\n\nFor Traders\n\nFor Traders is a simulated prop trading platform tailored for those who don’t have a lot of personal capital to start with. Here’s how it works: you get access to virtual capital ranging from $6,000 to $100,000 for a one-time entry fee starting at $46. Meet a 9% profit target while staying within a 5% drawdown limit, and you unlock profit-sharing opportunities. This setup lets you manage larger positions than your own funds would typically allow.\n\nOne standout feature is the unlimited timeframe for challenges. You can work at your own pace, sticking to your strategy without feeling rushed."
+    },
+    {
+      "url": "context7:/perpetual-ml/perpetual",
+      "title": "Perpetual",
+      "description": "Perpetual is a self-generalizing gradient boosting machine that achieves optimal accuracy without hyperparameter optimization, available with high-performance bindings for Python, Rust, and R.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/valory-xyz/trader",
+      "title": "Trader",
+      "description": "The Trader service is an autonomous agent that places bets on prediction markets by interacting with an AI Mech to estimate probabilities and confidence levels, dynamically adjusting bet amounts and blacklisting unprofitable markets.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hkuds/ai-trader",
+      "title": "AI-Trader",
+      "description": "AI-Trader is a platform where five distinct AI models autonomously compete in NASDAQ 100 trading, leveraging a tool-driven architecture and real-time market data to determine which can generate the highest profits without human intervention.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/nautechsystems/nautilus_trader",
+      "title": "Nautilus Trader",
+      "description": "NautilusTrader is an open-source, high-performance, production-grade algorithmic trading platform for backtesting and live deployment of AI-first trading strategies across various asset classes.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/tez-capital/docs.tez.capital",
+      "title": "Tez Capital",
+      "description": "",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/tez-capital/docs.tez.capital_content",
+      "title": "Tez Capital",
+      "description": "",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/alexjsully/small-dev-talk",
+      "title": "Small Dev Talk",
+      "description": "Small Dev Talk is an independent news source covering the indie world of entertainment, providing a platform for upcoming developers to showcase their projects through interviews to an audience.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/wshobson/mcp-trader",
+      "title": "MCP Trader",
+      "description": "A simplified Model Context Protocol (MCP) server for stock and cryptocurrency analysis, featuring technical analysis tools and FastMCP resources for direct market data access.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/dfed/swift-testing-expectation",
+      "title": "Swift Testing Expectation",
+      "description": "Swift Testing Expectation provides asynchronous expectations for Swift Testing framework, enabling testing of code that fulfills expectations at indeterminate points in the future.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/cryptopp_ref",
+      "title": "Crypto++",
+      "description": "Crypto++ is a free C++ class library of cryptographic schemes providing implementations of block ciphers, stream ciphers, hash functions, public-key cryptography, and more.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/mohitk05/react-insta-stories",
+      "title": "React Insta Stories",
+      "description": "A React component that allows developers to easily implement Instagram-like stories in their applications, with customizable intervals and responsive design.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/priora_saltedge_berlingroup",
+      "title": "Victoriabank Retail",
+      "description": "Victoriabank Retail is a PSD2-compliant banking API that provides Third-Party Providers secure access to customer accounts, account information, and payment initiation services using the BerlinGroup standard.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/clensh/capital-library",
+      "title": "Capital.com Library",
+      "description": "Capital.com Library for anything",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/developer_helloretail",
+      "title": "Hello Retail",
+      "description": "Hello Retail is a personalization platform for ecommerce that uses AI-powered insights to deliver product recommendations, search, personalized pages, and product intelligence to optimize conversions and customer experience.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/tez_capital",
+      "title": "Tez Capital Docs",
+      "description": "Tez Capital provides documentation for its suite of tools designed for the Tezos blockchain, covering essential operations like baking, governance, delegator payments, and transaction monitoring.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/weidai11/cryptopp",
+      "title": "Crypto++",
+      "description": "free C++ class library of cryptographic schemes",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/instamojo/instamojo-nodejs",
+      "title": "Instamojo Retail",
+      "description": "Instamojo Retail is an official Node.js wrapper for the Instamojo API that enables developers to integrate payment processing, refunds, and order management into their applications.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/cloud_google_retail",
+      "title": "Google Cloud Retail",
+      "description": "Google Cloud Retail provides AI-powered solutions for retailers, including search, recommendations, and personalization, to enhance the shopping experience and drive business growth.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/developers_lightspeedhq_retail",
+      "title": "Lightspeed Retail API",
+      "description": "Comprehensive API documentation for Lightspeed Retail POS (R-Series) system, providing endpoints for inventory, sales, customer management, and order processing.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/juneandgreen/sm-crypto",
+      "title": "SM-Crypto",
+      "description": "sm-crypto provides JavaScript implementations for Chinese national cryptographic algorithms SM2, SM3, and SM4, supporting key generation, encryption/decryption, and signature/verification.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/oslo-project/crypto",
+      "title": "Oslo Crypto",
+      "description": "A very basic, runtime-agnostic crypto library",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/sonr-io/crypto",
+      "title": "Sonr Crypto",
+      "description": "Sonr Crypto is a collection of cryptographic primitives and protocols, including accumulators, zero-knowledge proofs, distributed key generation, and various encryption and signature schemes, used by Sonr.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/consensys/gnark-crypto",
+      "title": "gnark-crypto",
+      "description": "gnark-crypto provides efficient cryptographic primitives in Go, including elliptic curve cryptography, pairing schemes, FFT, KZG commitments, and digital signatures for zero-knowledge applications.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/avantis-labs/avantis_trader_sdk",
+      "title": "Avantis Trader SDK",
+      "description": "A powerful and flexible toolkit for trading on the Avantis platform, enabling developers and traders to interact with the Avantis DEX, access real-time price feeds, and execute trades.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/altcha-org/altcha-crypto",
+      "title": "Altcha Crypto",
+      "description": "Altcha Crypto is a lightweight library simplifying asymmetric data encryption using Web Crypto with a hybrid approach combining RSA keys and AES encryption.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/pub_dev_packages_native_crypto",
+      "title": "Native Crypto",
+      "description": "Native Crypto provides fast AES, MD5, SHA, and HMAC cryptographic functions using built-in system APIs with hardware-acceleration where supported, for various platforms including Android, Windows, and Linux.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/jeap-admin-ch/jeap-crypto",
+      "title": "jEAP Crypto",
+      "description": "jEAP Crypto is a library providing client-side AES-256 GCM encryption for data at-rest, with Spring Boot integration and simplified Key Management System implementations.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/rs_cml-crypto_6_2_0_cml_crypto",
+      "title": "Cml Crypto",
+      "description": "Cml Crypto is a Rust library providing cryptographic primitives, data structures, and utilities for secure operations, likely for blockchain or distributed ledger technology applications.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/node-saml/xml-crypto",
+      "title": "xml-crypto",
+      "description": "Xml digital signature and encryption library for Node.js",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/birdwingo/react-native-instagram-stories",
+      "title": "React Native Instagram Stories",
+      "description": "A React Native component that displays a horizontal scrollable list of user stories, inspired by Instagram, with support for images, videos, and text.",
+      "provider": "context7"
+    }
+  ],
+  "sources_count": 42,
+  "primary_sources": [
+    {
+      "url": "https://metamask.io/news/guide-to-crypto-perpetual-futures-for-beginners",
+      "title": "Crypto perpetual futures for beginners"
+    },
+    {
+      "url": "https://www.goatfundedtrader.com/blog/how-much-money-do-you-need-to-start-trading-futures",
+      "title": "How Much Money Do You Need To Start Trading Futures?"
+    },
+    {
+      "url": "https://audacity.capital/trading-guides/how-much-money-do-you-need-to-start-trading-futures/",
+      "title": "How Much Money Do You Need to Start Trading Futures ..."
+    },
+    {
+      "url": "https://www.cftc.gov/sites/default/files/2024-11/Retail_Traders_Futures_V2_new_ada.pdf",
+      "title": "Retail Traders in Futures Markets"
+    },
+    {
+      "url": "https://ambergroup.medium.com/crypto-derivatives-part-1-perpetual-growth-1b15354b865f",
+      "title": "Crypto Derivatives Part 1: Perpetual Growth | by Amber Group"
+    },
+    {
+      "url": "https://www.binance.com/en/blog/futures/421499824684902224",
+      "title": "How to Trade Futures with a Small Account"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=7g0XKSEjnT8",
+      "title": "How I'd Trade Futures With Just $1000 (Beginner-Friendly ..."
+    },
+    {
+      "url": "https://blog.sei.io/trading/perps/perpetual-futures-vs-traditional-futures/",
+      "title": "Perpetual Futures vs. Traditional Futures: Crypto Trader Guide"
+    },
+    {
+      "url": "https://mudrex.com/learn/best-way-to-trade-bitcoin-futures/",
+      "title": "Best Way to Trade Bitcoin Futures (2025): Strategies, Risks ..."
+    },
+    {
+      "url": "https://wazirx.com/blog/who-should-avoid-crypto-futures/",
+      "title": "Is Crypto Futures Trading Right for You? Who Should ..."
+    }
+  ],
+  "primary_sources_count": 10,
+  "extra_sources": [
+    {
+      "url": "https://coinmarketman.com/blog/retail-trading-crypto-data",
+      "provider": "tavily",
+      "title": "15 Surprising Statistics About Retail Traders",
+      "description": "The global day trading community is estimated to be 9.6 million people.\n For younger traders in this category of traders, crypto is the preferred market.\n In an average year, profitable day traders account for 1.6% of all traders.\n Roughly 89% of day traders use technical analysis as part of their trading strategies.\n According to one study, the average day trader traded on 43 days of the year.\n\n### How long do retail traders last?\n\nRetail trading is not easy, but exactly how difficult is it? Here is some data on trader survival rates. [...] Nearly 40% of retail traders day trade for only one month.\n The average retail day trader loses money for six months before quitting.\n 97% of day traders lose money in less than a year.\n Within three years, only 13% of retail continues to day trade.\n After five years, only 7% of retail day traders remain.\n\n### How much money do retail traders have?\n\n Nearly 17% of day traders can earn minimum wage from their trading.\n Retail day traders who live in the US earn roughly $56 per hour from their trading.\n The average day trader enjoys a 10% return rate.\n But only about 1% of all day traders are able to predictably profit net of fees.\n\n### How much leverage do crypto traders use? [...] 🇬🇧 EN\n\nLaunch App\n\nHome>Blog>15 Surprising Statistics About Retail Traders\n\n15 Surprising Statistics About Retail Traders \n\n# 15 Surprising Statistics About Retail Traders\n\nBy CMM Team - 04-Sep-2023\n\nTrading is not an easy hobby or profession.\n\nRegardless of whether a retail trader is active in stocks, currencies, commodities, or crypto, making a living as a retail market participant is immensely challenging. For successful traders, the victory of overcoming these odds is extremely satisfying. But the numbers don’t lie – most traders fail. This article is a simple compilation of a variety of retail trading statistics for consideration by any readers who may be considering making trading their new hobby or full-time career."
+    },
+    {
+      "url": "https://www.fortraders.com/blog/trade-small-capital",
+      "provider": "tavily",
+      "title": "How to Trade with Small Capital in 2025 | For Traders",
+      "description": "One major issue is the disproportionate impact of transaction costs and slippage. For example, a $10 commission on a $500 trade eats up a much larger percentage of your capital compared to a bigger trade. Recovering from losses is another tough challenge. If your account takes a 50% hit, you’ll need a 100% gain just to get back to where you started. The odds are already stacked against small-capital traders, with research showing that 51% of retail investor accounts lose money when trading CFDs with certain providers. Highly volatile instruments like cryptocurrencies and Contracts for Difference (CFDs) can amplify these risks, especially for beginners. [...] Start by determining realistic profit targets. For example, if you're trading with $2,000, aim for monthly gains in the range of 5% to 10%. These targets should align with your trading strategy, current market conditions, and your level of experience.\n\nNext, establish a maximum drawdown limit - the total amount you're willing to lose before stepping back to reassess. For most small-capital traders, a 5% drawdown is a reasonable starting point. If your account drops by that amount, pause, figure out what went wrong, and adjust your strategy.\n\nTo manage individual trades, the 3-5-7 rule is a practical framework:\n\nThis approach ensures that even if you hit a rough patch, your account won't be wiped out, while your winning trades still have the potential for meaningful returns. [...] For Traders\n\nFor Traders\n\nFor Traders is a simulated prop trading platform tailored for those who don’t have a lot of personal capital to start with. Here’s how it works: you get access to virtual capital ranging from $6,000 to $100,000 for a one-time entry fee starting at $46. Meet a 9% profit target while staying within a 5% drawdown limit, and you unlock profit-sharing opportunities. This setup lets you manage larger positions than your own funds would typically allow.\n\nOne standout feature is the unlimited timeframe for challenges. You can work at your own pace, sticking to your strategy without feeling rushed."
+    },
+    {
+      "url": "https://metamask.io/news/guide-to-crypto-perpetual-futures-for-beginners",
+      "provider": "tavily",
+      "title": "Perps trading for beginners",
+      "description": "For a three-way comparison that includes traditional futures, check out key perpetual futures concepts. For a deeper look using Bitcoin as a case study, see perpetual futures vs spot Bitcoin.\n\n  \n\n### A worked example\n\nHere's a hypothetical scenario showing what happens to a long position as the price moves.\n\nA trader deposits $100 as collateral and opens a long ETH position at 5x leverage. That $100 controls $500 of exposure, with ETH priced at $2,000.\n\n   ETH rises 10% to $2,200:The position gains $50. The trader's $100 is now worth $150—a 50% return on the deposited collateral.\n\n   ETH falls 10% to $1,800:The position loses $50. The trader's $100 drops to $50."
+    },
+    {
+      "url": "context7:/perpetual-ml/perpetual",
+      "title": "Perpetual",
+      "description": "Perpetual is a self-generalizing gradient boosting machine that achieves optimal accuracy without hyperparameter optimization, available with high-performance bindings for Python, Rust, and R.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/valory-xyz/trader",
+      "title": "Trader",
+      "description": "The Trader service is an autonomous agent that places bets on prediction markets by interacting with an AI Mech to estimate probabilities and confidence levels, dynamically adjusting bet amounts and blacklisting unprofitable markets.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/hkuds/ai-trader",
+      "title": "AI-Trader",
+      "description": "AI-Trader is a platform where five distinct AI models autonomously compete in NASDAQ 100 trading, leveraging a tool-driven architecture and real-time market data to determine which can generate the highest profits without human intervention.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/nautechsystems/nautilus_trader",
+      "title": "Nautilus Trader",
+      "description": "NautilusTrader is an open-source, high-performance, production-grade algorithmic trading platform for backtesting and live deployment of AI-first trading strategies across various asset classes.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/tez-capital/docs.tez.capital",
+      "title": "Tez Capital",
+      "description": "",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/tez-capital/docs.tez.capital_content",
+      "title": "Tez Capital",
+      "description": "",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/alexjsully/small-dev-talk",
+      "title": "Small Dev Talk",
+      "description": "Small Dev Talk is an independent news source covering the indie world of entertainment, providing a platform for upcoming developers to showcase their projects through interviews to an audience.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/wshobson/mcp-trader",
+      "title": "MCP Trader",
+      "description": "A simplified Model Context Protocol (MCP) server for stock and cryptocurrency analysis, featuring technical analysis tools and FastMCP resources for direct market data access.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/dfed/swift-testing-expectation",
+      "title": "Swift Testing Expectation",
+      "description": "Swift Testing Expectation provides asynchronous expectations for Swift Testing framework, enabling testing of code that fulfills expectations at indeterminate points in the future.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/cryptopp_ref",
+      "title": "Crypto++",
+      "description": "Crypto++ is a free C++ class library of cryptographic schemes providing implementations of block ciphers, stream ciphers, hash functions, public-key cryptography, and more.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/mohitk05/react-insta-stories",
+      "title": "React Insta Stories",
+      "description": "A React component that allows developers to easily implement Instagram-like stories in their applications, with customizable intervals and responsive design.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/priora_saltedge_berlingroup",
+      "title": "Victoriabank Retail",
+      "description": "Victoriabank Retail is a PSD2-compliant banking API that provides Third-Party Providers secure access to customer accounts, account information, and payment initiation services using the BerlinGroup standard.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/clensh/capital-library",
+      "title": "Capital.com Library",
+      "description": "Capital.com Library for anything",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/developer_helloretail",
+      "title": "Hello Retail",
+      "description": "Hello Retail is a personalization platform for ecommerce that uses AI-powered insights to deliver product recommendations, search, personalized pages, and product intelligence to optimize conversions and customer experience.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/tez_capital",
+      "title": "Tez Capital Docs",
+      "description": "Tez Capital provides documentation for its suite of tools designed for the Tezos blockchain, covering essential operations like baking, governance, delegator payments, and transaction monitoring.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/weidai11/cryptopp",
+      "title": "Crypto++",
+      "description": "free C++ class library of cryptographic schemes",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/instamojo/instamojo-nodejs",
+      "title": "Instamojo Retail",
+      "description": "Instamojo Retail is an official Node.js wrapper for the Instamojo API that enables developers to integrate payment processing, refunds, and order management into their applications.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/cloud_google_retail",
+      "title": "Google Cloud Retail",
+      "description": "Google Cloud Retail provides AI-powered solutions for retailers, including search, recommendations, and personalization, to enhance the shopping experience and drive business growth.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/developers_lightspeedhq_retail",
+      "title": "Lightspeed Retail API",
+      "description": "Comprehensive API documentation for Lightspeed Retail POS (R-Series) system, providing endpoints for inventory, sales, customer management, and order processing.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/juneandgreen/sm-crypto",
+      "title": "SM-Crypto",
+      "description": "sm-crypto provides JavaScript implementations for Chinese national cryptographic algorithms SM2, SM3, and SM4, supporting key generation, encryption/decryption, and signature/verification.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/oslo-project/crypto",
+      "title": "Oslo Crypto",
+      "description": "A very basic, runtime-agnostic crypto library",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/sonr-io/crypto",
+      "title": "Sonr Crypto",
+      "description": "Sonr Crypto is a collection of cryptographic primitives and protocols, including accumulators, zero-knowledge proofs, distributed key generation, and various encryption and signature schemes, used by Sonr.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/consensys/gnark-crypto",
+      "title": "gnark-crypto",
+      "description": "gnark-crypto provides efficient cryptographic primitives in Go, including elliptic curve cryptography, pairing schemes, FFT, KZG commitments, and digital signatures for zero-knowledge applications.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/avantis-labs/avantis_trader_sdk",
+      "title": "Avantis Trader SDK",
+      "description": "A powerful and flexible toolkit for trading on the Avantis platform, enabling developers and traders to interact with the Avantis DEX, access real-time price feeds, and execute trades.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/altcha-org/altcha-crypto",
+      "title": "Altcha Crypto",
+      "description": "Altcha Crypto is a lightweight library simplifying asymmetric data encryption using Web Crypto with a hybrid approach combining RSA keys and AES encryption.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/pub_dev_packages_native_crypto",
+      "title": "Native Crypto",
+      "description": "Native Crypto provides fast AES, MD5, SHA, and HMAC cryptographic functions using built-in system APIs with hardware-acceleration where supported, for various platforms including Android, Windows, and Linux.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/jeap-admin-ch/jeap-crypto",
+      "title": "jEAP Crypto",
+      "description": "jEAP Crypto is a library providing client-side AES-256 GCM encryption for data at-rest, with Spring Boot integration and simplified Key Management System implementations.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/rs_cml-crypto_6_2_0_cml_crypto",
+      "title": "Cml Crypto",
+      "description": "Cml Crypto is a Rust library providing cryptographic primitives, data structures, and utilities for secure operations, likely for blockchain or distributed ledger technology applications.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/node-saml/xml-crypto",
+      "title": "xml-crypto",
+      "description": "Xml digital signature and encryption library for Node.js",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/birdwingo/react-native-instagram-stories",
+      "title": "React Native Instagram Stories",
+      "description": "A React Native component that displays a horizontal scrollable list of user stories, inspired by Instagram, with support for images, videos, and text.",
+      "provider": "context7"
+    }
+  ],
+  "extra_sources_count": 33,
+  "source_warning": "extra_sources are retrieved in parallel and are not automatically used to verify generated content; use fetch on key URLs for claim-level evidence.",
+  "routing_decision": {
+    "docs_intent": true,
+    "zh_current_intent": false,
+    "web_current_intent": false,
+    "fetch_intent": false,
+    "supplemental_paths": [
+      "docs_search"
+    ],
+    "validation_level": "balanced",
+    "fallback_mode": "auto",
+    "providers": "auto",
+    "main_search_chain": [
+      "xai-responses"
+    ]
+  },
+  "providers_used": [
+    "xAI Responses",
+    "tavily",
+    "context7"
+  ],
+  "provider_attempts": [
+    {
+      "capability": "main_search",
+      "provider": "xAI Responses",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 16525.95,
+      "result_count": 1
+    },
+    {
+      "capability": "web_search",
+      "provider": "tavily",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 18723.67,
+      "result_count": 3
+    },
+    {
+      "capability": "docs_search",
+      "provider": "context7",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 1376.04,
+      "result_count": 30
+    }
+  ],
+  "fallback_used": false,
+  "validation_level": "balanced",
+  "minimum_profile_ok": true,
+  "capability_status": {
+    "main_search": {
+      "configured": [
+        "xai-responses"
+      ],
+      "fallback_chain": [
+        "xai-responses",
+        "openai-compatible"
+      ],
+      "ok": true
+    },
+    "web_search": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "zhipu",
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    },
+    "docs_search": {
+      "configured": [
+        "context7"
+      ],
+      "fallback_chain": [
+        "exa",
+        "context7"
+      ],
+      "ok": true
+    },
+    "web_fetch": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    }
+  },
+  "elapsed_ms": 20099.95
+}

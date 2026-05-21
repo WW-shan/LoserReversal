@@ -1,0 +1,239 @@
+{
+  "ok": true,
+  "error_type": "",
+  "error": "",
+  "session_id": "792525af0d8d",
+  "query": "Nansen smart money label Hyperliquid leaderboard losing trader copy trade reverse fade",
+  "platform": "",
+  "model": "grok-4.20-fast",
+  "primary_api_mode": "xai-responses",
+  "content": "**Nansen labels \"Smart Money\" (or similar high-performing trader categories) on Hyperliquid based on historical profitability, trade patterns, wallet behavior, and other on-chain metrics across chains.** [[1]](https://coinmarketman.com/blog/hyperliquid-data-providers-compared/) [[2]](https://eco.com/support/en/articles/14800361-nansen-smart-money-how-it-works)\n\nThese labels help identify skilled traders, funds, or whales versus retail. Nansen integrates deeply with Hyperliquid perps data, offering leaderboards, smart money trade tracking, and filters. [[3]](https://docs.nansen.ai/api/hyperliquid/hyperliquid-leaderboard)\n\n### Nansen Hyperliquid Leaderboard Features\nNansen's API and dashboard provide perpetual trading leaderboards ranked by **PnL** (profit and loss), ROI, account value, etc., over custom date ranges (e.g., 24h, 7d, 30d). [[4]](https://docs.nansen.ai/api/profiler/hyperliquid-address-leaderboard)\n\n- **Key filters** include trader address labels like \"Smart Money,\" account value minimums, and PnL thresholds.\n- You can isolate **Smart Money** leaders to see top performers with their PnL, ROI, and labels. [[3]](https://docs.nansen.ai/api/hyperliquid/hyperliquid-leaderboard)\n- Endpoints like `/perp-leaderboard` return addresses + labels. There are also dedicated Smart Money Perp Trades for real-time activity from labeled wallets. [[5]](https://docs.nansen.ai/api/hyperliquid/smart-money-perp-trades)\n- Dashboard views (e.g., app.nansen.ai) show Hyperliquid Perps Leaderboard with Smart Money focus. [[6]](https://app.nansen.ai/smart-money?chains=hyperliquid)\n\n**Note:** Leaderboards primarily rank *profitable* traders (positive PnL). For \"losing traders,\" sort by lowest/negative PnL, use custom filters, or analyze broader wallet PnL distributions. Nansen doesn't prominently feature a \"top losers\" public list, as its value is in highlighting winners/smart wallets. [[3]](https://docs.nansen.ai/api/hyperliquid/hyperliquid-leaderboard)\n\nHyperliquid's native leaderboard (app.hyperliquid.xyz/leaderboard) shows top PNL winners by timeframes (e.g., 30D), with filters excluding small accounts. It does not natively emphasize losers. [[7]](https://app.hyperliquid.xyz/leaderboard)\n\n### Copy Trading vs. Reverse/Fade Strategies on Hyperliquid\n**Copy trading** (mirroring top/Smart Money traders) is popular due to on-chain transparency. Tools/platforms support auto-copying Hyperliquid wallets, including from Nansen-labeled smart ones. [[8]](https://www.bitmex.com/app/leaderboard/copy-leader/hyperliquid) [[9]](https://docs.nansen.ai/api/hyperliquid)\n\n- **Pros of copying Smart Money**: Access to proven performers via Nansen labels + leaderboards. Some simulations show positive returns when following larger-account whales (e.g., ≥$5M–$10M thresholds). [[10]](https://medium.com/@gwrx2005/combining-simulation-and-machine-learning-analysis-of-whale-trading-on-hyperliquid-93f10d96941b)\n- **Risks**: Past performance ≠ future; many \"whales\" or leaderboard traders have drawdowns. Most Hyperliquid traders overall lose money (e.g., analyses show only ~14% profitable in some periods). [[11]](https://beincrypto.com/hyperliquid-traders-profitability/)\n\n**Reverse copy / fade** (taking the opposite side of a trader's positions) is explicitly supported on some copy-trading platforms for Hyperliquid. [[8]](https://www.bitmex.com/app/leaderboard/copy-leader/hyperliquid) [[12]](https://www.bitmex.com/blog/how-to-copy-trade-hyperliquid)\n\n- **Rationale for fading losers**: If a wallet consistently shows negative PnL or poor timing (identifiable via Nansen profiling or Hyperliquid data), reversing their longs/shorts can theoretically profit from their mistakes. Some tools flag \"terrible\" traders for reverse strategies. [[13]](https://www.youtube.com/watch?v=3V04vFddFRA)\n- **Caveats**: This is high-risk. Markets can stay irrational longer than expected; a \"loser\" might reverse or have asymmetric upside. Large losers can still influence liquidity or trigger cascades. Always use tight risk management (stops, position sizing). Simulations highlight concentration risk and the need for ongoing validation. [[10]](https://medium.com/@gwrx2005/combining-simulation-and-machine-learning-analysis-of-whale-trading-on-hyperliquid-93f10d96941b)\n\n### Practical Tips\n- **Use Nansen** for Smart Money filtering on Hyperliquid leaderboards and real-time perp trades. Combine with wallet profiling for context (e.g., sub-labels, historical consistency). [[9]](https://docs.nansen.ai/api/hyperliquid)\n- Check Hyperliquid native leaderboard for raw top performers, then cross-reference addresses in Nansen for labels. [[7]](https://app.hyperliquid.xyz/leaderboard)\n- For copy/reverse: Platforms like BitMEX (integrated support) or others allow one-click copy/reverse with AUM, PnL tracking. [[12]](https://www.bitmex.com/blog/how-to-copy-trade-hyperliquid)\n- Broader context: Perps trading is zero-sum (minus fees); a small % of traders capture most profits. Focus on risk management over blind following.\n\nFor the latest specific wallets or performance, check Nansen's dashboard/API directly (requires access) or current Hyperliquid leaderboard, as data changes rapidly. Always DYOR and trade responsibly—crypto perps involve high leverage risk.",
+  "sources": [
+    {
+      "url": "https://coinmarketman.com/blog/hyperliquid-data-providers-compared/",
+      "title": "Hyperliquid Data Providers Compared: Features, Pricing, ..."
+    },
+    {
+      "url": "https://eco.com/support/en/articles/14800361-nansen-smart-money-how-it-works",
+      "title": "Nansen Smart Money: How It Works | Support - Eco"
+    },
+    {
+      "url": "https://docs.nansen.ai/api/hyperliquid/hyperliquid-leaderboard",
+      "title": "Hyperliquid Leaderboard - Nansen API"
+    },
+    {
+      "url": "https://docs.nansen.ai/api/profiler/hyperliquid-address-leaderboard",
+      "title": "Hyperliquid Address Leaderboard - Nansen API"
+    },
+    {
+      "url": "https://docs.nansen.ai/api/hyperliquid/smart-money-perp-trades",
+      "title": "Smart Money Perp Trades - Nansen API"
+    },
+    {
+      "url": "https://app.nansen.ai/smart-money?chains=hyperliquid",
+      "title": "Hyperliquid Perps Leaderboard"
+    },
+    {
+      "url": "https://app.hyperliquid.xyz/leaderboard",
+      "title": "Leaderboard"
+    },
+    {
+      "url": "https://www.bitmex.com/app/leaderboard/copy-leader/hyperliquid",
+      "title": "Copy Leader Leaderboard"
+    },
+    {
+      "url": "https://docs.nansen.ai/api/hyperliquid",
+      "title": "Hyperliquid"
+    },
+    {
+      "url": "https://medium.com/@gwrx2005/combining-simulation-and-machine-learning-analysis-of-whale-trading-on-hyperliquid-93f10d96941b",
+      "title": "Combining Simulation and Machine Learning Analysis of ..."
+    },
+    {
+      "url": "https://beincrypto.com/hyperliquid-traders-profitability/",
+      "title": "Why 86% of Hyperliquid Traders Are Facing Losses"
+    },
+    {
+      "url": "https://www.bitmex.com/blog/how-to-copy-trade-hyperliquid",
+      "title": "How to Copy Trade Hyperliquid Traders?"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=3V04vFddFRA",
+      "title": "This Hyperliquid Strategy Prints Over $200k (Perpetuals ..."
+    },
+    {
+      "url": "https://copygram.app/blog/education/reverse-copying-profit-losing-strategy",
+      "provider": "tavily",
+      "title": "Reverse Copying in Trading: How to Profit from Fading Losing Strategies with Copygram",
+      "description": "Reverse copy trading—also known as inverse or fade trading—turns a losing trading system on its head. Instead of following a lead trader or bot’s every move, reverse copying does the opposite: when the master account buys, you sell, and vice versa.   \n  \n This counterintuitive approach is rooted in the mathematics of expectancy. If a strategy consistently loses, betting against it (factoring in costs) can produce positive returns. But, like all edge-seeking methods, it requires nuance, discipline, and the right technology—like Copygram’s advanced copier with Reverse Mode.\n\n Reverse Copy Trading: Mirror a losing trader by executing the opposite trades\n Fade Losing Traders: Capitalize on consistently poor performers\n Hedge Exposure: Offset risk by betting against correlated strategies [...] It may seem counterintuitive to follow a trader just to do the opposite of their trades. However, in many markets—especially retail Forex and crypto—most traders lose over time due to poor risk management or flawed strategies.   \n  \nReverse copying lets you profit from this predictable failure. If a trading bot or human consistently delivers negative returns, inverting can create a positive edge (after costs). This technique is also popular among contrarian traders who fade market sentiment.\n\n Hedging: Use reverse trades to protect a basket of correlated positions\n Fading \"herd\" bots: Run reverse mode on bots that crowd into losing trades\n Testing Prop Firm bots: Identify failing strategies in competitions and fade them [...] ## Q&A: Top Questions About Reverse Copying Answered\n\n Is it legal/ethical to reverse copy traders?   \n  ✅ Yes, as long as your broker/platform allows it and you’re not violating any terms. Reverse copying is simply a sophisticated use of market order flows.\n Is reverse copy trading suitable for beginners?   \n  ⚠️ Not unless they fully understand the math of expectancy, drawdown, and trading costs. It’s best for advanced users.\n How do I identify a truly failing bot or trader?   \n  Look for long-term negative returns, high consistency in losses, and low success across multiple market cycles.\n Is Copygram’s reverse mode customizable?   \n  Yes. You can selectively enable reverse mode per master, symbol, and adjust lot sizes as needed.\n\n### 🚀 Final Thoughts: Smart Contrarians Win"
+    },
+    {
+      "url": "https://www.bitmex.com/blog/hyperliquid-copy-trading-bitmex",
+      "provider": "tavily",
+      "title": "Hyperliquid Copy Trading on BitMEX: Copy Top DeFi Traders on a CEX",
+      "description": "1. Get 100 USDT in Loss Coverage: Make your first copy trade on BitMEX with zero risk. Get up to 100 USDT in loss coverage if your Copy Leader loses.\n2. Bonus 10% Cashback: Make your first deposit on BitMEX from a DEX wallet to get 10% back.\n3. Copy Trade and Earn: Copy trade the top leaders to win up to $100 in trading credits\n4. Reverse Copy and Earn: Feeling like an anti-hero? Reverse copy trade any leader to win up to $100 in trading credits.\n5. Refer and Earn: Invite friends to try Copy Trading on BitMEX for both of you to receive your friends’ profits.\n\nFor more details on how you can win your share of the rewards, visit here. [...] hyperliquidmarketplace\n\nEach Hyperliquid trader card shows the metrics that matter for you when selecting a leader to copy trade: ROI (%), Profit and Loss (PnL), maximum drawdown, win ratio, and assets under management (AUM). Risk indicators are shown on the top right corner of the trader card so you can filter by high, moderate, or low-risk strategies.\n\nhyperliquidtrader\n\nFrom there, choose your Hyperliquid trader. Click Copy or Reverse Copy to execute your trade.\n\n## Why Copy Trade on BitMEX vs Other Platforms\n\nThe key difference between copying Hyperliquid traders on BitMEX versus using Hyperliquid directly: safety and risk. Your assets never leave BitMEX. You don't need to bridge funds to a decentralised exchange, manage your own private keys, or interact with any smart contracts. [...] ### TL;DR:\n\n Copy or Reverse Copy Trade the top Hyperliquid users, directly on the BitMEX platform. Browse the list of Hyperliquid leaders here.\n Access top DeFi trading strategies with no exposure to decentralised exchange trading risks.\n Win $100,000 in rewards for Copy Trading or Reverse Copy Trading any trader on the Copy Trading Marketplace.\n\nIf you haven’t signed up for a BitMEX account yet, we’re currently offering $5,050 worth of trading credits to new users - you can register here.\n\n## Copy Trading and Reverse Copy Trading Explained\n\nThe standard copy trading feature does what it says: your account replicates the positions of whichever trader you follow. If they go long on BTCUSD, you go long and vice versa. Once they close their position, your position also closes."
+    }
+  ],
+  "sources_count": 15,
+  "primary_sources": [
+    {
+      "url": "https://coinmarketman.com/blog/hyperliquid-data-providers-compared/",
+      "title": "Hyperliquid Data Providers Compared: Features, Pricing, ..."
+    },
+    {
+      "url": "https://eco.com/support/en/articles/14800361-nansen-smart-money-how-it-works",
+      "title": "Nansen Smart Money: How It Works | Support - Eco"
+    },
+    {
+      "url": "https://docs.nansen.ai/api/hyperliquid/hyperliquid-leaderboard",
+      "title": "Hyperliquid Leaderboard - Nansen API"
+    },
+    {
+      "url": "https://docs.nansen.ai/api/profiler/hyperliquid-address-leaderboard",
+      "title": "Hyperliquid Address Leaderboard - Nansen API"
+    },
+    {
+      "url": "https://docs.nansen.ai/api/hyperliquid/smart-money-perp-trades",
+      "title": "Smart Money Perp Trades - Nansen API"
+    },
+    {
+      "url": "https://app.nansen.ai/smart-money?chains=hyperliquid",
+      "title": "Hyperliquid Perps Leaderboard"
+    },
+    {
+      "url": "https://app.hyperliquid.xyz/leaderboard",
+      "title": "Leaderboard"
+    },
+    {
+      "url": "https://www.bitmex.com/app/leaderboard/copy-leader/hyperliquid",
+      "title": "Copy Leader Leaderboard"
+    },
+    {
+      "url": "https://docs.nansen.ai/api/hyperliquid",
+      "title": "Hyperliquid"
+    },
+    {
+      "url": "https://medium.com/@gwrx2005/combining-simulation-and-machine-learning-analysis-of-whale-trading-on-hyperliquid-93f10d96941b",
+      "title": "Combining Simulation and Machine Learning Analysis of ..."
+    },
+    {
+      "url": "https://beincrypto.com/hyperliquid-traders-profitability/",
+      "title": "Why 86% of Hyperliquid Traders Are Facing Losses"
+    },
+    {
+      "url": "https://www.bitmex.com/blog/how-to-copy-trade-hyperliquid",
+      "title": "How to Copy Trade Hyperliquid Traders?"
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=3V04vFddFRA",
+      "title": "This Hyperliquid Strategy Prints Over $200k (Perpetuals ..."
+    }
+  ],
+  "primary_sources_count": 13,
+  "extra_sources": [
+    {
+      "url": "https://copygram.app/blog/education/reverse-copying-profit-losing-strategy",
+      "provider": "tavily",
+      "title": "Reverse Copying in Trading: How to Profit from Fading Losing Strategies with Copygram",
+      "description": "Reverse copy trading—also known as inverse or fade trading—turns a losing trading system on its head. Instead of following a lead trader or bot’s every move, reverse copying does the opposite: when the master account buys, you sell, and vice versa.   \n  \n This counterintuitive approach is rooted in the mathematics of expectancy. If a strategy consistently loses, betting against it (factoring in costs) can produce positive returns. But, like all edge-seeking methods, it requires nuance, discipline, and the right technology—like Copygram’s advanced copier with Reverse Mode.\n\n Reverse Copy Trading: Mirror a losing trader by executing the opposite trades\n Fade Losing Traders: Capitalize on consistently poor performers\n Hedge Exposure: Offset risk by betting against correlated strategies [...] It may seem counterintuitive to follow a trader just to do the opposite of their trades. However, in many markets—especially retail Forex and crypto—most traders lose over time due to poor risk management or flawed strategies.   \n  \nReverse copying lets you profit from this predictable failure. If a trading bot or human consistently delivers negative returns, inverting can create a positive edge (after costs). This technique is also popular among contrarian traders who fade market sentiment.\n\n Hedging: Use reverse trades to protect a basket of correlated positions\n Fading \"herd\" bots: Run reverse mode on bots that crowd into losing trades\n Testing Prop Firm bots: Identify failing strategies in competitions and fade them [...] ## Q&A: Top Questions About Reverse Copying Answered\n\n Is it legal/ethical to reverse copy traders?   \n  ✅ Yes, as long as your broker/platform allows it and you’re not violating any terms. Reverse copying is simply a sophisticated use of market order flows.\n Is reverse copy trading suitable for beginners?   \n  ⚠️ Not unless they fully understand the math of expectancy, drawdown, and trading costs. It’s best for advanced users.\n How do I identify a truly failing bot or trader?   \n  Look for long-term negative returns, high consistency in losses, and low success across multiple market cycles.\n Is Copygram’s reverse mode customizable?   \n  Yes. You can selectively enable reverse mode per master, symbol, and adjust lot sizes as needed.\n\n### 🚀 Final Thoughts: Smart Contrarians Win"
+    },
+    {
+      "url": "https://www.bitmex.com/blog/how-to-copy-trade-hyperliquid",
+      "provider": "tavily",
+      "title": "How to Copy Trade Hyperliquid Traders?",
+      "description": "### Step 5: Configure Copy Settings\n\nNow you've chosen a trader, it’s time to configure your risk preference and how much capital you’d like to commit to.\n\n1. Click ‘Copy’ or ‘Reverse Copy’ on their profile. You'll see a settings screen:\n\nhyperliquid7\n\n2. Input the amount of capital you’re willing to commit. Please note that you need a minimum of $100 USD to start copying a Leader. However, Copy Leaders have the discretion to increase the minimum starting capital to their preference. If you’d like to commit other types of crypto, hit the ‘+’ and select your asset.\n\nhyperliquid8\n\n3. Set your Stop Loss and Take Profit parameters. [...] BitMEX Security: 11+ years of operations, zero customer funds lost\n\nElite Trader Access: Copy Hyperliquid degens AND BitMEX legends\n\nReverse Copy: Disagree with a trader? Counter their trades in a click\n\n24/7 Human Support: Something breaks at 2 AM? We have actual humans who respond, not Discord moderators\n\nPortfolio Diversification: Copy up to 5 traders simultaneously\n\nZero DeFi Friction: No wallets. No bridging. No gas fees. No seed phrases to lose\n\nCEX-y Convenience: Instant fiat on-ramp, trading bots, equity perps, and so more more.\n\nPro Tip: The best copy traders aren't trying to beat the market daily. They're consistent over months. Look for traders with 90+ day track records showing steady growth, not explosive one day gains.\n\nhyperliquid15 [...] ### Step 4: Research and Select Traders\n\nThis is where 80% of traders make mistakes. They see a trader up 90% last month and copy immediately. Then that trader loses 60% the next month, wiping out their capital.\n\nHere's how to choose traders properly:\n\n|  |  |\n --- |\n| Red flags to be aware:  🚩 New traders with <90 days track record  🚩 Extremely high ROI with high drawdown  🚩 Low trade count (<50 total trades, small sample size)  🚩 No strategy description | Green Flags to Look For:  ✅ 90+ days of verified performance  ✅ ROI between 20-50% monthly  ✅ Max drawdown under -20%  ✅ 50+ trades  ✅ Clear strategy description |\n\nRed flags to be aware:\n\n🚩 New traders with <90 days track record\n\n🚩 Extremely high ROI with high drawdown\n\n🚩 Low trade count (<50 total trades, small sample size)"
+    },
+    {
+      "url": "https://www.bitmex.com/blog/hyperliquid-copy-trading-bitmex",
+      "provider": "tavily",
+      "title": "Hyperliquid Copy Trading on BitMEX: Copy Top DeFi Traders on a CEX",
+      "description": "1. Get 100 USDT in Loss Coverage: Make your first copy trade on BitMEX with zero risk. Get up to 100 USDT in loss coverage if your Copy Leader loses.\n2. Bonus 10% Cashback: Make your first deposit on BitMEX from a DEX wallet to get 10% back.\n3. Copy Trade and Earn: Copy trade the top leaders to win up to $100 in trading credits\n4. Reverse Copy and Earn: Feeling like an anti-hero? Reverse copy trade any leader to win up to $100 in trading credits.\n5. Refer and Earn: Invite friends to try Copy Trading on BitMEX for both of you to receive your friends’ profits.\n\nFor more details on how you can win your share of the rewards, visit here. [...] hyperliquidmarketplace\n\nEach Hyperliquid trader card shows the metrics that matter for you when selecting a leader to copy trade: ROI (%), Profit and Loss (PnL), maximum drawdown, win ratio, and assets under management (AUM). Risk indicators are shown on the top right corner of the trader card so you can filter by high, moderate, or low-risk strategies.\n\nhyperliquidtrader\n\nFrom there, choose your Hyperliquid trader. Click Copy or Reverse Copy to execute your trade.\n\n## Why Copy Trade on BitMEX vs Other Platforms\n\nThe key difference between copying Hyperliquid traders on BitMEX versus using Hyperliquid directly: safety and risk. Your assets never leave BitMEX. You don't need to bridge funds to a decentralised exchange, manage your own private keys, or interact with any smart contracts. [...] ### TL;DR:\n\n Copy or Reverse Copy Trade the top Hyperliquid users, directly on the BitMEX platform. Browse the list of Hyperliquid leaders here.\n Access top DeFi trading strategies with no exposure to decentralised exchange trading risks.\n Win $100,000 in rewards for Copy Trading or Reverse Copy Trading any trader on the Copy Trading Marketplace.\n\nIf you haven’t signed up for a BitMEX account yet, we’re currently offering $5,050 worth of trading credits to new users - you can register here.\n\n## Copy Trading and Reverse Copy Trading Explained\n\nThe standard copy trading feature does what it says: your account replicates the positions of whichever trader you follow. If they go long on BTCUSD, you go long and vice versa. Once they close their position, your position also closes."
+    }
+  ],
+  "extra_sources_count": 3,
+  "source_warning": "extra_sources are retrieved in parallel and are not automatically used to verify generated content; use fetch on key URLs for claim-level evidence.",
+  "routing_decision": {
+    "docs_intent": false,
+    "zh_current_intent": false,
+    "web_current_intent": false,
+    "fetch_intent": false,
+    "supplemental_paths": [],
+    "validation_level": "balanced",
+    "fallback_mode": "auto",
+    "providers": "auto",
+    "main_search_chain": [
+      "xai-responses"
+    ]
+  },
+  "providers_used": [
+    "xAI Responses",
+    "tavily"
+  ],
+  "provider_attempts": [
+    {
+      "capability": "main_search",
+      "provider": "xAI Responses",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 9650.43,
+      "result_count": 1
+    },
+    {
+      "capability": "web_search",
+      "provider": "tavily",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 13092.6,
+      "result_count": 3
+    }
+  ],
+  "fallback_used": false,
+  "validation_level": "balanced",
+  "minimum_profile_ok": true,
+  "capability_status": {
+    "main_search": {
+      "configured": [
+        "xai-responses"
+      ],
+      "fallback_chain": [
+        "xai-responses",
+        "openai-compatible"
+      ],
+      "ok": true
+    },
+    "web_search": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "zhipu",
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    },
+    "docs_search": {
+      "configured": [
+        "context7"
+      ],
+      "fallback_chain": [
+        "exa",
+        "context7"
+      ],
+      "ok": true
+    },
+    "web_fetch": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    }
+  },
+  "elapsed_ms": 13092.61
+}

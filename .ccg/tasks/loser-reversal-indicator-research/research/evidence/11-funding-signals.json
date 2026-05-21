@@ -1,0 +1,253 @@
+{
+  "ok": true,
+  "error_type": "",
+  "error": "",
+  "session_id": "13d79ce4f6c7",
+  "query": "funding rate arbitrage open interest divergence liquidation cascade prediction perpetual futures signal",
+  "platform": "",
+  "model": "grok-4.20-fast",
+  "primary_api_mode": "xai-responses",
+  "content": "**Funding rate arbitrage, open interest (OI) divergence, and liquidation cascade prediction form interconnected signals in crypto perpetual futures markets.** These help traders identify imbalances, execute low-risk strategies, and anticipate volatile resets. Perpetual futures lack expiry and use periodic funding payments (typically every 8 hours) between longs and shorts to anchor the contract price to spot. [[1]](https://www.kraken.com/learn/trading/perpetual-futures-contracts)\n\n### 1. Funding Rate Arbitrage Basics\n**Funding rates** compensate for the perpetual contract's price diverging from spot. Positive rates: longs pay shorts (bullish sentiment/crowded longs). Negative rates: shorts pay longs (bearish/crowded shorts). [[2]](https://www.coinglass.com/learn/what-is-funding-rate-arbitrage)\n\n**Classic spot-perp arbitrage (delta-neutral)**:\n- **Positive funding**: Buy spot + short equal notional perp (earn funding from longs).\n- **Negative funding**: Short spot (or borrow) + long perp (earn from shorts).\n- Positions offset price risk; profit comes from funding fees (e.g., ~0.01-0.05% per 8h period, annualizing to double digits in favorable conditions). [[3]](https://arbitragescanner.io/funding-rates)\n\n**Cross-exchange arb**: Exploit rate spreads by going long on one platform and short on another for the same asset. Tools like scanners track this across Binance, Bybit, Hyperliquid, etc. [[4]](https://www.reddit.com/r/defi/comments/1m0c7ls/is_anyone_here_taking_advantage_of_funding_rate/)\n\n**Risks and considerations**: Basis risk (imperfect hedge), funding rate changes, borrowing costs, slippage, and exchange-specific mechanics. High OI improves execution stability. Annualized returns often target 10-30%+ in stable regimes but vary with market conditions. [[5]](https://ouinex.com/en/education/funding-rate-arbitrage-cashing-in-on-perpetual-swings)\n\n### 2. Open Interest Divergence\n**Open interest** tracks total outstanding perp contracts (not closed or delivered). It measures leverage and conviction. [[6]](https://www.bitget.com/academy/12560603880644)\n\n**Common OI + Price interpretations**:\n- **Rising OI + rising price**: New longs entering → strong bullish trend.\n- **Rising OI + falling price**: New shorts building → bearish conviction.\n- **Falling OI + price move**: Position closing/liquidations (momentum fading or flush).\n- **Divergence signals**: Price up but OI flat/falling → weak momentum (profit-taking by longs). Price down but OI rising → potential for short squeeze if reversal occurs. [[7]](https://medium.com/@XT_com/bitcoin-futures-market-microstructure-liquidation-cascades-funding-regimes-and-open-interest-978b107b4889)\n\n**OI/volume or OI/ADV ratios** highlight overcrowding, especially on high-leverage perps vs. regulated venues. Sustained high OI without resets (unique to perps) builds cascade risk. [[8]](https://www.linkedin.com/posts/jlldavies_a-comparison-worth-running-the-open-interest-activity-7450177386316279808-db2v)\n\n### 3. Liquidation Cascades and Prediction Signals\n**Liquidation cascades** occur when a price move triggers forced closures, amplifying the move via a feedback loop (e.g., long liqs push price lower → more liqs). Perps amplify this due to continuous OI accumulation and leverage. [[9]](https://blog.tradingriot.com/p/what-you-should-know-about-perpetual)\n\n**Combined Funding Rate + OI signals for cascades** (strong predictive framework):\n- **High positive funding + rising OI + price stalling**: Overcrowded longs → high risk of downside cascade (longs pay heavily, vulnerable to dip). [[10]](https://tradelink.pro/blog/funding-rate-open-interest/)\n- **Deep negative funding + rising OI**: Crowded shorts → upside squeeze risk (shorts pay, forced buybacks accelerate rally). [[11]](https://phemex.com/blogs/bitcoin-funding-rates-negative-46-days-ftx-bottom)\n- **Extreme funding + high OI clusters**: Look at liquidation heatmaps for stacked leverage levels; breaches often cascade. [[12]](https://blog.amberdata.io/liquidations-in-crypto-how-to-anticipate-volatile-market-moves)\n- **Divergences**: Price rising but funding turning less positive/falling OI → hidden weakness. Sustained extremes often precede reversals. [[7]](https://medium.com/@XT_com/bitcoin-futures-market-microstructure-liquidation-cascades-funding-regimes-and-open-interest-978b107b4889)\n\n**Feedback loop**: High OI builds leverage → funding reveals bias → unsustainable moves trigger liqs → OI resets, funding normalizes.\n\n**Practical signal checklist for a \"perpetual futures signal\"**:\n1. Monitor aggregated (OI-weighted) funding across exchanges.\n2. Check OI changes and price correlation.\n3. Overlay liquidation levels/heatmaps.\n4. Watch for extremes: e.g., funding >0.05-0.1% per 8h sustained + OI spike = caution for longs. [[13]](https://www.altrady.com/blog/crypto-trading-strategies/crypto-funding-rates-explained)\n5. Cross-reference volume and order book for confirmation.\n\n**Tools and data sources**: Coinglass, Binance/Bybit dashboards, Amberdata, on-chain/perp scanners (Hyperliquid often shows distinct dynamics), TradingView scripts for OI/funding. [[14]](https://www.sharpe.ai/products/futures)\n\n### Strategy Integration and Caveats\n- **Arbitrage during imbalances**: Use funding arb in high-OI regimes for yield while monitoring for cascade risk (reduce exposure near extremes).\n- **Directional bias**: Fade crowded trades (e.g., prepare shorts on extreme positive funding + OI divergence).\n- **Timing**: Funding resets every 8 hours; cascades accelerate on thin liquidity or news.\n- **Risks**: Not foolproof—black swans, exchange differences, and rapid funding shifts apply. Use proper position sizing, isolated margin, and monitor real-time data. Backtest with historical liq/OI/funding.\n\nThis combination provides a robust, multi-angle view of market stress and opportunities in perps. Track live data on platforms like Coinglass for current signals, as conditions evolve quickly. Always manage risk, as leveraged derivatives can lead to rapid losses.",
+  "sources": [
+    {
+      "url": "https://www.kraken.com/learn/trading/perpetual-futures-contracts",
+      "title": "What are perpetual futures contracts? A complete guide"
+    },
+    {
+      "url": "https://www.coinglass.com/learn/what-is-funding-rate-arbitrage",
+      "title": "What is Funding Rate Arbitrage?"
+    },
+    {
+      "url": "https://arbitragescanner.io/funding-rates",
+      "title": "Crypto Funding Rates"
+    },
+    {
+      "url": "https://www.reddit.com/r/defi/comments/1m0c7ls/is_anyone_here_taking_advantage_of_funding_rate/",
+      "title": "Is anyone here taking advantage of funding rate arbitrage ..."
+    },
+    {
+      "url": "https://ouinex.com/en/education/funding-rate-arbitrage-cashing-in-on-perpetual-swings",
+      "title": "Funding Rate Arbitrage: How to Profit from Perpetual Swap ..."
+    },
+    {
+      "url": "https://www.bitget.com/academy/12560603880644",
+      "title": "Best Coin Glass Features for Crypto Traders: Liquidations ..."
+    },
+    {
+      "url": "https://medium.com/@XT_com/bitcoin-futures-market-microstructure-liquidation-cascades-funding-regimes-and-open-interest-978b107b4889",
+      "title": "Bitcoin Futures Market Microstructure: Liquidation ..."
+    },
+    {
+      "url": "https://www.linkedin.com/posts/jlldavies_a-comparison-worth-running-the-open-interest-activity-7450177386316279808-db2v",
+      "title": "Crypto OI/ADV divergence signals concentrated exposure"
+    },
+    {
+      "url": "https://blog.tradingriot.com/p/what-you-should-know-about-perpetual",
+      "title": "What You Should Know About Perpetual Futures - by Adam"
+    },
+    {
+      "url": "https://tradelink.pro/blog/funding-rate-open-interest/",
+      "title": "Funding Rate + Open Interest: How to Spot Liquidations"
+    },
+    {
+      "url": "https://phemex.com/blogs/bitcoin-funding-rates-negative-46-days-ftx-bottom",
+      "title": "Bitcoin Negative Funding Rates 46 Days"
+    },
+    {
+      "url": "https://blog.amberdata.io/liquidations-in-crypto-how-to-anticipate-volatile-market-moves",
+      "title": "Tracking Liquidations to Anticipate Volatile Market Moves"
+    },
+    {
+      "url": "https://www.altrady.com/blog/crypto-trading-strategies/crypto-funding-rates-explained",
+      "title": "Crypto Funding Rates: How to Trade Them"
+    },
+    {
+      "url": "https://www.sharpe.ai/products/futures",
+      "title": "Crypto Futures Analytics — OI, Funding, Liquidations"
+    },
+    {
+      "url": "https://www.coinapi.io/blog/historical-data-for-perpetual-futures",
+      "provider": "tavily",
+      "title": "CoinAPI.io Blog - Historical Data for Perpetual Futures",
+      "description": "## What You Can Do Tomorrow\n\nFor Quant Developers: Download sample perpetual futures data from CoinAPI's historical endpoints. Start with BTC/USDT funding rates across Binance, Bybit, and OKX to validate your normalization logic.\n\nFor Systematic Traders: Use the WebSocket API to build a real-time funding rate monitor. Track when rates diverge across exchanges by more than 0.1% - these are your arbitrage entry signals.\n\nFor Risk Managers: Implement open interest monitoring across your perpetual positions. Use the historical OI data to establish baseline leverage ratios and set alerts when the market becomes overleveraged.\n\nFor Researchers: Access the complete liquidation dataset to study market microstructure. Analyze how liquidation cascades propagate across exchanges and price levels. [...] ### 1. Funding Rate Data\n\n Real-time funding rates via `DERIVATIVES_FUNDING_RATE_CURRENT`\n Historical funding rates via `/v1/metrics/symbol/history`\n Predicted funding rates via `DERIVATIVES_FUNDING_RATE_PREDICTED` (where supported)\n\nUse case: Backtesting funding arbitrage, monitoring premium/discount shifts, building funding-based signals.\n\n### 2. Mark Price and Index Price\n\n Mark price: `DERIVATIVES_MARK_PRICE`\n Index price: `DERIVATIVES_INDEX_PRICE` (when available from the exchange)\n\nUse case: Building liquidation models, tracking fair value, and analyzing price divergence from spot.\n\n### 3. Open Interest (Supported on Select Exchanges)\n\nWhile not universally supported, CoinAPI does offer open interest data via the Metrics API for the following exchanges: [...] Perpetuals introduce layers like:\n\n Funding rate asymmetries: Earn or pay yield depending on market skew\n Open interest dynamics: Track positioning and leverage buildup\n Liquidation events: Time entries around forced moves\n Perp-spot basis: Trade price dislocations and mean reversion\n\nThis is why many advanced traders, market makers, and quant desks favor perpetuals. There’s more noise, but also more signal, if you know where to look.\n\nWith CoinAPI’s historical data platform, you can:\n\n Backtest funding rate arbitrage strategies across multiple exchanges\n Analyze open interest shifts leading into price spikes\n Monitor how liquidation clusters propagate across volatile ranges\n Study how the perp-spot basis behaves around macro events"
+    },
+    {
+      "url": "https://metamask.io/news/monitoring-perps-funding-rate-trends-signals",
+      "provider": "tavily",
+      "title": "How to monitor funding rate trends in perpetual futures",
+      "description": "Predictive funding rate: A projection of where the funding rate is likely to land in the next settlement interval. Used to estimate upcoming cost drag before it hits the settlement ledger.\n\nCumulative funding: The net total of funding payments paid or received over a defined period. Used in post-trade PnL attribution to separate price movement from funding drag.\n\nSlippage: The difference between the expected price of a trade and the actual fill price. Relevant to cross-venue divergence analysis where apparent funding arbitrage can be eroded by execution costs.\n\nLiquidation cascade: A chain reaction of forced position closures triggered when margin falls below maintenance levels across multiple traders simultaneously. Cascades can reset or invert funding rate trends. [...] Disclaimer: This content is for general educational purposes only, is not financial advice or a solicitation, and is not intended for UK audiences. Perpetual futures involve a high risk of loss and may not be suitable for everyone.\n\n## Key terms for perps funding rate monitoring\n\nFunding rate: A periodic payment between long and short perpetual futures traders. In a monitoring context, the rate's direction and magnitude signal whether longs or shorts are paying a premium to hold positions.\n\nOpen interest (OI): The total value of outstanding derivative contracts. Rising OI alongside rising funding confirms directional crowding; falling OI alongside extreme funding suggests the trend may be losing participation. [...] Predictive funding tools estimate upcoming cost drag before settlement; cumulative funding tools separate price-driven PnL from funding drag after the fact.\n\nFunding applies to full position notional, not just posted margin—a 5x leveraged position amplifies funding costs fivefold.\n\nHigh positive funding is not a buy signal. It reflects crowded longs paying a premium to hold positions, which increases cost drag and can precede deleveraging rather than further upside.\n\nCross-exchange funding divergences often reflect structural design differences between platforms—different formulas, cap levels, and settlement timing—rather than arbitrageable mispricings.\n\nFunding applies only to positions open at the settlement timestamp, making alert cadence and settlement schedule awareness critical."
+    },
+    {
+      "url": "https://www.bitget.com/academy/12560603876113",
+      "provider": "tavily",
+      "title": "Crypto Funding Rates Explained: How Perpetual Futures Payments ...",
+      "description": "Extreme funding rates often precede market reversals, though they function better as risk indicators than precise timing signals. When funding rates reach historical extremes—such as exceeding 0.1% per eight-hour period—they indicate overleveraged positioning that becomes vulnerable to liquidation cascades. However, markets can sustain extreme funding rates for extended periods during strong trends. The most reliable reversal signals combine extreme funding rates with other factors: declining trading volume, bearish divergences in momentum indicators, or significant open interest increases suggesting late-stage position accumulation. Funding rates alone should not drive trading decisions but rather inform risk management and position sizing. [...] The relationship between funding rates and open interest provides additional context. Rising open interest combined with increasing positive funding rates suggests new leveraged long positions entering the market, potentially creating liquidation cascades if prices reverse. Declining open interest with normalizing funding rates often indicates position unwinding and reduced leverage, typically associated with healthier market conditions.\n\n## Strategic Implications for Derivatives Traders [...] ### Funding Rate Arbitrage Strategies\n\nFunding rate arbitrage involves taking opposing positions across different contract types or exchanges to capture rate differentials. A common strategy during periods of high positive funding is to short perpetual contracts while simultaneously holding spot or going long on quarterly futures. This delta-neutral position collects funding payments from perpetual shorts while maintaining market exposure through the offsetting position."
+    }
+  ],
+  "sources_count": 17,
+  "primary_sources": [
+    {
+      "url": "https://www.kraken.com/learn/trading/perpetual-futures-contracts",
+      "title": "What are perpetual futures contracts? A complete guide"
+    },
+    {
+      "url": "https://www.coinglass.com/learn/what-is-funding-rate-arbitrage",
+      "title": "What is Funding Rate Arbitrage?"
+    },
+    {
+      "url": "https://arbitragescanner.io/funding-rates",
+      "title": "Crypto Funding Rates"
+    },
+    {
+      "url": "https://www.reddit.com/r/defi/comments/1m0c7ls/is_anyone_here_taking_advantage_of_funding_rate/",
+      "title": "Is anyone here taking advantage of funding rate arbitrage ..."
+    },
+    {
+      "url": "https://ouinex.com/en/education/funding-rate-arbitrage-cashing-in-on-perpetual-swings",
+      "title": "Funding Rate Arbitrage: How to Profit from Perpetual Swap ..."
+    },
+    {
+      "url": "https://www.bitget.com/academy/12560603880644",
+      "title": "Best Coin Glass Features for Crypto Traders: Liquidations ..."
+    },
+    {
+      "url": "https://medium.com/@XT_com/bitcoin-futures-market-microstructure-liquidation-cascades-funding-regimes-and-open-interest-978b107b4889",
+      "title": "Bitcoin Futures Market Microstructure: Liquidation ..."
+    },
+    {
+      "url": "https://www.linkedin.com/posts/jlldavies_a-comparison-worth-running-the-open-interest-activity-7450177386316279808-db2v",
+      "title": "Crypto OI/ADV divergence signals concentrated exposure"
+    },
+    {
+      "url": "https://blog.tradingriot.com/p/what-you-should-know-about-perpetual",
+      "title": "What You Should Know About Perpetual Futures - by Adam"
+    },
+    {
+      "url": "https://tradelink.pro/blog/funding-rate-open-interest/",
+      "title": "Funding Rate + Open Interest: How to Spot Liquidations"
+    },
+    {
+      "url": "https://phemex.com/blogs/bitcoin-funding-rates-negative-46-days-ftx-bottom",
+      "title": "Bitcoin Negative Funding Rates 46 Days"
+    },
+    {
+      "url": "https://blog.amberdata.io/liquidations-in-crypto-how-to-anticipate-volatile-market-moves",
+      "title": "Tracking Liquidations to Anticipate Volatile Market Moves"
+    },
+    {
+      "url": "https://www.altrady.com/blog/crypto-trading-strategies/crypto-funding-rates-explained",
+      "title": "Crypto Funding Rates: How to Trade Them"
+    },
+    {
+      "url": "https://www.sharpe.ai/products/futures",
+      "title": "Crypto Futures Analytics — OI, Funding, Liquidations"
+    }
+  ],
+  "primary_sources_count": 14,
+  "extra_sources": [
+    {
+      "url": "https://www.coinapi.io/blog/historical-data-for-perpetual-futures",
+      "provider": "tavily",
+      "title": "CoinAPI.io Blog - Historical Data for Perpetual Futures",
+      "description": "## What You Can Do Tomorrow\n\nFor Quant Developers: Download sample perpetual futures data from CoinAPI's historical endpoints. Start with BTC/USDT funding rates across Binance, Bybit, and OKX to validate your normalization logic.\n\nFor Systematic Traders: Use the WebSocket API to build a real-time funding rate monitor. Track when rates diverge across exchanges by more than 0.1% - these are your arbitrage entry signals.\n\nFor Risk Managers: Implement open interest monitoring across your perpetual positions. Use the historical OI data to establish baseline leverage ratios and set alerts when the market becomes overleveraged.\n\nFor Researchers: Access the complete liquidation dataset to study market microstructure. Analyze how liquidation cascades propagate across exchanges and price levels. [...] ### 1. Funding Rate Data\n\n Real-time funding rates via `DERIVATIVES_FUNDING_RATE_CURRENT`\n Historical funding rates via `/v1/metrics/symbol/history`\n Predicted funding rates via `DERIVATIVES_FUNDING_RATE_PREDICTED` (where supported)\n\nUse case: Backtesting funding arbitrage, monitoring premium/discount shifts, building funding-based signals.\n\n### 2. Mark Price and Index Price\n\n Mark price: `DERIVATIVES_MARK_PRICE`\n Index price: `DERIVATIVES_INDEX_PRICE` (when available from the exchange)\n\nUse case: Building liquidation models, tracking fair value, and analyzing price divergence from spot.\n\n### 3. Open Interest (Supported on Select Exchanges)\n\nWhile not universally supported, CoinAPI does offer open interest data via the Metrics API for the following exchanges: [...] Perpetuals introduce layers like:\n\n Funding rate asymmetries: Earn or pay yield depending on market skew\n Open interest dynamics: Track positioning and leverage buildup\n Liquidation events: Time entries around forced moves\n Perp-spot basis: Trade price dislocations and mean reversion\n\nThis is why many advanced traders, market makers, and quant desks favor perpetuals. There’s more noise, but also more signal, if you know where to look.\n\nWith CoinAPI’s historical data platform, you can:\n\n Backtest funding rate arbitrage strategies across multiple exchanges\n Analyze open interest shifts leading into price spikes\n Monitor how liquidation clusters propagate across volatile ranges\n Study how the perp-spot basis behaves around macro events"
+    },
+    {
+      "url": "https://metamask.io/news/monitoring-perps-funding-rate-trends-signals",
+      "provider": "tavily",
+      "title": "How to monitor funding rate trends in perpetual futures",
+      "description": "Predictive funding rate: A projection of where the funding rate is likely to land in the next settlement interval. Used to estimate upcoming cost drag before it hits the settlement ledger.\n\nCumulative funding: The net total of funding payments paid or received over a defined period. Used in post-trade PnL attribution to separate price movement from funding drag.\n\nSlippage: The difference between the expected price of a trade and the actual fill price. Relevant to cross-venue divergence analysis where apparent funding arbitrage can be eroded by execution costs.\n\nLiquidation cascade: A chain reaction of forced position closures triggered when margin falls below maintenance levels across multiple traders simultaneously. Cascades can reset or invert funding rate trends. [...] Disclaimer: This content is for general educational purposes only, is not financial advice or a solicitation, and is not intended for UK audiences. Perpetual futures involve a high risk of loss and may not be suitable for everyone.\n\n## Key terms for perps funding rate monitoring\n\nFunding rate: A periodic payment between long and short perpetual futures traders. In a monitoring context, the rate's direction and magnitude signal whether longs or shorts are paying a premium to hold positions.\n\nOpen interest (OI): The total value of outstanding derivative contracts. Rising OI alongside rising funding confirms directional crowding; falling OI alongside extreme funding suggests the trend may be losing participation. [...] Predictive funding tools estimate upcoming cost drag before settlement; cumulative funding tools separate price-driven PnL from funding drag after the fact.\n\nFunding applies to full position notional, not just posted margin—a 5x leveraged position amplifies funding costs fivefold.\n\nHigh positive funding is not a buy signal. It reflects crowded longs paying a premium to hold positions, which increases cost drag and can precede deleveraging rather than further upside.\n\nCross-exchange funding divergences often reflect structural design differences between platforms—different formulas, cap levels, and settlement timing—rather than arbitrageable mispricings.\n\nFunding applies only to positions open at the settlement timestamp, making alert cadence and settlement schedule awareness critical."
+    },
+    {
+      "url": "https://www.bitget.com/academy/12560603876113",
+      "provider": "tavily",
+      "title": "Crypto Funding Rates Explained: How Perpetual Futures Payments ...",
+      "description": "Extreme funding rates often precede market reversals, though they function better as risk indicators than precise timing signals. When funding rates reach historical extremes—such as exceeding 0.1% per eight-hour period—they indicate overleveraged positioning that becomes vulnerable to liquidation cascades. However, markets can sustain extreme funding rates for extended periods during strong trends. The most reliable reversal signals combine extreme funding rates with other factors: declining trading volume, bearish divergences in momentum indicators, or significant open interest increases suggesting late-stage position accumulation. Funding rates alone should not drive trading decisions but rather inform risk management and position sizing. [...] The relationship between funding rates and open interest provides additional context. Rising open interest combined with increasing positive funding rates suggests new leveraged long positions entering the market, potentially creating liquidation cascades if prices reverse. Declining open interest with normalizing funding rates often indicates position unwinding and reduced leverage, typically associated with healthier market conditions.\n\n## Strategic Implications for Derivatives Traders [...] ### Funding Rate Arbitrage Strategies\n\nFunding rate arbitrage involves taking opposing positions across different contract types or exchanges to capture rate differentials. A common strategy during periods of high positive funding is to short perpetual contracts while simultaneously holding spot or going long on quarterly futures. This delta-neutral position collects funding payments from perpetual shorts while maintaining market exposure through the offsetting position."
+    }
+  ],
+  "extra_sources_count": 3,
+  "source_warning": "extra_sources are retrieved in parallel and are not automatically used to verify generated content; use fetch on key URLs for claim-level evidence.",
+  "routing_decision": {
+    "docs_intent": false,
+    "zh_current_intent": false,
+    "web_current_intent": false,
+    "fetch_intent": false,
+    "supplemental_paths": [],
+    "validation_level": "balanced",
+    "fallback_mode": "auto",
+    "providers": "auto",
+    "main_search_chain": [
+      "xai-responses"
+    ]
+  },
+  "providers_used": [
+    "xAI Responses",
+    "tavily"
+  ],
+  "provider_attempts": [
+    {
+      "capability": "main_search",
+      "provider": "xAI Responses",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 9928.09,
+      "result_count": 1
+    },
+    {
+      "capability": "web_search",
+      "provider": "tavily",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 14558.26,
+      "result_count": 3
+    }
+  ],
+  "fallback_used": false,
+  "validation_level": "balanced",
+  "minimum_profile_ok": true,
+  "capability_status": {
+    "main_search": {
+      "configured": [
+        "xai-responses"
+      ],
+      "fallback_chain": [
+        "xai-responses",
+        "openai-compatible"
+      ],
+      "ok": true
+    },
+    "web_search": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "zhipu",
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    },
+    "docs_search": {
+      "configured": [
+        "context7"
+      ],
+      "fallback_chain": [
+        "exa",
+        "context7"
+      ],
+      "ok": true
+    },
+    "web_fetch": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    }
+  },
+  "elapsed_ms": 14558.28
+}

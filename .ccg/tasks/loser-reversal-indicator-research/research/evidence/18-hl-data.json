@@ -1,0 +1,571 @@
+{
+  "ok": true,
+  "error_type": "",
+  "error": "",
+  "session_id": "5f0bb937a96b",
+  "query": "Hyperliquid historical data API L2 orderbook trades positions download backtest python free",
+  "platform": "",
+  "model": "grok-4.20-fast",
+  "primary_api_mode": "xai-responses",
+  "content": "**Hyperliquid** offers public APIs for real-time and limited historical market data (L2 orderbook snapshots, trades, candles), plus S3 archives for deeper historical L2 book snapshots. Much of it is **free** (with AWS transfer costs for bulk S3 data). User-specific data like positions and fills has recency limits. [[1]](https://hyperliquid.gitbook.io/hyperliquid-docs/historical-data)\n\n### 1. Official Python SDK (Recommended, Free)\nInstall the official SDK: `pip install hyperliquid-python-sdk`\n\n**Key usage for Info (market data):**\n```python\nfrom hyperliquid.info import Info\nfrom hyperliquid.utils import constants\n\ninfo = Info(constants.MAINNET_API_URL, skip_ws=True)  # or TESTNET_API_URL\n\n# L2 Orderbook snapshot (up to ~20 levels per side)\nbook = info.l2_book(\"BTC\")  # or coin like \"ETH\", \"SOL\"\nprint(book)  # {'coin': 'BTC', 'time': ..., 'levels': [[bids...], [asks...]]}\n\n# Recent trades for a coin\ntrades = info.recent_trades(\"BTC\")  # or other methods\n\n# Candle snapshot (OHLCV for backtesting)\ncandles = info.candle_snapshot({\"coin\": \"BTC\", \"interval\": \"1h\", \"startTime\": start_ms, \"endTime\": end_ms})\n```\n\n- **L2Book**: Snapshot only (not full depth or full history via API). Supports aggregation (`nSigFigs`). [[2]](https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint)\n- **Trades**: Recent trades endpoint; subscribe via WebSocket for live.\n- **User data** (positions, fills): Use `info.user_state(address)`, `info.user_fills(address)` (last ~10k fills limit), `historicalOrders`. Requires wallet address (no private key for read-only).\n- WebSocket support for real-time L2 updates, trades, user events, etc.\n\nFull examples in the GitHub repo: https://github.com/hyperliquid-dex/hyperliquid-python-sdk (check `examples/` folder). [[3]](https://github.com/hyperliquid-dex/hyperliquid-python-sdk)\n\n**CCXT** also supports Hyperliquid for easier integration (candles, orderbook, etc.).\n\n### 2. Historical Data Downloads (Free/Public S3)\nHyperliquid uploads **L2 book snapshots** and asset contexts to a public S3 bucket monthly (no timeliness guarantee; data may have gaps). [[1]](https://hyperliquid.gitbook.io/hyperliquid-docs/historical-data)\n\n- Bucket: `hyperliquid-archive`\n- Path example: `s3://hyperliquid-archive/market_data/[date]/[hour]/l2Book/[coin].lz4`\n- Asset contexts: `s3://hyperliquid-archive/asset_ctxs/[date].csv.lz4`\n\n**Download example (AWS CLI):**\n```bash\naws s3 cp s3://hyperliquid-archive/market_data/20230916/9/l2Book/SOL.lz4 /tmp/SOL.lz4 --request-payer requester\nunlz4 --rm /tmp/SOL.lz4\n```\n\nOther buckets exist for fills/trades/node data (more advanced, e.g., `hl-mainnet-node-data`). Pay only for data transfer (requester pays).\n\n**Third-party free/public options**:\n- SonarX public S3: L2 summary snapshots (top 20 levels, every ~20 blocks) for many markets, gzipped JSON, CC0 license. [[4]](https://www.linkedin.com/posts/sonarx_weve-expanded-our-free-hyperliquid-order-activity-7440404755702497282-kfhC)\n- Various providers offer Parquet/CSV historical data (some free tiers, others paid for higher resolution/full depth). [[5]](https://coinmarketman.com/blog/hyperliquid-data-providers-compared/)\n\n### 3. Backtesting in Python\n- **Easiest**: Use the SDK or CCXT to fetch candle snapshots for OHLCV-based backtests (e.g., with Backtrader, VectorBT, or pandas).\n- **Orderbook-aware**: Download S3 L2 snapshots or use third-party Parquet data (e.g., 1-sec resolution from providers) for realistic slippage/execution simulation.\n- Record your own data by running a script that polls the API/WebSocket and saves to CSV/Parquet/ database.\n- Example notebooks exist on GitHub/YouTube for Hyperliquid OHLCV backtesting. [[6]](https://www.youtube.com/watch?v=wEJGjaoniVE)\n\n**Limitations for backtesting**:\n- Official API: Recent candles only (~5000), L2 snapshots limited.\n- User fills/positions: Limited recency (e.g., last 10k).\n- For high-fidelity (tick/L4): Use S3 archives or paid providers (full L4 order book data available commercially). [[7]](https://papers.ssrn.com/sol3/Delivery.cfm/6465720.pdf?abstractid=6465720&mirid=1)\n\n### 4. Other Useful Endpoints\n- **allMids**: Mid prices for all assets.\n- **Open interest, funding history**.\n- **User positions**: Via `clearinghouseState` or `user_state`.\n- Rate limits apply on public endpoints; third-party proxies or self-hosted indexers help for heavy use. [[8]](https://github.com/moondevonyt/Hyperliquid-Data-Layer-API/blob/main/README.md)\n\n**Official Docs**:\n- API: https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api\n- Info endpoint details: https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint\n- Historical: https://hyperliquid.gitbook.io/hyperliquid-docs/historical-data\n\nStart with the official Python SDK for quick prototyping. For bulk historical L2/orderbook data, go to the S3 archives or third-party providers. Most core functionality is free for reasonable use. Let me know if you need a specific code sample (e.g., orderbook downloader or basic backtester).",
+  "sources": [
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/historical-data",
+      "title": "Historical data - Hyperliquid Docs - GitBook"
+    },
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint",
+      "title": "Info endpoint | Hyperliquid Docs - GitBook"
+    },
+    {
+      "url": "https://github.com/hyperliquid-dex/hyperliquid-python-sdk",
+      "title": "SDK for Hyperliquid API trading with Python."
+    },
+    {
+      "url": "https://www.linkedin.com/posts/sonarx_weve-expanded-our-free-hyperliquid-order-activity-7440404755702497282-kfhC",
+      "title": "Hyperliquid Order Book Data Now Publicly Available"
+    },
+    {
+      "url": "https://coinmarketman.com/blog/hyperliquid-data-providers-compared/",
+      "title": "Hyperliquid Data Providers Compared: Features, Pricing, ..."
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=wEJGjaoniVE",
+      "title": "Backtest Your Crypto Trading Bot on Hyperliquid DEX"
+    },
+    {
+      "url": "https://papers.ssrn.com/sol3/Delivery.cfm/6465720.pdf?abstractid=6465720&mirid=1",
+      "title": "Level 4 Order Book Data from the Hyperliquid Exchange"
+    },
+    {
+      "url": "https://github.com/moondevonyt/Hyperliquid-Data-Layer-API/blob/main/README.md",
+      "title": "README.md - moondevonyt/Hyperliquid-Data-Layer-API"
+    },
+    {
+      "url": "https://www.dwellir.com/docs/hyperliquid/historical-data",
+      "provider": "tavily",
+      "title": "Historical Data | Hyperliquid API Docs | Dwellir",
+      "description": "Docs\n\n# Historical Data - Hyperliquid Market Archives\n\nAccess Hyperliquid historical data including archival blockchain state, OHLCV candlesticks, tick-by-tick trade executions, order statuses, and order book diffs from Dwellir.\n\nDwellir provides comprehensive historical data for Hyperliquid, ranging from complete blockchain archives to pre-processed market data formats optimized for specific use cases.\n\n## Available Data Products\n\n### Archival Data (Raw)\n\nComplete raw data in native Hyperliquid formats. [...] | Attribute | Value |\n --- |\n| Available Intervals | 1s, 1m, 5m |\n| Formats | REST, JSON-RPC, WebSocket |\n| Fields | s, i, t, T, o, h, l, c, v, q, n, x |\n| Best For | Technical analysis, charting, portfolio tracking |\n\nView OHLCV Data Documentation\n\nDiscover available Hyperliquid symbols via the Info endpoint. Perpetual market names come from `meta`, and spot market names come from `spotMeta`.\n\n### Tick Data\n\nIndividual trade executions derived from `node_fills_by_block`.\n\n| Attribute | Value |\n --- |\n| Available From | July 2025 |\n| Precision | Millisecond timestamps with block sequencing |\n| Formats | CSV, Parquet |\n| Fields | timestamp, pair, price, size, side, trade\\_id, user\\_address, block\\_number |\n| Best For | Backtesting, slippage analysis, market microstructure | [...] Complete raw data in native Hyperliquid formats.\n\n| Attribute | Value |\n --- |\n| Available From | January 2025 (replica\\_cmds), March 2025 (trade fills) |\n| Formats | replica\\_cmds, node\\_trades, node\\_fills, node\\_fills\\_by\\_block, node\\_order\\_statuses\\_by\\_block, node\\_raw\\_book\\_diffs\\_by\\_block |\n| Contents | Full blockchain state, all transactions, trade fills with PnL, order statuses, order book diffs |\n| Best For | Blockchain replay, compliance, protocol research, order book reconstruction |\n\nView Archival Data Documentation\n\n### OHLCV Data\n\nPre-aggregated candlestick data for all Hyperliquid markets."
+    },
+    {
+      "url": "https://coinmarketman.com/blog/hyperliquid-data-providers-compared",
+      "provider": "tavily",
+      "title": "Hyperliquid Data Providers Compared: Features, Pricing, and Use Cases",
+      "description": "## What Are Hyperliquid Data Providers?\n\nA Hyperliquid data provider is any service that processes, enriches, or delivers data from the Hyperliquid exchange through APIs, dashboards, or streaming feeds. The raw Hyperliquid API gives you the basics: prices, positions, and order states. But turning that raw data into something actionable, whether that means behavioral cohort analytics, whale tracking, orderbook depth visualization, or historical backtesting datasets, requires significant infrastructure.\n\nThese providers fall into roughly four categories: [...] What Hydromancer is not is an analytics layer. You get the raw plumbing, the pipes and the pressure. What you do with the water is up to you. There are no pre-computed cohorts, no behavioral classifications, no smart money aggregates. If you need those, you build them yourself on top of Hydromancer's feeds, which is exactly what some of the most sophisticated trading teams do.\n\n Strengths: L2/L4 orderbook streaming with trigger order visibility, no rate limits, HIP-3/HIP-4 support, historical Parquet data for backtesting, validator-peered infrastructure\n Best for: Market makers, HFT firms, and teams that need raw, low-latency data and have engineering resources to build their own analytics\n Pricing: Starter $300/mo, Growth $1,200/mo, Scale $2,500/mo, Enterprise custom [...] | Provider | Entry Price | Mid Tier | Top Tier | What You Get at Entry | ------ | ASXN / HyperScreener | Free | Free | Free | Dashboard + basic API, daily updates | | Arkham | Free | API by application | Custom | Entity analytics dashboard, fund flow tracing | | Hyperdash (pvp.trade) | Free | N/A | N/A | Analytics dashboard + execution terminal | | CoinGlass | $29/mo | $299/mo | $699/mo | 80+ endpoints, 30 req/min, personal use | | Nansen | $49/mo | $49/mo | $69/mo (monthly) | 500M+ labeled wallets, multi-chain analytics | | HyperTracker | Free / $179/mo | $499/mo | $2,399/mo | 16 cohorts, 50K requests, REST API, 5-min refresh | | Hydromancer | $300/mo | $1,200/mo | $2,500/mo | L2/L4 orderbook, builder APIs, no rate limits | | Raw RPC (HypeRPC) | Usage-based | Usage-based | Usage-based |"
+    },
+    {
+      "url": "context7:/hyperliquid-dex/hyperliquid-python-sdk",
+      "title": "Hyperliquid Python SDK",
+      "description": "SDK for Hyperliquid API trading with Python.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/api_cryptodatadownload",
+      "title": "Crypto Data Download API",
+      "description": "An API that provides access to historical cryptocurrency data from various exchanges.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/nomeida/hyperliquid",
+      "title": "Hyperliquid",
+      "description": "A TypeScript SDK for easily interacting with Hyperliquid's REST and WebSocket APIs, supporting both perpetuals and spot trading with comprehensive rate limiting and browser compatibility.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/llmstxt/hyperliquidapi_llms_txt",
+      "title": "Hyperliquid API",
+      "description": "Hyperliquid API is a zero-custody REST builder API for trading perpetuals, spot, and HIP-3 markets on Hyperliquid where your private keys never leave your machine.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/nktkas/hyperliquid",
+      "title": "Hyperliquid",
+      "description": "An unofficial, typed, and minimal TypeScript SDK for the Hyperliquid API, supporting all major JS runtimes and easy integration with wallet providers.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/hyperliquid_gitbook_io_hyperliquid-docs",
+      "title": "Hyperliquid",
+      "description": "Hyperliquid is a performant layer one blockchain built for a fully onchain open financial system, featuring HyperCore for perpetual futures and spot trading, and HyperEVM for general-purpose smart contracts.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/llmstxt/hyperliquid_gitbook_io_hyperliquid-docs_llms_txt",
+      "title": "Hyperliquid",
+      "description": "Hyperliquid is a decentralized exchange (DEX) offering perpetuals trading, staking, vaults, and a comprehensive API for developers, built on its own HyperEVM.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/joaquinbejar/orderbook-rs",
+      "title": "OrderBook RS",
+      "description": "A high-performance, lock-free limit order book engine written in Rust designed for low-latency trading systems with support for multiple order types and concurrent thread-safe operations.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/rainlanguage/rain.orderbook",
+      "title": "Rain Orderbook",
+      "description": "Rain Orderbook (Raindex) is an open-source, permissionless orderbook system with no fees or admin keys, featuring Solidity contracts, Rust tooling, and JavaScript packages for web and desktop applications.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/liqd-labs/hyperliquid-sdk",
+      "title": "Hyperliquid API SDK",
+      "description": "A TypeScript SDK designed to facilitate interaction with the Hyperliquid API, enabling users to manage orders, retrieve market data, and utilize WebSocket functionality for both spot and perpetual markets.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/10mohi6/portfolio-backtest-python",
+      "title": "Portfolio Backtest",
+      "description": "A Python library for backtesting portfolio asset allocation strategies, including Tangency, Minimum Variance, Hierarchical Risk Parity, and CVaR optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/minecraft-lightland/l2complements",
+      "title": "L2 Complements",
+      "description": "L2 Complements is a Minecraft Forge mod that adds complementary items, tools, armor, magical wands, and enchantments to enhance gameplay with new materials and abilities.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/tripolskypetr/backtest-kit",
+      "title": "Backtest Kit",
+      "description": "A TypeScript framework for backtesting and live trading strategies on multi-asset, crypto, forex or DEX, spot, futures with crash-safe persistence, signal validation, and AI optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/bartonguestier1725-collab/backtest-engine",
+      "title": "Backtest Engine",
+      "description": "A Numba JIT-accelerated backtesting engine for trading strategies that provides 10-50x speedup with technical indicators, Monte Carlo drawdown analysis, and walk-forward validation.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/sonirico/go-hyperliquid",
+      "title": "go-hyperliquid",
+      "description": "An unofficial Go client for the Hyperliquid exchange API with full feature parity to the official Python SDK, providing complete trading, account management, and WebSocket support.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/nktkas_gitbook_io_hyperliquid",
+      "title": "Nktkas Hyperliquid",
+      "description": "A TypeScript SDK for the Hyperliquid API that provides type-safe methods for reading data, placing orders, and receiving real-time updates with support for multiple JavaScript runtimes.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/quiknode-labs/hyperliquid-sdk",
+      "title": "Hyperliquid SDK",
+      "description": "Hyperliquid SDK is a multi-language trading library that simplifies interaction with the Hyperliquid exchange, enabling one-line order placement with support for spot, perpetuals, and derivatives trading.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/jkorf/hyperliquid.net",
+      "title": "HyperLiquid.Net",
+      "description": "A high-performance .NET client library for accessing the HyperLiquid DEX REST and WebSocket APIs with automatic connection management, rate limiting, and order book support.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/nkaz001/hftbacktest",
+      "title": "HFT Backtest",
+      "description": "HFT Backtest is a high-frequency trading backtesting framework designed for developing trading and market-making strategies with accurate feed/order latency simulation and order queue position modeling.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/evil0ctal/douyin_tiktok_download_api",
+      "title": "Douyin TikTok Download API",
+      "description": "A high-performance asynchronous API tool for scraping and downloading videos from Douyin, TikTok, and Bilibili with support for batch parsing, watermark removal, and comprehensive data extraction.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/freecurrencyapi",
+      "title": "Free Currency API",
+      "description": "Free Currency API is a service that provides real-time and historical foreign exchange rates with support for multiple programming languages and authentication methods.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/smappnyu/youtube-data-api",
+      "title": "YouTube Data API Python Client",
+      "description": "A Python client for the YouTube Data API v3, simplifying GET requests and JSON response parsing for data collection.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/meetdeveloper/freedictionaryapi",
+      "title": "Free Dictionary API",
+      "description": "A free API that provides definitions, pronunciations, and etymologies for words, with support for multiple versions and an emphasis on developer usability.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/freenewsapi_io",
+      "title": "Free News API",
+      "description": "Free News API provides authenticated access to news articles, publisher and author information, with support for search, filtering by language/country/topic, and pagination.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/aviationedgeapi/historical-schedules-api",
+      "title": "Aviation Edge Historical Airport Schedules API",
+      "description": "The Aviation Edge Historical Airport Schedules API offers worldwide historical airport schedule data, including flight details, delays, and cancellations, for specific dates or ranges, enabling analysis and compensation claims.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/xclud/dart_download",
+      "title": "Dart Download",
+      "description": "A cross-platform file downloader for Dart and Flutter projects, supporting Android, iOS, Linux, MacOS, Web, and Windows.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/cheahjs/free-llm-api-resources",
+      "title": "Free LLM API Resources",
+      "description": "A comprehensive directory of free and trial LLM services including OpenRouter, Google AI Studio, Groq, and other providers with API access, credits, and usage limits.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/freetheai_xyz",
+      "title": "Free AI API",
+      "description": "An OpenAI-compatible API gateway providing access to 16,000+ AI models including chat, streaming, image generation, and image editing with zero cost and no billing required.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/eodhd",
+      "title": "EODHD End-Of-Day Historical Stock Market Data API",
+      "description": "The EODHD End-Of-Day Historical Stock Market Data API provides daily, weekly, and monthly historical stock market data for over 150,000 global tickers, including US stocks, ETFs, and Mutual Funds, adjusted for splits and dividends.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/datadotworld/data.world-py",
+      "title": "Data.world Python",
+      "description": "The official Python client library for data.world, providing programmatic access to datasets and projects on the platform.",
+      "provider": "context7"
+    }
+  ],
+  "sources_count": 40,
+  "primary_sources": [
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/historical-data",
+      "title": "Historical data - Hyperliquid Docs - GitBook"
+    },
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint",
+      "title": "Info endpoint | Hyperliquid Docs - GitBook"
+    },
+    {
+      "url": "https://github.com/hyperliquid-dex/hyperliquid-python-sdk",
+      "title": "SDK for Hyperliquid API trading with Python."
+    },
+    {
+      "url": "https://www.linkedin.com/posts/sonarx_weve-expanded-our-free-hyperliquid-order-activity-7440404755702497282-kfhC",
+      "title": "Hyperliquid Order Book Data Now Publicly Available"
+    },
+    {
+      "url": "https://coinmarketman.com/blog/hyperliquid-data-providers-compared/",
+      "title": "Hyperliquid Data Providers Compared: Features, Pricing, ..."
+    },
+    {
+      "url": "https://www.youtube.com/watch?v=wEJGjaoniVE",
+      "title": "Backtest Your Crypto Trading Bot on Hyperliquid DEX"
+    },
+    {
+      "url": "https://papers.ssrn.com/sol3/Delivery.cfm/6465720.pdf?abstractid=6465720&mirid=1",
+      "title": "Level 4 Order Book Data from the Hyperliquid Exchange"
+    },
+    {
+      "url": "https://github.com/moondevonyt/Hyperliquid-Data-Layer-API/blob/main/README.md",
+      "title": "README.md - moondevonyt/Hyperliquid-Data-Layer-API"
+    }
+  ],
+  "primary_sources_count": 8,
+  "extra_sources": [
+    {
+      "url": "https://www.dwellir.com/docs/hyperliquid/historical-data",
+      "provider": "tavily",
+      "title": "Historical Data | Hyperliquid API Docs | Dwellir",
+      "description": "Docs\n\n# Historical Data - Hyperliquid Market Archives\n\nAccess Hyperliquid historical data including archival blockchain state, OHLCV candlesticks, tick-by-tick trade executions, order statuses, and order book diffs from Dwellir.\n\nDwellir provides comprehensive historical data for Hyperliquid, ranging from complete blockchain archives to pre-processed market data formats optimized for specific use cases.\n\n## Available Data Products\n\n### Archival Data (Raw)\n\nComplete raw data in native Hyperliquid formats. [...] | Attribute | Value |\n --- |\n| Available Intervals | 1s, 1m, 5m |\n| Formats | REST, JSON-RPC, WebSocket |\n| Fields | s, i, t, T, o, h, l, c, v, q, n, x |\n| Best For | Technical analysis, charting, portfolio tracking |\n\nView OHLCV Data Documentation\n\nDiscover available Hyperliquid symbols via the Info endpoint. Perpetual market names come from `meta`, and spot market names come from `spotMeta`.\n\n### Tick Data\n\nIndividual trade executions derived from `node_fills_by_block`.\n\n| Attribute | Value |\n --- |\n| Available From | July 2025 |\n| Precision | Millisecond timestamps with block sequencing |\n| Formats | CSV, Parquet |\n| Fields | timestamp, pair, price, size, side, trade\\_id, user\\_address, block\\_number |\n| Best For | Backtesting, slippage analysis, market microstructure | [...] Complete raw data in native Hyperliquid formats.\n\n| Attribute | Value |\n --- |\n| Available From | January 2025 (replica\\_cmds), March 2025 (trade fills) |\n| Formats | replica\\_cmds, node\\_trades, node\\_fills, node\\_fills\\_by\\_block, node\\_order\\_statuses\\_by\\_block, node\\_raw\\_book\\_diffs\\_by\\_block |\n| Contents | Full blockchain state, all transactions, trade fills with PnL, order statuses, order book diffs |\n| Best For | Blockchain replay, compliance, protocol research, order book reconstruction |\n\nView Archival Data Documentation\n\n### OHLCV Data\n\nPre-aggregated candlestick data for all Hyperliquid markets."
+    },
+    {
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/historical-data",
+      "provider": "tavily",
+      "title": "Historical data - Hyperliquid Docs - GitBook",
+      "description": "# Historical data | Hyperliquid Docs\n\nImage 1Image 2 Hyperliquid Docs\n\n⌘Ctrl k\n\n   Hyperliquid Docs\n   Builder Tools\n   Support\n\nImage 3Image 4 Hyperliquid Docs\n\n   About Hyperliquid\n   Onboarding\n   HyperCore\n   HyperEVM\n   Hyperliquid Improvement Proposals (HIPs)\n   Trading\n   Validators\n   Referrals\n   Points\n   Historical data\n   Risks\n   Bug bounty program\n   Audits\n   Brand kit\n    For developers \n\n       API\n       HyperEVM\n       Nodes\n\nPowered by GitBook\n\nThe examples below use the AWS CLI (see  and LZ4 ( or install from your package manager).\n\nNote that the requester of the data must pay for transfer costs.\n\n#### . You can use the API to record additional historical data sets yourself. [...] Format: `s3://hyperliquid-archive/market_data/[date]/[hour]/[datatype]/[coin].lz4` or `s3://hyperliquid-archive/asset_ctxs/[date].csv.lz4`\n\nCopy\n```\naws s3 cp s3://hyperliquid-archive/market_data/20230916/9/l2Book/SOL.lz4 /tmp/SOL.lz4 --request-payer requester\nunlz4 --rm /tmp/SOL.lz4\nhead /tmp/SOL\n```\n\n####"
+    },
+    {
+      "url": "https://coinmarketman.com/blog/hyperliquid-data-providers-compared",
+      "provider": "tavily",
+      "title": "Hyperliquid Data Providers Compared: Features, Pricing, and Use Cases",
+      "description": "## What Are Hyperliquid Data Providers?\n\nA Hyperliquid data provider is any service that processes, enriches, or delivers data from the Hyperliquid exchange through APIs, dashboards, or streaming feeds. The raw Hyperliquid API gives you the basics: prices, positions, and order states. But turning that raw data into something actionable, whether that means behavioral cohort analytics, whale tracking, orderbook depth visualization, or historical backtesting datasets, requires significant infrastructure.\n\nThese providers fall into roughly four categories: [...] What Hydromancer is not is an analytics layer. You get the raw plumbing, the pipes and the pressure. What you do with the water is up to you. There are no pre-computed cohorts, no behavioral classifications, no smart money aggregates. If you need those, you build them yourself on top of Hydromancer's feeds, which is exactly what some of the most sophisticated trading teams do.\n\n Strengths: L2/L4 orderbook streaming with trigger order visibility, no rate limits, HIP-3/HIP-4 support, historical Parquet data for backtesting, validator-peered infrastructure\n Best for: Market makers, HFT firms, and teams that need raw, low-latency data and have engineering resources to build their own analytics\n Pricing: Starter $300/mo, Growth $1,200/mo, Scale $2,500/mo, Enterprise custom [...] | Provider | Entry Price | Mid Tier | Top Tier | What You Get at Entry | ------ | ASXN / HyperScreener | Free | Free | Free | Dashboard + basic API, daily updates | | Arkham | Free | API by application | Custom | Entity analytics dashboard, fund flow tracing | | Hyperdash (pvp.trade) | Free | N/A | N/A | Analytics dashboard + execution terminal | | CoinGlass | $29/mo | $299/mo | $699/mo | 80+ endpoints, 30 req/min, personal use | | Nansen | $49/mo | $49/mo | $69/mo (monthly) | 500M+ labeled wallets, multi-chain analytics | | HyperTracker | Free / $179/mo | $499/mo | $2,399/mo | 16 cohorts, 50K requests, REST API, 5-min refresh | | Hydromancer | $300/mo | $1,200/mo | $2,500/mo | L2/L4 orderbook, builder APIs, no rate limits | | Raw RPC (HypeRPC) | Usage-based | Usage-based | Usage-based |"
+    },
+    {
+      "url": "context7:/hyperliquid-dex/hyperliquid-python-sdk",
+      "title": "Hyperliquid Python SDK",
+      "description": "SDK for Hyperliquid API trading with Python.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/api_cryptodatadownload",
+      "title": "Crypto Data Download API",
+      "description": "An API that provides access to historical cryptocurrency data from various exchanges.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/nomeida/hyperliquid",
+      "title": "Hyperliquid",
+      "description": "A TypeScript SDK for easily interacting with Hyperliquid's REST and WebSocket APIs, supporting both perpetuals and spot trading with comprehensive rate limiting and browser compatibility.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/llmstxt/hyperliquidapi_llms_txt",
+      "title": "Hyperliquid API",
+      "description": "Hyperliquid API is a zero-custody REST builder API for trading perpetuals, spot, and HIP-3 markets on Hyperliquid where your private keys never leave your machine.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/nktkas/hyperliquid",
+      "title": "Hyperliquid",
+      "description": "An unofficial, typed, and minimal TypeScript SDK for the Hyperliquid API, supporting all major JS runtimes and easy integration with wallet providers.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/hyperliquid_gitbook_io_hyperliquid-docs",
+      "title": "Hyperliquid",
+      "description": "Hyperliquid is a performant layer one blockchain built for a fully onchain open financial system, featuring HyperCore for perpetual futures and spot trading, and HyperEVM for general-purpose smart contracts.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/llmstxt/hyperliquid_gitbook_io_hyperliquid-docs_llms_txt",
+      "title": "Hyperliquid",
+      "description": "Hyperliquid is a decentralized exchange (DEX) offering perpetuals trading, staking, vaults, and a comprehensive API for developers, built on its own HyperEVM.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/joaquinbejar/orderbook-rs",
+      "title": "OrderBook RS",
+      "description": "A high-performance, lock-free limit order book engine written in Rust designed for low-latency trading systems with support for multiple order types and concurrent thread-safe operations.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/rainlanguage/rain.orderbook",
+      "title": "Rain Orderbook",
+      "description": "Rain Orderbook (Raindex) is an open-source, permissionless orderbook system with no fees or admin keys, featuring Solidity contracts, Rust tooling, and JavaScript packages for web and desktop applications.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/liqd-labs/hyperliquid-sdk",
+      "title": "Hyperliquid API SDK",
+      "description": "A TypeScript SDK designed to facilitate interaction with the Hyperliquid API, enabling users to manage orders, retrieve market data, and utilize WebSocket functionality for both spot and perpetual markets.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/10mohi6/portfolio-backtest-python",
+      "title": "Portfolio Backtest",
+      "description": "A Python library for backtesting portfolio asset allocation strategies, including Tangency, Minimum Variance, Hierarchical Risk Parity, and CVaR optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/minecraft-lightland/l2complements",
+      "title": "L2 Complements",
+      "description": "L2 Complements is a Minecraft Forge mod that adds complementary items, tools, armor, magical wands, and enchantments to enhance gameplay with new materials and abilities.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/tripolskypetr/backtest-kit",
+      "title": "Backtest Kit",
+      "description": "A TypeScript framework for backtesting and live trading strategies on multi-asset, crypto, forex or DEX, spot, futures with crash-safe persistence, signal validation, and AI optimization.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/bartonguestier1725-collab/backtest-engine",
+      "title": "Backtest Engine",
+      "description": "A Numba JIT-accelerated backtesting engine for trading strategies that provides 10-50x speedup with technical indicators, Monte Carlo drawdown analysis, and walk-forward validation.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/sonirico/go-hyperliquid",
+      "title": "go-hyperliquid",
+      "description": "An unofficial Go client for the Hyperliquid exchange API with full feature parity to the official Python SDK, providing complete trading, account management, and WebSocket support.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/nktkas_gitbook_io_hyperliquid",
+      "title": "Nktkas Hyperliquid",
+      "description": "A TypeScript SDK for the Hyperliquid API that provides type-safe methods for reading data, placing orders, and receiving real-time updates with support for multiple JavaScript runtimes.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/quiknode-labs/hyperliquid-sdk",
+      "title": "Hyperliquid SDK",
+      "description": "Hyperliquid SDK is a multi-language trading library that simplifies interaction with the Hyperliquid exchange, enabling one-line order placement with support for spot, perpetuals, and derivatives trading.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/jkorf/hyperliquid.net",
+      "title": "HyperLiquid.Net",
+      "description": "A high-performance .NET client library for accessing the HyperLiquid DEX REST and WebSocket APIs with automatic connection management, rate limiting, and order book support.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/nkaz001/hftbacktest",
+      "title": "HFT Backtest",
+      "description": "HFT Backtest is a high-frequency trading backtesting framework designed for developing trading and market-making strategies with accurate feed/order latency simulation and order queue position modeling.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/evil0ctal/douyin_tiktok_download_api",
+      "title": "Douyin TikTok Download API",
+      "description": "A high-performance asynchronous API tool for scraping and downloading videos from Douyin, TikTok, and Bilibili with support for batch parsing, watermark removal, and comprehensive data extraction.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/freecurrencyapi",
+      "title": "Free Currency API",
+      "description": "Free Currency API is a service that provides real-time and historical foreign exchange rates with support for multiple programming languages and authentication methods.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/smappnyu/youtube-data-api",
+      "title": "YouTube Data API Python Client",
+      "description": "A Python client for the YouTube Data API v3, simplifying GET requests and JSON response parsing for data collection.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/meetdeveloper/freedictionaryapi",
+      "title": "Free Dictionary API",
+      "description": "A free API that provides definitions, pronunciations, and etymologies for words, with support for multiple versions and an emphasis on developer usability.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/freenewsapi_io",
+      "title": "Free News API",
+      "description": "Free News API provides authenticated access to news articles, publisher and author information, with support for search, filtering by language/country/topic, and pagination.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/aviationedgeapi/historical-schedules-api",
+      "title": "Aviation Edge Historical Airport Schedules API",
+      "description": "The Aviation Edge Historical Airport Schedules API offers worldwide historical airport schedule data, including flight details, delays, and cancellations, for specific dates or ranges, enabling analysis and compensation claims.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/xclud/dart_download",
+      "title": "Dart Download",
+      "description": "A cross-platform file downloader for Dart and Flutter projects, supporting Android, iOS, Linux, MacOS, Web, and Windows.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/cheahjs/free-llm-api-resources",
+      "title": "Free LLM API Resources",
+      "description": "A comprehensive directory of free and trial LLM services including OpenRouter, Google AI Studio, Groq, and other providers with API access, credits, and usage limits.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/freetheai_xyz",
+      "title": "Free AI API",
+      "description": "An OpenAI-compatible API gateway providing access to 16,000+ AI models including chat, streaming, image generation, and image editing with zero cost and no billing required.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/websites/eodhd",
+      "title": "EODHD End-Of-Day Historical Stock Market Data API",
+      "description": "The EODHD End-Of-Day Historical Stock Market Data API provides daily, weekly, and monthly historical stock market data for over 150,000 global tickers, including US stocks, ETFs, and Mutual Funds, adjusted for splits and dividends.",
+      "provider": "context7"
+    },
+    {
+      "url": "context7:/datadotworld/data.world-py",
+      "title": "Data.world Python",
+      "description": "The official Python client library for data.world, providing programmatic access to datasets and projects on the platform.",
+      "provider": "context7"
+    }
+  ],
+  "extra_sources_count": 33,
+  "source_warning": "extra_sources are retrieved in parallel and are not automatically used to verify generated content; use fetch on key URLs for claim-level evidence.",
+  "routing_decision": {
+    "docs_intent": true,
+    "zh_current_intent": false,
+    "web_current_intent": false,
+    "fetch_intent": false,
+    "supplemental_paths": [
+      "docs_search"
+    ],
+    "validation_level": "balanced",
+    "fallback_mode": "auto",
+    "providers": "auto",
+    "main_search_chain": [
+      "xai-responses"
+    ]
+  },
+  "providers_used": [
+    "xAI Responses",
+    "tavily",
+    "context7"
+  ],
+  "provider_attempts": [
+    {
+      "capability": "main_search",
+      "provider": "xAI Responses",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 16956.16,
+      "result_count": 1
+    },
+    {
+      "capability": "web_search",
+      "provider": "tavily",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 20100.55,
+      "result_count": 3
+    },
+    {
+      "capability": "docs_search",
+      "provider": "context7",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 1501.21,
+      "result_count": 30
+    }
+  ],
+  "fallback_used": false,
+  "validation_level": "balanced",
+  "minimum_profile_ok": true,
+  "capability_status": {
+    "main_search": {
+      "configured": [
+        "xai-responses"
+      ],
+      "fallback_chain": [
+        "xai-responses",
+        "openai-compatible"
+      ],
+      "ok": true
+    },
+    "web_search": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "zhipu",
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    },
+    "docs_search": {
+      "configured": [
+        "context7"
+      ],
+      "fallback_chain": [
+        "exa",
+        "context7"
+      ],
+      "ok": true
+    },
+    "web_fetch": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    }
+  },
+  "elapsed_ms": 21601.91
+}

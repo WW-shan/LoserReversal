@@ -1,0 +1,261 @@
+{
+  "ok": true,
+  "error_type": "",
+  "error": "",
+  "session_id": "b23047d62548",
+  "query": "crypto retail trader contrarian indicator on-chain losing wallets fade dumb money strategy",
+  "platform": "",
+  "model": "grok-4.20-fast",
+  "primary_api_mode": "xai-responses",
+  "content": "**The \"fade dumb money\" or contrarian retail strategy in crypto uses on-chain data to identify when retail traders (often called \"dumb money\" due to their tendency to buy high/FOMO and sell low/panic) are heavily positioned one way, then take the opposite side.** [[1]](https://www.kucoin.com/news/articles/on-chain-profitability-analysis-what-it-means-when-most-bitcoin-wallets-are-in-the-money) [[2]](https://fr.tradingview.com/scripts/retail/)\n\nRetail traders typically dominate smaller wallets and short-term holding behavior. \"Smart money\" (whales, institutions, long-term holders) often accumulates during retail capitulation and distributes during retail euphoria. On-chain analytics make this visible in near real-time. [[3]](https://app.santiment.net/insights/read/this-week-in-crypto-full-written-summary-w4-january-2026-10510) [[4]](https://www.facebook.com/coindesk/posts/-bitcoin-whales-are-buying-the-dip-as-retail-exits-with-1000-btc-holders-leading/1336149988550750/)\n\n### Core On-Chain Concepts\n- **Short-Term Holders (STH)** vs. **Long-Term Holders (LTH)**: Platforms like Glassnode define STH as coins held <155 days (proxy for retail/new buyers). LTH are more experienced/conviction holders. [[5]](https://insights.glassnode.com/quantifying-bitcoin-hodler-supply/)\n- **Supply in Profit/Loss**: Tracks unrealized gains/losses by cohort. High STH supply in loss signals retail pain/capitulation (often a bottoming signal). Extreme STH profits can indicate tops. [[1]](https://www.kucoin.com/news/articles/on-chain-profitability-analysis-what-it-means-when-most-bitcoin-wallets-are-in-the-money) [[6]](https://www.coindesk.com/markets/2025/11/17/short-term-holder-bitcoin-supply-in-loss-climbs-to-highest-level-since-ftx-collapse)\n- **Addresses/Wallets in Loss**: Spikes (e.g., millions of addresses underwater) show widespread retail distress. [[7]](https://www.facebook.com/cointelegraph/posts/-market-the-number-of-bitcoin-addresses-in-loss-are-now-over-13m-per-glassnode/1267057242267768/)\n- **Realized Losses/Proft-Taking**: High realized losses from STH = capitulation (dumb money exiting). SOPR (Spent Output Profit Ratio) for STH dipping below 1 indicates selling at a loss. [[8]](https://cryptoquant.com/asset/btc/chart/market-indicator/short-term-holder-sopr)\n- **Wallet Size Behavior**: Small wallets (<10-100 BTC or equivalent) accumulating while whales distribute is often bearish (fade retail). Reverse is bullish. [[3]](https://app.santiment.net/insights/read/this-week-in-crypto-full-written-summary-w4-january-2026-10510)\n- **Exchange Flows**: Retail-driven inflows to exchanges (selling pressure) vs. outflows (accumulation).\n\n**Contrarian logic**: When losing wallets surge, STH are capitulating, and sentiment is fearful (e.g., high fear/greed index fear), it often marks local or cycle bottoms as weak hands flush out. Extreme retail greed + STH profits signals distribution tops. [[9]](https://phemex.com/academy/crypto-sentiment-indicator) [[10]](https://www.usfunds.com/resource/why-bitcoins-capitulation-event-sets-up-a-contrarian-buy/)\n\n### Key Indicators and Tools\n- **Glassnode**: Addresses in loss, STH/LTH supply in profit/loss, NUPL (Net Unrealized Profit/Loss), HODL waves, realized loss metrics. [[11]](https://glassnode.com/)\n- **CryptoQuant**: STH SOPR, exchange reserves, profit/loss margins for recent buyers, Apparent Demand. [[12]](https://cryptoquant.com/)\n- **Santiment**: Retail wallet behavior, divergence between small vs. large holders. [[3]](https://app.santiment.net/insights/read/this-week-in-crypto-full-written-summary-w4-january-2026-10510)\n- Supporting signals: High exchange inflows during dips (retail panic-selling), low active addresses in euphoria, or whale accumulation during retail exits. [[13]](https://wundertrading.com/journal/en/on-chain-analysis-trading-blockchain-data)\n\n### Practical \"Fade Dumb Money\" Strategy\n1. **Monitor for Capitulation (Bullish Contrarian Entry)**: Look for spikes in STH supply in loss, addresses in loss, and realized losses. Combine with sentiment extremes (Fear & Greed <20) and whale accumulation. Historical bottoms show convergence of profit/loss supply. [[1]](https://www.kucoin.com/news/articles/on-chain-profitability-analysis-what-it-means-when-most-bitcoin-wallets-are-in-the-money) [[14]](https://finance.yahoo.com/news/onchain-metric-identified-bitcoin-bottom-120525433.html)\n2. **Monitor for Euphoria/Distribution (Bearish Contrarian Exit/Short)**: High STH profits, retail small-wallet buying while whales sell/exchange inflows rise. [[3]](https://app.santiment.net/insights/read/this-week-in-crypto-full-written-summary-w4-january-2026-10510)\n3. **Risk Management**: Use with price action, volume, and broader macro. On-chain is not perfect (e.g., ETFs change flows). Position size small, especially in leveraged trades. Confirm with multiple metrics. [[13]](https://wundertrading.com/journal/en/on-chain-analysis-trading-blockchain-data)\n4. **Examples from Cycles**: Retail FOMO into tops (2017, late bulls) where they bought from distributing LTH; capitulation in bears where LTH/smart money accumulate from panicked sellers. [[15]](https://www.checkonchain.com/why-onchain-analysis)\n\n**This is a probabilistic edge, not guaranteed.** Retail isn't always wrong, and metrics lag or get noisy with ETFs/institutions. Always DYOR, manage risk, and avoid over-reliance on any single signal. Tools like Glassnode/CryptoQuant offer free tiers for basics; paid for deeper breakdowns. Combine with on-chain dashboards for real-time monitoring.",
+  "sources": [
+    {
+      "url": "https://www.kucoin.com/news/articles/on-chain-profitability-analysis-what-it-means-when-most-bitcoin-wallets-are-in-the-money",
+      "title": "Bitcoin Wallets In The Money"
+    },
+    {
+      "url": "https://fr.tradingview.com/scripts/retail/",
+      "title": "Retail — Indicateurs et Stratégies"
+    },
+    {
+      "url": "https://app.santiment.net/insights/read/this-week-in-crypto-full-written-summary-w4-january-2026-10510",
+      "title": "This Week in Crypto, Full Written Summary: W4 January 2026"
+    },
+    {
+      "url": "https://www.facebook.com/coindesk/posts/-bitcoin-whales-are-buying-the-dip-as-retail-exits-with-1000-btc-holders-leading/1336149988550750/",
+      "title": "📊 Bitcoin whales are buying the dip as retail exits, with ..."
+    },
+    {
+      "url": "https://insights.glassnode.com/quantifying-bitcoin-hodler-supply/",
+      "title": "Quantifying Short-Term and Long-Term Holder Bitcoin ..."
+    },
+    {
+      "url": "https://www.coindesk.com/markets/2025/11/17/short-term-holder-bitcoin-supply-in-loss-climbs-to-highest-level-since-ftx-collapse",
+      "title": "BTC Supply in Loss Held by Short-Term Holders at Highest ..."
+    },
+    {
+      "url": "https://www.facebook.com/cointelegraph/posts/-market-the-number-of-bitcoin-addresses-in-loss-are-now-over-13m-per-glassnode/1267057242267768/",
+      "title": "The number of Bitcoin addresses in loss are now over 13M, per ..."
+    },
+    {
+      "url": "https://cryptoquant.com/asset/btc/chart/market-indicator/short-term-holder-sopr",
+      "title": "Short Term Holder SOPR - Bitcoin"
+    },
+    {
+      "url": "https://phemex.com/academy/crypto-sentiment-indicator",
+      "title": "Crypto Sentiment Analysis Guide 2025: Top Indicators ..."
+    },
+    {
+      "url": "https://www.usfunds.com/resource/why-bitcoins-capitulation-event-sets-up-a-contrarian-buy/",
+      "title": "Why Bitcoin's Capitulation Event Sets Up a Contrarian Buy"
+    },
+    {
+      "url": "https://glassnode.com/",
+      "title": "Glassnode - Digital Asset Market Intelligence"
+    },
+    {
+      "url": "https://cryptoquant.com/",
+      "title": "CryptoQuant | On-Chain Actionable Insights"
+    },
+    {
+      "url": "https://wundertrading.com/journal/en/on-chain-analysis-trading-blockchain-data",
+      "title": "Using On-Chain Data to Anticipate Crypto Price Moves"
+    },
+    {
+      "url": "https://finance.yahoo.com/news/onchain-metric-identified-bitcoin-bottom-120525433.html",
+      "title": "This onchain metric has identified the Bitcoin bottom every ..."
+    },
+    {
+      "url": "https://www.checkonchain.com/why-onchain-analysis",
+      "title": "What is Bitcoin onchain analysis, and why it it important?"
+    },
+    {
+      "url": "https://www.coinbase.com/learn/advanced-trading/what-is-onchain-analysis-and-how-to-use-it-as-a-crypto-trader",
+      "provider": "tavily",
+      "title": "What is onchain analysis and how to use it as a crypto trader?",
+      "description": "On-chain analysis uses many different measurements, like how many wallets are active, the total amount of transactions, where the supply of an asset is, and the total value of assets locked in a smart contract. These measurements are used to understand how an asset's price might change. Realized profits and losses, supply in profit or loss, and realized capitalization are the primary on-chain indicators for market action.\n\n## Tools for Onchain Analysis\n\nVarious tools are available for onchain analysis. These tools allow users to look up any wallet address or smart contract. But they don’t aggregate data or offer tools to make sense of the wealth of data points that exist. [...] Onchain analysis can be a new framework for crypto valuation which allows users to establish an edge.\n\n## Understanding Onchain Analysis\n\nOnchain analysis looks at public blockchain information, like transactions and how much crypto is in a wallet. It helps you understand what people are doing on the blockchain right now. This unique insight into market movements, absent in traditional finance, gives people a different way to do research and make educated decisions.\n\nPublic blockchains such as Ethereum, Solana, and Bitcoin are transparent digital ledgers, auditable by anyone and everyone. Every transaction and event on these chains is visible and publicly accessible, allowing anyone, anywhere, at any time, to access and analyze it. [...] In response, numerous platforms and sources have sprung up that each offer insightful charts and dashboards to better help users visualize blockchain data and track the movements of crypto and individual wallets.\n\n## Onchain Analysis and Crypto Trading\n\nOn-chain analysis is the examination of blockchain data to understand transaction patterns, asset movements, and network health, helping people make better decisions in the world of cryptocurrency.\n\nBy measuring data points like token holder counts, transaction volume and decentralization metrics, users can gain a better understanding of the fundamental value of a cryptocurrency.\n\n   Understanding Onchain Analysis\n   Onchain Data and Its Importance\n   Tools for Onchain Analysis\n   Onchain Analysis and Crypto Trading"
+    },
+    {
+      "url": "https://www.bitcoinmagazinepro.com/blog/how-on-chain-analysis-can-improve-your-trading-13-top-tools-to-use",
+      "provider": "tavily",
+      "title": "How On-Chain Analysis Can Improve Your Trading & 13 Top Tools to Use | BM Pro",
+      "description": "You can conduct an on-chain analysis to determine why various market participants buy or sell a given asset. Through an on-chain analysis platform like Glassnode, you can view various BTC investors' activities. Analyzing on-chain data can show whether they are actively depositing assets to centralized exchanges (CEXs) or withdrawing them to decentralized wallets. A high inflow to CEXs suggests the chance that they will dump their holdings, while a high influx to decentralized wallets means they are planning to hold for some time. You can use this information to guide you in making a wise investment decision. [...] The Pi Cycle Top Indicator is a precious tool for forecasting the peaks of Bitcoin’s market cycles. It aims to predict when the price is likely to reach its all-time high before undergoing a downturn. It operates on significant high time frames and has demonstrated a strong track record in identifying the highest points in Bitcoin’s major price movements. \n\n#### Bitcoin MVRV-Z Score: Spotting Market Peaks and Bottoms"
+    },
+    {
+      "url": "https://www.altrady.com/crypto-trading/onchain-blockchain-analytics-for-traders/how-to-read-interpret-onchain-metrics",
+      "provider": "tavily",
+      "title": "How to Read and Interpret On-Chain Metrics Like a Pro",
+      "description": "Some traders even track whale wallets directly to front-run moves—more on that in a minute.\n\n### 5. Total Value Locked (TVL)\n\nTVL measures the amount of crypto staked in DeFi protocols or smart contracts.\n\n Rising TVL = growing trust in the ecosystem. It means people are locking up assets and using the network.\n Sudden TVL drops = panic. It could be fear, a rug pull, or a smart contract exploit. Either way, time to pay attention.\n\nTVL is especially important if you’re trading DeFi tokens or protocols.\n\n### 6. Profit/Loss Metrics: NUPL and MVRV\n\nLet’s talk about how deep into profit or pain the market is.\n\nNUPL (Net Unrealized Profit/Loss): Measures whether coins are sitting in profit or loss.\n\nHigh profits across the network? Some might start selling. [...] High profits across the network? Some might start selling.\n\nDeep unrealized losses? Most won’t sell—they’re already wrecked and waiting for a bounce.\n\nSource: Glassnode\n\nMVRV Ratio (Market Value / Realized Value):\n\n Below 1: Asset could be undervalued—possibly a buying opportunity.\n Above 1.5–2: Watch out. The market may be overheated.\n\nGreat tools for finding good entry points—or knowing when to exit before the top.\n\n### 7. Whale and Smart Money Activity\n\nWhales move markets.  Track wallets known for making smart moves or holding large amounts of crypto:\n\n Accumulation by whales = bullish. They tend to load up before rallies.\n Large transfers to exchanges = danger. Could signal incoming sells. [...] ## Key Takeaways\n\nOn-chain metrics give you a clear edge in crypto trading. While most traders chase charts and headlines, you’ll be reading the network’s heartbeat in real time. That’s the power of on-chain data—it’s honest, transparent, and full of signals most people never see.\n\nMaster it, and you’re not just reacting to the market—you’re anticipating it. Now go pull some wallets, check the flows, and trade like you know what you’re doing.\n\nIn this Article"
+    }
+  ],
+  "sources_count": 18,
+  "primary_sources": [
+    {
+      "url": "https://www.kucoin.com/news/articles/on-chain-profitability-analysis-what-it-means-when-most-bitcoin-wallets-are-in-the-money",
+      "title": "Bitcoin Wallets In The Money"
+    },
+    {
+      "url": "https://fr.tradingview.com/scripts/retail/",
+      "title": "Retail — Indicateurs et Stratégies"
+    },
+    {
+      "url": "https://app.santiment.net/insights/read/this-week-in-crypto-full-written-summary-w4-january-2026-10510",
+      "title": "This Week in Crypto, Full Written Summary: W4 January 2026"
+    },
+    {
+      "url": "https://www.facebook.com/coindesk/posts/-bitcoin-whales-are-buying-the-dip-as-retail-exits-with-1000-btc-holders-leading/1336149988550750/",
+      "title": "📊 Bitcoin whales are buying the dip as retail exits, with ..."
+    },
+    {
+      "url": "https://insights.glassnode.com/quantifying-bitcoin-hodler-supply/",
+      "title": "Quantifying Short-Term and Long-Term Holder Bitcoin ..."
+    },
+    {
+      "url": "https://www.coindesk.com/markets/2025/11/17/short-term-holder-bitcoin-supply-in-loss-climbs-to-highest-level-since-ftx-collapse",
+      "title": "BTC Supply in Loss Held by Short-Term Holders at Highest ..."
+    },
+    {
+      "url": "https://www.facebook.com/cointelegraph/posts/-market-the-number-of-bitcoin-addresses-in-loss-are-now-over-13m-per-glassnode/1267057242267768/",
+      "title": "The number of Bitcoin addresses in loss are now over 13M, per ..."
+    },
+    {
+      "url": "https://cryptoquant.com/asset/btc/chart/market-indicator/short-term-holder-sopr",
+      "title": "Short Term Holder SOPR - Bitcoin"
+    },
+    {
+      "url": "https://phemex.com/academy/crypto-sentiment-indicator",
+      "title": "Crypto Sentiment Analysis Guide 2025: Top Indicators ..."
+    },
+    {
+      "url": "https://www.usfunds.com/resource/why-bitcoins-capitulation-event-sets-up-a-contrarian-buy/",
+      "title": "Why Bitcoin's Capitulation Event Sets Up a Contrarian Buy"
+    },
+    {
+      "url": "https://glassnode.com/",
+      "title": "Glassnode - Digital Asset Market Intelligence"
+    },
+    {
+      "url": "https://cryptoquant.com/",
+      "title": "CryptoQuant | On-Chain Actionable Insights"
+    },
+    {
+      "url": "https://wundertrading.com/journal/en/on-chain-analysis-trading-blockchain-data",
+      "title": "Using On-Chain Data to Anticipate Crypto Price Moves"
+    },
+    {
+      "url": "https://finance.yahoo.com/news/onchain-metric-identified-bitcoin-bottom-120525433.html",
+      "title": "This onchain metric has identified the Bitcoin bottom every ..."
+    },
+    {
+      "url": "https://www.checkonchain.com/why-onchain-analysis",
+      "title": "What is Bitcoin onchain analysis, and why it it important?"
+    }
+  ],
+  "primary_sources_count": 15,
+  "extra_sources": [
+    {
+      "url": "https://www.coinbase.com/learn/advanced-trading/what-is-onchain-analysis-and-how-to-use-it-as-a-crypto-trader",
+      "provider": "tavily",
+      "title": "What is onchain analysis and how to use it as a crypto trader?",
+      "description": "On-chain analysis uses many different measurements, like how many wallets are active, the total amount of transactions, where the supply of an asset is, and the total value of assets locked in a smart contract. These measurements are used to understand how an asset's price might change. Realized profits and losses, supply in profit or loss, and realized capitalization are the primary on-chain indicators for market action.\n\n## Tools for Onchain Analysis\n\nVarious tools are available for onchain analysis. These tools allow users to look up any wallet address or smart contract. But they don’t aggregate data or offer tools to make sense of the wealth of data points that exist. [...] Onchain analysis can be a new framework for crypto valuation which allows users to establish an edge.\n\n## Understanding Onchain Analysis\n\nOnchain analysis looks at public blockchain information, like transactions and how much crypto is in a wallet. It helps you understand what people are doing on the blockchain right now. This unique insight into market movements, absent in traditional finance, gives people a different way to do research and make educated decisions.\n\nPublic blockchains such as Ethereum, Solana, and Bitcoin are transparent digital ledgers, auditable by anyone and everyone. Every transaction and event on these chains is visible and publicly accessible, allowing anyone, anywhere, at any time, to access and analyze it. [...] In response, numerous platforms and sources have sprung up that each offer insightful charts and dashboards to better help users visualize blockchain data and track the movements of crypto and individual wallets.\n\n## Onchain Analysis and Crypto Trading\n\nOn-chain analysis is the examination of blockchain data to understand transaction patterns, asset movements, and network health, helping people make better decisions in the world of cryptocurrency.\n\nBy measuring data points like token holder counts, transaction volume and decentralization metrics, users can gain a better understanding of the fundamental value of a cryptocurrency.\n\n   Understanding Onchain Analysis\n   Onchain Data and Its Importance\n   Tools for Onchain Analysis\n   Onchain Analysis and Crypto Trading"
+    },
+    {
+      "url": "https://www.bitcoinmagazinepro.com/blog/how-on-chain-analysis-can-improve-your-trading-13-top-tools-to-use",
+      "provider": "tavily",
+      "title": "How On-Chain Analysis Can Improve Your Trading & 13 Top Tools to Use | BM Pro",
+      "description": "You can conduct an on-chain analysis to determine why various market participants buy or sell a given asset. Through an on-chain analysis platform like Glassnode, you can view various BTC investors' activities. Analyzing on-chain data can show whether they are actively depositing assets to centralized exchanges (CEXs) or withdrawing them to decentralized wallets. A high inflow to CEXs suggests the chance that they will dump their holdings, while a high influx to decentralized wallets means they are planning to hold for some time. You can use this information to guide you in making a wise investment decision. [...] The Pi Cycle Top Indicator is a precious tool for forecasting the peaks of Bitcoin’s market cycles. It aims to predict when the price is likely to reach its all-time high before undergoing a downturn. It operates on significant high time frames and has demonstrated a strong track record in identifying the highest points in Bitcoin’s major price movements. \n\n#### Bitcoin MVRV-Z Score: Spotting Market Peaks and Bottoms"
+    },
+    {
+      "url": "https://www.altrady.com/crypto-trading/onchain-blockchain-analytics-for-traders/how-to-read-interpret-onchain-metrics",
+      "provider": "tavily",
+      "title": "How to Read and Interpret On-Chain Metrics Like a Pro",
+      "description": "Some traders even track whale wallets directly to front-run moves—more on that in a minute.\n\n### 5. Total Value Locked (TVL)\n\nTVL measures the amount of crypto staked in DeFi protocols or smart contracts.\n\n Rising TVL = growing trust in the ecosystem. It means people are locking up assets and using the network.\n Sudden TVL drops = panic. It could be fear, a rug pull, or a smart contract exploit. Either way, time to pay attention.\n\nTVL is especially important if you’re trading DeFi tokens or protocols.\n\n### 6. Profit/Loss Metrics: NUPL and MVRV\n\nLet’s talk about how deep into profit or pain the market is.\n\nNUPL (Net Unrealized Profit/Loss): Measures whether coins are sitting in profit or loss.\n\nHigh profits across the network? Some might start selling. [...] High profits across the network? Some might start selling.\n\nDeep unrealized losses? Most won’t sell—they’re already wrecked and waiting for a bounce.\n\nSource: Glassnode\n\nMVRV Ratio (Market Value / Realized Value):\n\n Below 1: Asset could be undervalued—possibly a buying opportunity.\n Above 1.5–2: Watch out. The market may be overheated.\n\nGreat tools for finding good entry points—or knowing when to exit before the top.\n\n### 7. Whale and Smart Money Activity\n\nWhales move markets.  Track wallets known for making smart moves or holding large amounts of crypto:\n\n Accumulation by whales = bullish. They tend to load up before rallies.\n Large transfers to exchanges = danger. Could signal incoming sells. [...] ## Key Takeaways\n\nOn-chain metrics give you a clear edge in crypto trading. While most traders chase charts and headlines, you’ll be reading the network’s heartbeat in real time. That’s the power of on-chain data—it’s honest, transparent, and full of signals most people never see.\n\nMaster it, and you’re not just reacting to the market—you’re anticipating it. Now go pull some wallets, check the flows, and trade like you know what you’re doing.\n\nIn this Article"
+    }
+  ],
+  "extra_sources_count": 3,
+  "source_warning": "extra_sources are retrieved in parallel and are not automatically used to verify generated content; use fetch on key URLs for claim-level evidence.",
+  "routing_decision": {
+    "docs_intent": false,
+    "zh_current_intent": false,
+    "web_current_intent": false,
+    "fetch_intent": false,
+    "supplemental_paths": [],
+    "validation_level": "balanced",
+    "fallback_mode": "auto",
+    "providers": "auto",
+    "main_search_chain": [
+      "xai-responses"
+    ]
+  },
+  "providers_used": [
+    "xAI Responses",
+    "tavily"
+  ],
+  "provider_attempts": [
+    {
+      "capability": "main_search",
+      "provider": "xAI Responses",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 13520.5,
+      "result_count": 1
+    },
+    {
+      "capability": "web_search",
+      "provider": "tavily",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 16543.82,
+      "result_count": 3
+    }
+  ],
+  "fallback_used": false,
+  "validation_level": "balanced",
+  "minimum_profile_ok": true,
+  "capability_status": {
+    "main_search": {
+      "configured": [
+        "xai-responses"
+      ],
+      "fallback_chain": [
+        "xai-responses",
+        "openai-compatible"
+      ],
+      "ok": true
+    },
+    "web_search": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "zhipu",
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    },
+    "docs_search": {
+      "configured": [
+        "context7"
+      ],
+      "fallback_chain": [
+        "exa",
+        "context7"
+      ],
+      "ok": true
+    },
+    "web_fetch": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    }
+  },
+  "elapsed_ms": 16543.83
+}

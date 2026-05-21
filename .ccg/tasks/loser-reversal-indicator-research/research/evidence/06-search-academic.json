@@ -1,0 +1,247 @@
+{
+  "ok": true,
+  "error_type": "",
+  "error": "",
+  "session_id": "2804eef67af6",
+  "query": "retail sentiment contrarian indicator academic study behavioral finance disposition effect dumb money equity returns",
+  "platform": "",
+  "model": "grok-4.20-fast",
+  "primary_api_mode": "xai-responses",
+  "content": "**Retail (individual) investor sentiment often acts as a contrarian indicator in behavioral finance: high bullish sentiment or heavy retail buying frequently predicts lower future equity returns, while high bearish sentiment or selling can precede rebounds.** [[1]](https://pages.stern.nyu.edu/~jwurgler/papers/wurgler_baker_cross_section.pdf) [[2]](https://ideas.repec.org/p/nbr/nberwo/11526.html)\n\nThis aligns with the \"dumb money\" hypothesis, where retail flows chase performance and exacerbate mispricings, and connects to biases like the disposition effect. Academic studies provide strong evidence, though nuances exist (e.g., context-specific contrarian trading around news).\n\n### Key Academic Studies and Findings\n\n**1. \"Dumb Money\" Effect (Frazzini and Lamont, 2008)**  \nMutual fund flows serve as a proxy for retail investor sentiment. Retail investors disproportionately direct money into funds holding stocks that subsequently underperform (high sentiment → low future returns). This \"dumb money\" reallocates wealth-destroyingly on average. One can construct profitable strategies by betting against retail flows. [[3]](https://www.aqr.com/Insights/Research/Journal-Article/Dumb-Money-Mutual-Fund-Flows-and-the-CrossSection-of-Stock-Returns)\n\nThe effect is robust across horizons and subperiods, linked to sentiment-driven chasing rather than informed timing. Retail investors reduce their own wealth through poor fund selection and timing. [[4]](https://pages.stern.nyu.edu/~afrazzin/pdf/Dumb%20money%20Mutual%20fund%20flows%20and%20the%20cross-section%20of%20stock%20returns%20-%20Frazzini%20and%20Lamont.pdf)\n\n**2. Baker and Wurgler (2006, 2007): Investor Sentiment and the Cross-Section of Stock Returns**  \nThey construct a composite sentiment index (e.g., closed-end fund discounts, IPO activity, turnover, equity share in new issues, dividend premium). High sentiment disproportionately inflates prices of \"speculative\" stocks (small, young, high-volatility, unprofitable, non-dividend-paying, extreme growth, distressed). These stocks earn relatively low subsequent returns when sentiment starts high, and vice versa. [[1]](https://pages.stern.nyu.edu/~jwurgler/papers/wurgler_baker_cross_section.pdf) [[5]](https://onlinelibrary.wiley.com/doi/10.1111/j.1540-6261.2006.00885.x)\n\nSentiment has stronger effects on harder-to-arbitrage or subjectively valued stocks. Low sentiment predicts high returns on these stocks; high sentiment reverses the pattern. This supports sentiment as a contrarian signal, especially for certain segments. [[6]](https://pages.stern.nyu.edu/~jwurgler/papers/sentiment.pdf)\n\n**3. Retail as Contrarian Traders (Especially Around News)**  \n- Luo et al. (2023/2025 NBER): Using large U.S. brokerage data (2010–2014), retail investors often trade *contrarian* after large earnings surprises—selling after positive surprises and buying after negative ones (especially loser stocks). This contributes to post-earnings announcement drift (PEAD) and momentum. Momentum/PEAD effects are strongest where retail contrarian flows are intense. Younger and more attentive investors are more contrarian. Disposition effect and stale limits do not fully explain it; conservatism/sticky beliefs/cognitive uncertainty do. [[7]](https://www.chicagofed.org/-/media/publications/working-papers/2023/wp2023-34.pdf?sc_lang=en) [[8]](https://www.nber.org/system/files/working_papers/w34086/w34086.pdf)\n- Other work (e.g., on order flows) shows retail often buys after price drops and sells after rises (negative correlation with recent returns), acting as liquidity providers or mean-reversion believers in some contexts. [[9]](https://scispace.com/pdf/retail-investor-sentiment-and-behavior-an-empirical-analysis-34g7daf9kl.pdf)\n\n**4. Disposition Effect Link (Shefrin & Statman 1985; Odean et al.)**  \nInvestors sell winners too soon (realize gains) and hold losers too long (avoid realizing losses), driven by prospect theory/loss aversion, mental accounting, regret, and pride. This is widespread among retail investors and can produce contrarian-like selling of recent winners. It contributes to underperformance but is distinct from broader sentiment-driven flows. [[10]](https://faculty.haas.berkeley.edu/odean/papers%20current%20versions/behavior%20of%20individual%20investors.pdf)\n\nRetail portfolios underperform the market on average (before/after costs), partly due to excessive trading, poor selection, and these biases.\n\n### Practical Implications as a Contrarian Indicator\n- **Survey-based** (e.g., AAII bullish % extremes) or **market-based** (flows, order imbalance) sentiment at extremes often signals reversals: extreme bullishness → potential tops; extreme bearishness → bottoms. [[11]](https://www.aaii.com/sentimentsurvey) [[12]](https://www.wiu.edu/cbt/jcbi/documents/NAASFeb2016/SpecialNAASIssueFeb2016-InvestorSentiment.pdf)\n- Retail sentiment can be profitable to trade *against* in aggregate, especially for speculative stocks or after sentiment peaks.\n- Asymmetry: Retail may trade more aggressively on declining sentiment or survey data. [[13]](https://www.sciencedirect.com/science/article/abs/pii/S1703494920300190)\n- Limits: Not always \"dumb\"—some evidence of short-horizon informativeness or contrarian skill in specific settings (e.g., attention-driven). Effects vary by market conditions, firm type, and country. Recent retail activity (e.g., 2020s meme stocks) sometimes outperformed temporarily but fits speculative bubbles. [[14]](https://www.acadian-asset.com/investment-insights/owenomics/dumb-money-triumphant)\n\n**Overall**: Behavioral finance robustly shows retail sentiment as a useful contrarian signal due to biases like chasing, disposition, and overreaction. It drives mispricing that corrects over time, creating opportunities for patient or institutional investors. Use composite indices or flows for signals, but combine with fundamentals and risk management—sentiment is noisy and mean-reverting. [[13]](https://www.sciencedirect.com/science/article/abs/pii/S1703494920300190)\n\nFor deeper dives, read the Baker-Wurgler and Frazzini-Lamont papers directly. Empirical results hold in U.S. data but vary internationally.",
+  "sources": [
+    {
+      "url": "https://pages.stern.nyu.edu/~jwurgler/papers/wurgler_baker_cross_section.pdf",
+      "title": "Investor Sentiment and the Cross-Section of Stock Returns"
+    },
+    {
+      "url": "https://ideas.repec.org/p/nbr/nberwo/11526.html",
+      "title": "Mutual Fund Flows and the Cross-Section of Stock Returns"
+    },
+    {
+      "url": "https://www.aqr.com/Insights/Research/Journal-Article/Dumb-Money-Mutual-Fund-Flows-and-the-CrossSection-of-Stock-Returns",
+      "title": "Dumb Money: Mutual Fund Flows and the Cross-Section of ..."
+    },
+    {
+      "url": "https://pages.stern.nyu.edu/~afrazzin/pdf/Dumb%20money%20Mutual%20fund%20flows%20and%20the%20cross-section%20of%20stock%20returns%20-%20Frazzini%20and%20Lamont.pdf",
+      "title": "Mutual fund flows and the cross-section of stock returns"
+    },
+    {
+      "url": "https://onlinelibrary.wiley.com/doi/10.1111/j.1540-6261.2006.00885.x",
+      "title": "Investor Sentiment and the Cross‐Section of Stock Returns"
+    },
+    {
+      "url": "https://pages.stern.nyu.edu/~jwurgler/papers/sentiment.pdf",
+      "title": "Investor sentiment and the cross-section of stock returns"
+    },
+    {
+      "url": "https://www.chicagofed.org/-/media/publications/working-papers/2023/wp2023-34.pdf?sc_lang=en",
+      "title": "Retail Investors' Contrarian Behavior Around News, ..."
+    },
+    {
+      "url": "https://www.nber.org/system/files/working_papers/w34086/w34086.pdf",
+      "title": "Retail Investors' Contrarian Behavior Around News, ..."
+    },
+    {
+      "url": "https://scispace.com/pdf/retail-investor-sentiment-and-behavior-an-empirical-analysis-34g7daf9kl.pdf",
+      "title": "Retail Investor Sentiment and Behavior: An Empirical ..."
+    },
+    {
+      "url": "https://faculty.haas.berkeley.edu/odean/papers%20current%20versions/behavior%20of%20individual%20investors.pdf",
+      "title": "The Behavior of Individual Investors* | Odean"
+    },
+    {
+      "url": "https://www.aaii.com/sentimentsurvey",
+      "title": "AAII Investor Sentiment Survey"
+    },
+    {
+      "url": "https://www.wiu.edu/cbt/jcbi/documents/NAASFeb2016/SpecialNAASIssueFeb2016-InvestorSentiment.pdf",
+      "title": "An Overview of Investor Sentiment in Stock Market"
+    },
+    {
+      "url": "https://www.sciencedirect.com/science/article/abs/pii/S1703494920300190",
+      "title": "Understanding the impact of investor sentiment on ..."
+    },
+    {
+      "url": "https://www.acadian-asset.com/investment-insights/owenomics/dumb-money-triumphant",
+      "title": "Dumb money triumphant"
+    },
+    {
+      "url": "https://www.lambdafin.com/articles/smart-money-vs-dumb-money",
+      "provider": "tavily",
+      "title": "Smart Money vs Dumb Money (2026) - Lambda Finance",
+      "description": "## 6. Methodology\n\nPerformance data: Insider returns from Bessembinder & Zhang (2025) updated working paper. Congress portfolio returns from public STOCK Act disclosures and Capitol Trades. AAII cohort performance from AAII Investor Sentiment Survey methodology paper.\n\nIndicator scoring: Predictive strength rated on 3-year out-of-sample backtest of public signals against forward 1-month and 3-month S&P 500 returns.\n\nLimitations: Insider returns are inflated by survivorship bias (failed companies’ insider buys are still counted but the stocks delist). Congressional outperformance is concentrated in a small number of portfolios; aggregate Congress is closer to the market. Retail sentiment indicators have weakened as their popularity has grown—a meta-contrarian effect. [...] The strongest signal in the data is concentrated insider cluster buying, not casual single-officer purchases. Congressional outperformance is real for a handful of high-profile portfolios but average across all members. Retail behavioral signals are most useful as contrarian inputs at extremes.\n\n## 3. Where to Find the Data [...] Smart money vs dumb money is shorthand for a positioning gap that has driven contrarian indicators for decades. Smart money refers to institutional capital with information, scale, and time advantages—hedge funds, commercial hedgers, corporate insiders, and (controversially) members of Congress. Dumb money refers to less-informed retail flows captured in surveys like AAII sentiment, options open interest skewed toward short-dated calls, and Robinhood-style chasing. The classical interpretation: when smart and dumb diverge sharply, the dumb side usually loses. This report compares the two camps across positioning data, performance, and how to track each in real time. Data was compiled from CFTC COT reports, House and Senate disclosures, SEC Form 4 filings, AAII surveys, and Lambda Finance"
+    },
+    {
+      "url": "https://cdn.shanghai.nyu.edu/sites/default/files/honorsthesis2025_haozhi_zheng.pdf",
+      "provider": "tavily",
+      "title": "[PDF] Lagged Retail Sentiment Rankings and Weekly Stock Return ...",
+      "description": "reports, to test the robustness and generalizability of these findings across diverse markets, settings and investor types. In conclusion, this study empirically reaffirms retail investor sentiment — and investor sentiment more generally — as a contrarian predictor of equity returns. Importantly, it extends existing Zheng 17 theories by highlighting the asymmetric and context-dependent nature of sentiment effects. These insights not only refine theoretical understandings of sentiment-driven market phenomena but also offer practical guidance for market participants and policymakers navigating sentiment-induced market inefficiencies, especially during periods of market stress. 6. Limitations & Future Work This study examined little about other markets or timeframes, nor did it nearly go [...] operates asymmetrically according to market conditions provides valuable insights into the behavioral finance literature. Traditional finance frameworks typically characterize retail investors as uniformly prone to irrational exuberance or undue pessimism, independent of broader market contexts. This study exposes a more dynamic behavioral pattern, suggesting retail investors exhibit greater persistent loss-incurring biases during adverse market conditions. This finding has significant implications for theories on cognitive biases, particularly those related to loss aversion or disposition effects. During market downturns, retail investors may disproportionately anchor on optimistic narratives or selective attention biases, hoping desperately for mean reversion, thereby contributing to [...] factors of market behavior, rather than treating them as occasional exceptions to the rational market paradigm. In China, retail investors account for more than 60% of total stock turnover (Zhen and Zhou). Such recurring episodes of events epitomize a pervasive yet currently understudied phenomenon in behavioral finance: how retail investor sentiment can drive equity returns, or in some cases, completely decouple asset prices from economic reality. As this paper probes into this question in the context of China’s equity markets, its findings will be of significance in improving risk management mechanisms and investor protection regulations alike. 2. Literature Review Investor sentiment has attracted lots of attention from finance researchers. Earlier studies in the 80s and 90s mostly used"
+    }
+  ],
+  "sources_count": 16,
+  "primary_sources": [
+    {
+      "url": "https://pages.stern.nyu.edu/~jwurgler/papers/wurgler_baker_cross_section.pdf",
+      "title": "Investor Sentiment and the Cross-Section of Stock Returns"
+    },
+    {
+      "url": "https://ideas.repec.org/p/nbr/nberwo/11526.html",
+      "title": "Mutual Fund Flows and the Cross-Section of Stock Returns"
+    },
+    {
+      "url": "https://www.aqr.com/Insights/Research/Journal-Article/Dumb-Money-Mutual-Fund-Flows-and-the-CrossSection-of-Stock-Returns",
+      "title": "Dumb Money: Mutual Fund Flows and the Cross-Section of ..."
+    },
+    {
+      "url": "https://pages.stern.nyu.edu/~afrazzin/pdf/Dumb%20money%20Mutual%20fund%20flows%20and%20the%20cross-section%20of%20stock%20returns%20-%20Frazzini%20and%20Lamont.pdf",
+      "title": "Mutual fund flows and the cross-section of stock returns"
+    },
+    {
+      "url": "https://onlinelibrary.wiley.com/doi/10.1111/j.1540-6261.2006.00885.x",
+      "title": "Investor Sentiment and the Cross‐Section of Stock Returns"
+    },
+    {
+      "url": "https://pages.stern.nyu.edu/~jwurgler/papers/sentiment.pdf",
+      "title": "Investor sentiment and the cross-section of stock returns"
+    },
+    {
+      "url": "https://www.chicagofed.org/-/media/publications/working-papers/2023/wp2023-34.pdf?sc_lang=en",
+      "title": "Retail Investors' Contrarian Behavior Around News, ..."
+    },
+    {
+      "url": "https://www.nber.org/system/files/working_papers/w34086/w34086.pdf",
+      "title": "Retail Investors' Contrarian Behavior Around News, ..."
+    },
+    {
+      "url": "https://scispace.com/pdf/retail-investor-sentiment-and-behavior-an-empirical-analysis-34g7daf9kl.pdf",
+      "title": "Retail Investor Sentiment and Behavior: An Empirical ..."
+    },
+    {
+      "url": "https://faculty.haas.berkeley.edu/odean/papers%20current%20versions/behavior%20of%20individual%20investors.pdf",
+      "title": "The Behavior of Individual Investors* | Odean"
+    },
+    {
+      "url": "https://www.aaii.com/sentimentsurvey",
+      "title": "AAII Investor Sentiment Survey"
+    },
+    {
+      "url": "https://www.wiu.edu/cbt/jcbi/documents/NAASFeb2016/SpecialNAASIssueFeb2016-InvestorSentiment.pdf",
+      "title": "An Overview of Investor Sentiment in Stock Market"
+    },
+    {
+      "url": "https://www.sciencedirect.com/science/article/abs/pii/S1703494920300190",
+      "title": "Understanding the impact of investor sentiment on ..."
+    },
+    {
+      "url": "https://www.acadian-asset.com/investment-insights/owenomics/dumb-money-triumphant",
+      "title": "Dumb money triumphant"
+    }
+  ],
+  "primary_sources_count": 14,
+  "extra_sources": [
+    {
+      "url": "https://www.lambdafin.com/articles/smart-money-vs-dumb-money",
+      "provider": "tavily",
+      "title": "Smart Money vs Dumb Money (2026) - Lambda Finance",
+      "description": "## 6. Methodology\n\nPerformance data: Insider returns from Bessembinder & Zhang (2025) updated working paper. Congress portfolio returns from public STOCK Act disclosures and Capitol Trades. AAII cohort performance from AAII Investor Sentiment Survey methodology paper.\n\nIndicator scoring: Predictive strength rated on 3-year out-of-sample backtest of public signals against forward 1-month and 3-month S&P 500 returns.\n\nLimitations: Insider returns are inflated by survivorship bias (failed companies’ insider buys are still counted but the stocks delist). Congressional outperformance is concentrated in a small number of portfolios; aggregate Congress is closer to the market. Retail sentiment indicators have weakened as their popularity has grown—a meta-contrarian effect. [...] The strongest signal in the data is concentrated insider cluster buying, not casual single-officer purchases. Congressional outperformance is real for a handful of high-profile portfolios but average across all members. Retail behavioral signals are most useful as contrarian inputs at extremes.\n\n## 3. Where to Find the Data [...] Smart money vs dumb money is shorthand for a positioning gap that has driven contrarian indicators for decades. Smart money refers to institutional capital with information, scale, and time advantages—hedge funds, commercial hedgers, corporate insiders, and (controversially) members of Congress. Dumb money refers to less-informed retail flows captured in surveys like AAII sentiment, options open interest skewed toward short-dated calls, and Robinhood-style chasing. The classical interpretation: when smart and dumb diverge sharply, the dumb side usually loses. This report compares the two camps across positioning data, performance, and how to track each in real time. Data was compiled from CFTC COT reports, House and Senate disclosures, SEC Form 4 filings, AAII surveys, and Lambda Finance"
+    },
+    {
+      "url": "https://scispace.com/pdf/retail-investor-sentiment-and-behavior-an-empirical-analysis-34g7daf9kl.pdf",
+      "provider": "tavily",
+      "title": "[PDF] Retail Investor Sentiment and Behavior: An Empirical Analysis",
+      "description": "on average. The actions of retail investors often serve as contrary indicators in the sense that trading against these indicators would result in profit opportunities. In research, however, no unanimous conclusion has been reached 1 Deborah Brewster, “Retail investors trading at record levels”, Financial Times, November 4, 2008 2 see e.g. Frazzini and Lamont (2008), p. 300 Introduction 2 yet. In recent years, several research articles3 have been published indicating that certain groups of retail investors could be right in their trading decisions, and that their trading could serve as a positive indicator. Apart from whether retail investors represent the “dumb money” or the “smart money”, the fact that trading by retail investors is correlated is equally important. If retail investors [...] by the sentiment indicator are on average contrarian investors. Finally, a trading strategy developed using the sentiment index is able to generate abnormal returns. 3 see e.g. Jackson (2003), Dorn, Huberman, and Sengmueller (2008), Barber, Odean, and Zhu (2009a), Kaniel, Saar, and Titman (2008) Introduction 3 1.2. Research Outline The Efficient Markets Hypothesis (EMH) has been the central theory in finance for the last 40 years (Fama 1970). Since its inception, academics have tried to challenge the EMH on many grounds. In particular, its theoretical assumptions about the behavior of individual investors are frequently called into question: First, the rationality of investors, second, the irrelevance of irrational investors, and third, perfectly working arbitrage. The search for"
+    },
+    {
+      "url": "https://cdn.shanghai.nyu.edu/sites/default/files/honorsthesis2025_haozhi_zheng.pdf",
+      "provider": "tavily",
+      "title": "[PDF] Lagged Retail Sentiment Rankings and Weekly Stock Return ...",
+      "description": "reports, to test the robustness and generalizability of these findings across diverse markets, settings and investor types. In conclusion, this study empirically reaffirms retail investor sentiment — and investor sentiment more generally — as a contrarian predictor of equity returns. Importantly, it extends existing Zheng 17 theories by highlighting the asymmetric and context-dependent nature of sentiment effects. These insights not only refine theoretical understandings of sentiment-driven market phenomena but also offer practical guidance for market participants and policymakers navigating sentiment-induced market inefficiencies, especially during periods of market stress. 6. Limitations & Future Work This study examined little about other markets or timeframes, nor did it nearly go [...] operates asymmetrically according to market conditions provides valuable insights into the behavioral finance literature. Traditional finance frameworks typically characterize retail investors as uniformly prone to irrational exuberance or undue pessimism, independent of broader market contexts. This study exposes a more dynamic behavioral pattern, suggesting retail investors exhibit greater persistent loss-incurring biases during adverse market conditions. This finding has significant implications for theories on cognitive biases, particularly those related to loss aversion or disposition effects. During market downturns, retail investors may disproportionately anchor on optimistic narratives or selective attention biases, hoping desperately for mean reversion, thereby contributing to [...] factors of market behavior, rather than treating them as occasional exceptions to the rational market paradigm. In China, retail investors account for more than 60% of total stock turnover (Zhen and Zhou). Such recurring episodes of events epitomize a pervasive yet currently understudied phenomenon in behavioral finance: how retail investor sentiment can drive equity returns, or in some cases, completely decouple asset prices from economic reality. As this paper probes into this question in the context of China’s equity markets, its findings will be of significance in improving risk management mechanisms and investor protection regulations alike. 2. Literature Review Investor sentiment has attracted lots of attention from finance researchers. Earlier studies in the 80s and 90s mostly used"
+    }
+  ],
+  "extra_sources_count": 3,
+  "source_warning": "extra_sources are retrieved in parallel and are not automatically used to verify generated content; use fetch on key URLs for claim-level evidence.",
+  "routing_decision": {
+    "docs_intent": false,
+    "zh_current_intent": false,
+    "web_current_intent": false,
+    "fetch_intent": false,
+    "supplemental_paths": [],
+    "validation_level": "balanced",
+    "fallback_mode": "auto",
+    "providers": "auto",
+    "main_search_chain": [
+      "xai-responses"
+    ]
+  },
+  "providers_used": [
+    "xAI Responses",
+    "tavily"
+  ],
+  "provider_attempts": [
+    {
+      "capability": "main_search",
+      "provider": "xAI Responses",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 18175.11,
+      "result_count": 1
+    },
+    {
+      "capability": "web_search",
+      "provider": "tavily",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 23605.76,
+      "result_count": 3
+    }
+  ],
+  "fallback_used": false,
+  "validation_level": "balanced",
+  "minimum_profile_ok": true,
+  "capability_status": {
+    "main_search": {
+      "configured": [
+        "xai-responses"
+      ],
+      "fallback_chain": [
+        "xai-responses",
+        "openai-compatible"
+      ],
+      "ok": true
+    },
+    "web_search": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "zhipu",
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    },
+    "docs_search": {
+      "configured": [
+        "context7"
+      ],
+      "fallback_chain": [
+        "exa",
+        "context7"
+      ],
+      "ok": true
+    },
+    "web_fetch": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    }
+  },
+  "elapsed_ms": 23605.77
+}
