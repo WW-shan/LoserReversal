@@ -41,3 +41,63 @@ def test_load_events_filters_below_pct_threshold(fixtures_dir: Path):
     # APT has 0.018 → excluded
     assert "APT" not in df["token"].values
     assert len(df) == 4
+
+
+from datetime import datetime, timedelta, timezone
+
+from unlock_validation.fetcher import fetch_prices
+
+
+def test_fetch_prices_returns_dataframe_with_date_index(tmp_path, fixtures_dir, mocker):
+    """Loads from CoinGecko, returns DataFrame indexed by date."""
+    mock_get = mocker.patch("unlock_validation.fetcher.requests.get")
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.return_value = {
+        "prices": [
+            [1726358400000, 0.60],
+            [1726444800000, 0.595],
+        ]
+    }
+    mock_get.return_value.raise_for_status = lambda: None
+
+    start = datetime(2025, 9, 15, tzinfo=timezone.utc)
+    end = datetime(2025, 9, 16, tzinfo=timezone.utc)
+    df = fetch_prices("arbitrum", start, end, cache_dir=tmp_path)
+
+    assert isinstance(df, pd.DataFrame)
+    assert "price" in df.columns
+    assert pd.api.types.is_datetime64_any_dtype(df.index)
+    assert len(df) == 2
+
+
+def test_fetch_prices_caches_to_disk(tmp_path, mocker):
+    """Second call with same arguments must not hit the network."""
+    mock_get = mocker.patch("unlock_validation.fetcher.requests.get")
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.json.return_value = {"prices": [[1726358400000, 0.60]]}
+    mock_get.return_value.raise_for_status = lambda: None
+
+    start = datetime(2025, 9, 15, tzinfo=timezone.utc)
+    end = datetime(2025, 9, 16, tzinfo=timezone.utc)
+
+    fetch_prices("arbitrum", start, end, cache_dir=tmp_path)
+    fetch_prices("arbitrum", start, end, cache_dir=tmp_path)
+
+    assert mock_get.call_count == 1
+
+
+def test_fetch_prices_uses_cached_file_after_restart(tmp_path, mocker, fixtures_dir):
+    """Writes cache file and subsequent call (even with fresh mock state) reads it."""
+    import shutil
+
+    cache_file = tmp_path / "arbitrum_1726358400_1726444800.json"
+    shutil.copy(fixtures_dir / "coingecko_arb.json", cache_file)
+
+    mock_get = mocker.patch("unlock_validation.fetcher.requests.get")
+
+    start = datetime.fromtimestamp(1726358400, tz=timezone.utc)
+    end = datetime.fromtimestamp(1726444800, tz=timezone.utc)
+    df = fetch_prices("arbitrum", start, end, cache_dir=tmp_path)
+
+    assert mock_get.call_count == 0
+    assert len(df) == 5
