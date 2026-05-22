@@ -7,6 +7,22 @@ import pandas as pd
 from infra.fetchers.funding import fetch_funding
 
 
+def _response(mocker, rows):
+    response = mocker.Mock()
+    response.json.return_value = rows
+    response.raise_for_status = lambda: None
+    return response
+
+
+def _funding_row(time_ms: int) -> dict:
+    return {
+        "coin": "BTC",
+        "fundingRate": "0.0001",
+        "premium": "0.0002",
+        "time": time_ms,
+    }
+
+
 def test_fetch_funding_returns_rate_and_premium_frame(mocker):
     mock_post = mocker.patch("infra.hyperliquid_client.requests.post")
     mock_post.return_value.json.return_value = [
@@ -64,3 +80,25 @@ def test_fetch_funding_accepts_string_times(mocker):
     assert list(df.columns) == ["funding_rate", "premium"]
     assert df.empty
     assert all(dtype.kind == "f" for dtype in df.dtypes)
+
+
+def test_fetch_funding_paginates_when_history_hits_cap(mocker):
+    mock_post = mocker.patch("infra.hyperliquid_client.requests.post")
+    base_ms = int(pd.Timestamp("2026-01-01T00:00:00Z").timestamp() * 1000)
+    first_chunk = [_funding_row(base_ms + i * 3_600_000) for i in range(500)]
+    second_chunk = [
+        first_chunk[-1],
+        _funding_row(base_ms + 500 * 3_600_000),
+        _funding_row(base_ms + 501 * 3_600_000),
+    ]
+    mock_post.side_effect = [
+        _response(mocker, first_chunk),
+        _response(mocker, second_chunk),
+    ]
+
+    df = fetch_funding("BTC", "2026-01-01T00:00:00Z", "2026-02-01T00:00:00Z")
+
+    assert len(df) == 502
+    assert df.index.is_unique
+    assert mock_post.call_count == 2
+    assert mock_post.call_args_list[1].kwargs["json"]["startTime"] == first_chunk[-1]["time"] + 1
