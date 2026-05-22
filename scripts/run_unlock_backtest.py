@@ -78,7 +78,7 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
         cached = True
         try:
             candles, cached = _load_or_fetch_candles(token, config.interval, start, end, client)
-        except Exception as error:
+        except (FileNotFoundError, OSError, duckdb.Error, ValueError, ConnectionError) as error:
             elapsed = time.perf_counter() - token_started
             _log(
                 f"[{index}/{len(tokens)}] warning: skipping {token} candles: "
