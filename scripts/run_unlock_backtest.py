@@ -71,12 +71,14 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
     start = events["unlock_date"].min() - pd.Timedelta(days=30)
     end = events["unlock_date"].max() + pd.Timedelta(days=7)
     tokens = list(events["token"].dropna().unique())
+    n_candidate_tokens = len(tokens)
     prices: dict[str, pd.Series] = {}
     token_positions = {token: index for index, token in enumerate(tokens, start=1)}
     client = HyperliquidClient()
 
     for token in tokens:
         if token in skip_tokens:
+            failed_tokens.add(token)
             continue
 
         index = token_positions[token]
@@ -103,6 +105,7 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
 
         close = candles["close"].astype("float64").dropna()
         if close.empty:
+            failed_tokens.add(token)
             _log(f"[{index}/{len(tokens)}] warning: skipping {token}: no candle data")
             continue
         prices[token] = close
@@ -153,10 +156,12 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
     portfolio_equity = _summed_equity(equities, config.init_cash)
     funnel["non_overlap_events"] = int(sum(int(entries.sum()) for entries, _ in signals.values()))
     portfolio_stats = _portfolio_stats(portfolio_equity, token_stats, config, freq)
+    n_backtested_tokens = len(token_stats)
     output = {
         "config": config,
         "backtest_freq": freq,
-        "n_tokens": len(tokens),
+        "n_candidate_tokens": n_candidate_tokens,
+        "n_backtested_tokens": n_backtested_tokens,
         "n_events_with_signal": funnel["non_overlap_events"],
         "funnel": funnel,
         "portfolio_stats": portfolio_stats,
@@ -313,7 +318,8 @@ def _empty_result(
     return {
         "config": config,
         "backtest_freq": freq,
-        "n_tokens": 0,
+        "n_candidate_tokens": 0,
+        "n_backtested_tokens": 0,
         "n_events_with_signal": 0,
         "funnel": funnel,
         "portfolio_stats": _portfolio_stats(equity, [], config, freq),
@@ -333,6 +339,9 @@ def _write_report(path: Path, config: UnlockBacktestConfig, result: dict[str, An
     per_token_stats = result["per_token_stats"]
     funnel = result["funnel"]
     freq = result["backtest_freq"]
+    n_candidate_tokens = int(result["n_candidate_tokens"])
+    n_backtested_tokens = int(result["n_backtested_tokens"])
+    n_failed_tokens = n_candidate_tokens - n_backtested_tokens
 
     lines = [
         "# Unlock Short V1 Backtest",
@@ -348,11 +357,15 @@ def _write_report(path: Path, config: UnlockBacktestConfig, result: dict[str, An
         f"| fees | {config.fees:.6f} |",
         f"| slippage | {config.slippage:.6f} |",
         f"| freq | {freq} |",
-        f"| n_tokens | {result['n_tokens']} |",
+        f"| n_candidate_tokens | {n_candidate_tokens} |",
+        f"| n_backtested_tokens | {n_backtested_tokens} |",
+        f"| n_failed_tokens | {n_failed_tokens} |",
+        f"| failed_tokens | {result['failed_tokens']!r} |",
         f"| n_events_with_signal | {result['n_events_with_signal']} |",
-        "| portfolio_model | Per-token init_cash held in cash until first signal; "
-        "leading gaps = init_cash (cash held); trailing gaps = last equity "
-        "(position held); portfolio = sum across all attempted tokens. |",
+        "| portfolio_model | Per-token init_cash assumed for **backtested** tokens only; "
+        "leading gaps = init_cash (cash held); trailing gaps = last equity (position held); "
+        "portfolio = sum across backtested tokens. Failed-fetch tokens are NOT included "
+        "in the portfolio capital base. |",
         "",
     ]
 
@@ -372,6 +385,8 @@ def _write_report(path: Path, config: UnlockBacktestConfig, result: dict[str, An
             "",
             "| Check | Threshold | Value | Status |",
             "| --- | --- | --- | --- |",
+            f"| n_backtested_tokens | > 0 | {n_backtested_tokens} | "
+            f"{'**PASS**' if n_backtested_tokens > 0 else '**FAIL**'} |",
             f"| n_trades | >= 30 | {stats['n_trades']} | "
             f"{'**PASS**' if stats['n_trades'] >= 30 else '**FAIL**'} |",
             f"| Sharpe | >= 1.0 | {_fmt_num(stats['sharpe'], 2)} | "
