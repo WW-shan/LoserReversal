@@ -1,0 +1,390 @@
+"""Run the unlock-short strategy over real Hyperliquid candle data."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+import time
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+import duckdb
+import pandas as pd
+
+from infra.backtest.engine import BacktestConfig, BacktestResult, _periods_per_year, run_backtest
+from infra.backtest.risk import max_drawdown, sharpe_ratio, sortino_ratio
+from infra.fetchers.candles import fetch_candles
+from infra.hyperliquid_client import HyperliquidClient
+from infra.pipeline import PipelineConfig, _candles_cover_range
+from infra.storage import read_candles, read_unlocks, write_candles
+from signals.unlock_v1 import unlock_short_signal
+
+
+BACKTEST_FREQ = "1D"
+CACHE_ERRORS = (FileNotFoundError, OSError, duckdb.Error)
+
+
+@dataclass(frozen=True)
+class UnlockBacktestConfig:
+    pre_window_days: int = 7
+    min_unlock_pct: float = 0.02
+    interval: str = "1d"
+    init_cash: float = 10_000.0
+    fees: float = 0.0005
+    slippage: float = 0.0002
+    report: Path | None = Path("reports/unlock_v1_backtest.md")
+
+
+def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
+    started = time.perf_counter()
+    events = read_unlocks()
+    events = events.loc[_coerce_bool_series(events["has_hl_perp"])].copy()
+    events["token"] = events["token"].astype("string")
+    events["unlock_date"] = pd.to_datetime(events["unlock_date"], utc=True, errors="coerce")
+    events = events.dropna(subset=["token", "unlock_date"])
+
+    if events.empty:
+        result = _empty_result(config, started)
+        if config.report is not None:
+            _write_report(config.report, config, result)
+        return result
+
+    start = events["unlock_date"].min() - pd.Timedelta(days=30)
+    end = events["unlock_date"].max() + pd.Timedelta(days=7)
+    tokens = list(events["token"].dropna().unique())
+    prices: dict[str, pd.Series] = {}
+    token_positions = {token: index for index, token in enumerate(tokens, start=1)}
+    client = HyperliquidClient()
+
+    for token in tokens:
+        index = token_positions[token]
+        token_started = time.perf_counter()
+        cached = True
+        try:
+            candles, cached = _load_or_fetch_candles(token, config.interval, start, end, client)
+        except Exception as error:
+            elapsed = time.perf_counter() - token_started
+            _log(
+                f"[{index}/{len(tokens)}] warning: skipping {token} candles: "
+                f"{error} ({elapsed:.1f}s)"
+            )
+            continue
+
+        elapsed = time.perf_counter() - token_started
+        source = "from cache" if cached else "from HL"
+        verb = "loading" if cached else "fetching"
+        _log(
+            f"[{index}/{len(tokens)}] {verb} {token} candles {source}... "
+            f"cached={cached} ({elapsed:.1f}s)"
+        )
+
+        close = candles["close"].astype("float64").dropna()
+        if close.empty:
+            _log(f"[{index}/{len(tokens)}] warning: skipping {token}: no candle data")
+            continue
+        prices[token] = close
+
+    signals = unlock_short_signal(
+        events,
+        prices,
+        pre_window_days=config.pre_window_days,
+        min_unlock_pct=config.min_unlock_pct,
+        require_hl_perp=True,
+    )
+
+    backtest_config = BacktestConfig(
+        direction="shortonly",
+        init_cash=config.init_cash,
+        fees=config.fees,
+        slippage=config.slippage,
+        freq=BACKTEST_FREQ,
+    )
+    token_stats: list[dict[str, Any]] = []
+    equities: list[pd.Series] = []
+
+    for token in tokens:
+        if token not in prices:
+            continue
+
+        index = token_positions[token]
+        token_signal = signals.get(token)
+        signal_trades = int(token_signal[0].sum()) if token_signal is not None else 0
+        _log(f"[{index}/{len(tokens)}] signal generated: {signal_trades} trades")
+        if token_signal is None:
+            continue
+
+        entries, exits = token_signal
+        result = run_backtest(prices[token], entries, exits, backtest_config)
+        stats = _token_stats(token, result)
+        token_stats.append(stats)
+        equities.append(result.equity.rename(token))
+        _log(
+            f"[{index}/{len(tokens)}] backtest: Sharpe={stats['sharpe']:.2f} "
+            f"MaxDD={stats['max_dd']:.1%}"
+        )
+
+    portfolio_equity = _summed_equity(equities)
+    portfolio_stats = _portfolio_stats(portfolio_equity, token_stats, config)
+    output = {
+        "config": config,
+        "n_tokens": len(tokens),
+        "n_events_with_signal": sum(int(entries.sum()) for entries, _ in signals.values()),
+        "portfolio_stats": portfolio_stats,
+        "per_token_stats": sorted(token_stats, key=lambda row: row["sharpe"], reverse=True),
+        "portfolio_equity": portfolio_equity,
+        "runtime_seconds": time.perf_counter() - started,
+        "report_path": config.report,
+    }
+
+    if config.report is not None:
+        _write_report(config.report, config, output)
+    return output
+
+
+def _load_or_fetch_candles(
+    token: str,
+    interval: str,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    client: HyperliquidClient,
+) -> tuple[pd.DataFrame, bool]:
+    pipeline_config = PipelineConfig(symbol=token, interval=interval, start=start, end=end)
+    try:
+        candles = read_candles(token, interval, start=start, end=end)
+    except CACHE_ERRORS:
+        return _fetch_store_load_candles(token, interval, start, end, client), False
+
+    if not _candles_cover_range(candles, pipeline_config):
+        return _fetch_store_load_candles(token, interval, start, end, client), False
+    return candles, True
+
+
+def _fetch_store_load_candles(
+    token: str,
+    interval: str,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    client: HyperliquidClient,
+) -> pd.DataFrame:
+    candles = fetch_candles(token, interval, start, end, client=client)
+    if candles.empty:
+        raise ValueError("HL returned no candles")
+
+    write_candles(candles, token, interval)
+    loaded = read_candles(token, interval, start=start, end=end)
+    if loaded.empty:
+        raise ValueError("cached candles are empty after reload")
+    return loaded
+
+
+def _token_stats(token: str, result: BacktestResult) -> dict[str, Any]:
+    n_trades = int(result.stats.get("n_trades", 0))
+    win_rate = float(result.stats.get("win_rate", 0.0))
+    equity_final = float(result.equity.iloc[-1]) if not result.equity.empty else 0.0
+    return {
+        "token": token,
+        "sharpe": float(result.stats.get("sharpe", 0.0)),
+        "sortino": float(result.stats.get("sortino", 0.0)),
+        "max_dd": float(result.stats.get("max_dd", 0.0)),
+        "n_trades": n_trades,
+        "total_return": float(result.stats.get("total_return", 0.0)),
+        "win_rate": win_rate,
+        "equity_final": equity_final,
+        "trades_won": win_rate * n_trades,
+    }
+
+
+def _summed_equity(equities: list[pd.Series]) -> pd.Series:
+    if not equities:
+        return pd.Series(dtype="float64", name="equity")
+
+    aligned = pd.concat(equities, axis=1, sort=True).sort_index().ffill().bfill()
+    return aligned.sum(axis=1, min_count=1).dropna().rename("equity")
+
+
+def _portfolio_stats(
+    equity: pd.Series,
+    token_stats: list[dict[str, Any]],
+    config: UnlockBacktestConfig,
+) -> dict[str, Any]:
+    n_trades = sum(int(row["n_trades"]) for row in token_stats)
+    trades_won = sum(float(row["trades_won"]) for row in token_stats)
+    returns = equity.pct_change().dropna()
+    equity_final = float(equity.iloc[-1]) if not equity.empty else 0.0
+    equity_first = float(equity.iloc[0]) if not equity.empty else 0.0
+    return {
+        "sharpe": sharpe_ratio(returns, _periods_per_year(BACKTEST_FREQ)),
+        "sortino": sortino_ratio(returns, _periods_per_year(BACKTEST_FREQ)),
+        "max_dd": max_drawdown(equity),
+        "n_trades": n_trades,
+        "win_rate": trades_won / n_trades if n_trades else 0.0,
+        "total_return": equity_final / equity_first - 1.0 if equity_first else 0.0,
+        "equity_final": equity_final,
+        "capital_per_token": config.init_cash,
+    }
+
+
+def _empty_result(config: UnlockBacktestConfig, started: float) -> dict[str, Any]:
+    equity = pd.Series(dtype="float64", name="equity")
+    return {
+        "config": config,
+        "n_tokens": 0,
+        "n_events_with_signal": 0,
+        "portfolio_stats": _portfolio_stats(equity, [], config),
+        "per_token_stats": [],
+        "portfolio_equity": equity,
+        "runtime_seconds": time.perf_counter() - started,
+        "report_path": config.report,
+    }
+
+
+def _write_report(path: Path, config: UnlockBacktestConfig, result: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    generated = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    stats = result["portfolio_stats"]
+    equity = result["portfolio_equity"]
+    per_token_stats = result["per_token_stats"]
+
+    lines = [
+        "# Unlock Short V1 Backtest",
+        "",
+        f"_Generated {generated}_",
+        "",
+        "## Config",
+        "",
+        "| Key | Value |",
+        "| --- | --- |",
+        f"| pre_window_days | {config.pre_window_days} |",
+        f"| min_unlock_pct | {config.min_unlock_pct:.4f} |",
+        f"| fees | {config.fees:.6f} |",
+        f"| slippage | {config.slippage:.6f} |",
+        f"| freq | {BACKTEST_FREQ} |",
+        f"| n_tokens | {result['n_tokens']} |",
+        f"| n_events_with_signal | {result['n_events_with_signal']} |",
+        "",
+        "## Portfolio Stats",
+        "",
+        "| Metric | Value |",
+        "| --- | --- |",
+        f"| Sharpe | {_fmt_num(stats['sharpe'], 2)} |",
+        f"| Sortino | {_fmt_num(stats['sortino'], 2)} |",
+        f"| Max DD | {_fmt_pct(stats['max_dd'])} |",
+        f"| n_trades | {stats['n_trades']} |",
+        f"| win_rate | {_fmt_pct(stats['win_rate'])} |",
+        f"| total_return | {_fmt_pct(stats['total_return'])} |",
+        f"| final equity | {_fmt_money(stats['equity_final'])} |",
+        "",
+        "## Per-Token Stats",
+        "",
+        "| token | sharpe | sortino | max_dd | n_trades | total_return | win_rate | equity_final |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        *_per_token_rows(per_token_stats),
+        "",
+        "## Equity Curve",
+        "",
+        "| date | summed_equity |",
+        "| --- | ---: |",
+        *_equity_rows(equity),
+    ]
+    path.write_text("\n".join(lines) + "\n")
+
+
+def _per_token_rows(rows: list[dict[str, Any]]) -> list[str]:
+    if not rows:
+        return ["| - | - | - | - | - | - | - | - |"]
+
+    return [
+        "| {token} | {sharpe} | {sortino} | {max_dd} | {n_trades} | {total_return} | "
+        "{win_rate} | {equity_final} |".format(
+            token=row["token"],
+            sharpe=_fmt_num(row["sharpe"], 2),
+            sortino=_fmt_num(row["sortino"], 2),
+            max_dd=_fmt_pct(row["max_dd"]),
+            n_trades=row["n_trades"],
+            total_return=_fmt_pct(row["total_return"]),
+            win_rate=_fmt_pct(row["win_rate"]),
+            equity_final=_fmt_money(row["equity_final"]),
+        )
+        for row in rows
+    ]
+
+
+def _equity_rows(equity: pd.Series) -> list[str]:
+    if equity.empty:
+        return ["| - | - |"]
+
+    monthly = equity.resample("ME").last()
+    return [f"| {index.strftime('%Y-%m-%d')} | {_fmt_money(value)} |" for index, value in monthly.items()]
+
+
+def _coerce_bool_series(series: pd.Series) -> pd.Series:
+    if pd.api.types.is_bool_dtype(series):
+        return series.astype("bool")
+    return series.astype("string").str.lower().isin({"true", "1", "yes", "y"})
+
+
+def _fmt_pct(value: Any) -> str:
+    return f"{float(value) * 100:.2f}%"
+
+
+def _fmt_num(value: Any, decimals: int) -> str:
+    return f"{float(value):.{decimals}f}"
+
+
+def _fmt_money(value: Any) -> str:
+    return f"${float(value):,.2f}"
+
+
+def _log(message: str) -> None:
+    print(message, file=sys.stderr)
+
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run unlock-short backtest on HL candle data.")
+    parser.add_argument("--pre-window-days", type=int, default=7)
+    parser.add_argument("--min-unlock-pct", type=float, default=0.02)
+    parser.add_argument("--interval", default="1d")
+    parser.add_argument("--init-cash", type=float, default=10_000.0)
+    parser.add_argument("--fees", type=float, default=0.0005)
+    parser.add_argument("--slippage", type=float, default=0.0002)
+    parser.add_argument("--report", type=Path, default=Path("reports/unlock_v1_backtest.md"))
+    args = parser.parse_args()
+    _validate_args(parser, args)
+    return args
+
+
+def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    if args.pre_window_days < 1:
+        parser.error("--pre-window-days must be at least 1")
+    if args.min_unlock_pct < 0:
+        parser.error("--min-unlock-pct must be non-negative")
+    if args.init_cash <= 0:
+        parser.error("--init-cash must be greater than 0")
+    if args.fees < 0:
+        parser.error("--fees must be non-negative")
+    if args.slippage < 0:
+        parser.error("--slippage must be non-negative")
+    if not args.interval:
+        parser.error("--interval must not be empty")
+
+
+def main() -> int:
+    args = _parse_args()
+    config = UnlockBacktestConfig(
+        pre_window_days=args.pre_window_days,
+        min_unlock_pct=args.min_unlock_pct,
+        interval=args.interval,
+        init_cash=args.init_cash,
+        fees=args.fees,
+        slippage=args.slippage,
+        report=args.report,
+    )
+    result = run_unlock_backtest(config)
+    print(f"wrote report: {result['report_path']}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
