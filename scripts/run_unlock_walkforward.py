@@ -159,7 +159,7 @@ def _run_split(
     if len(rows) != 20:
         _log(f"[WARN] split {split_index}: expected 20 sweep rows, got {len(rows)}")
 
-    best_row, eligible_in_is = _select_best_is_row(rows)
+    best_row, eligible_in_is, selection_mode = _select_best_is_row(rows, split_index)
     best_config = UnlockBacktestConfig(
         pre_window_days=int(best_row["pre_window"]),
         min_unlock_pct=float(best_row["min_pct"]),
@@ -189,16 +189,48 @@ def _run_split(
         "oos_n_trades": int(oos_stats["n_trades"]),
         "oos_max_dd": float(oos_stats["max_dd"]),
         "eligible_in_is": eligible_in_is,
+        "is_selection_mode": selection_mode,
     }
 
 
-def _select_best_is_row(rows: list[dict[str, Any]]) -> tuple[dict[str, Any], bool]:
+def _select_best_is_row(
+    rows: list[dict[str, Any]],
+    split_index: int | None = None,
+) -> tuple[dict[str, Any], bool, str]:
     if not rows:
         raise RuntimeError("parameter sweep returned no rows")
 
     eligible_rows = [row for row in rows if int(row["n_trades"]) >= 30]
-    candidates = eligible_rows or rows
-    return max(candidates, key=_sort_sharpe), bool(eligible_rows)
+    if eligible_rows:
+        return max(eligible_rows, key=_sort_sharpe), True, "eligible"
+
+    positive_trade_rows = [row for row in rows if int(row["n_trades"]) > 0]
+    if positive_trade_rows:
+        median_n_trades = _median_int(int(row["n_trades"]) for row in positive_trade_rows)
+        median_bucket_rows = [
+            row
+            for row in positive_trade_rows
+            if int(row["n_trades"]) >= median_n_trades and float(row["sharpe"]) > 0
+        ]
+        if median_bucket_rows:
+            return (
+                max(median_bucket_rows, key=_sort_sharpe),
+                False,
+                "positive_trades_median",
+            )
+
+        positive_sharpe_rows = [row for row in positive_trade_rows if float(row["sharpe"]) > 0]
+        if positive_sharpe_rows:
+            return max(positive_sharpe_rows, key=_sort_sharpe), False, "positive_trades_any"
+
+        return max(positive_trade_rows, key=_sort_sharpe), False, "positive_trades_any"
+
+    if split_index is not None:
+        _log(
+            f"[WARN] split {split_index}: no positive-trade IS config; "
+            "fallback chose 0-trade max-Sharpe"
+        )
+    return max(rows, key=_sort_sharpe), False, "zero_trade_fallback"
 
 
 def _aggregate_split_results(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -281,8 +313,8 @@ def _format_report(result: dict[str, Any]) -> str:
         "",
         "| split | is_start | is_end | oos_start | oos_end | is_best_config | "
         "is_sharpe | is_n_trades | oos_sharpe | oos_n_trades | oos_max_dd | "
-        "eligible_in_is |",
-        "| ---: | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | :---: |",
+        "eligible_in_is | is_selection_mode |",
+        "| ---: | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | :---: | --- |",
         *_split_rows(result["split_results"]),
         "",
         "## Aggregate OOS Stats",
@@ -300,7 +332,7 @@ def _format_report(result: dict[str, Any]) -> str:
 
 def _split_rows(rows: list[dict[str, Any]]) -> list[str]:
     if not rows:
-        return ["| - | - | - | - | - | - | - | - | - | - | - | - |"]
+        return ["| - | - | - | - | - | - | - | - | - | - | - | - | - |"]
 
     output = []
     for row in rows:
@@ -313,6 +345,7 @@ def _split_rows(rows: list[dict[str, Any]]) -> list[str]:
             f"{row['oos_n_trades']} | "
             f"{_fmt_pct_or_na(row['oos_max_dd'], row['oos_n_trades'])} | "
             f"{_fmt_bool(row['eligible_in_is'])} |"
+            f" {row['is_selection_mode']} |"
         )
     return output
 
@@ -468,6 +501,14 @@ def _drawdown_status(value: Any) -> str:
 def _decay_status(value: Any) -> str:
     number = float(value)
     return _pass_fail(math.isfinite(number) and number <= 0.30)
+
+
+def _median_int(values: Any) -> int:
+    sorted_values = sorted(int(value) for value in values)
+    if not sorted_values:
+        return 0
+    middle = len(sorted_values) // 2
+    return int(sorted_values[middle])
 
 
 def _log(message: str) -> None:
