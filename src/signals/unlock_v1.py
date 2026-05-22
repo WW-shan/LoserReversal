@@ -10,6 +10,8 @@ def unlock_short_signal(
     min_unlock_pct: float = 0.02,
     require_hl_perp: bool = True,
 ) -> dict[str, tuple[pd.Series, pd.Series]]:
+    if pre_window_days < 1:
+        raise ValueError("pre_window_days must be at least 1")
     if events.empty or not prices:
         return {}
     if not {"token", "unlock_date", "unlock_pct"}.issubset(events.columns):
@@ -38,7 +40,11 @@ def unlock_short_signal(
         if token_name not in prices:
             continue
 
-        close_index = pd.DatetimeIndex(prices[token_name].index)
+        price_index = pd.DatetimeIndex(prices[token_name].index)
+        if price_index.tz is None:
+            close_index = pd.DatetimeIndex(price_index, tz="UTC")
+        else:
+            close_index = price_index.tz_convert("UTC")
         if close_index.empty:
             continue
 
@@ -65,4 +71,3 @@ def unlock_short_signal(
 
 def _coerce_bool_series(series: pd.Series) -> pd.Series:
     return series.astype("string").str.lower().isin({"true", "1", "yes", "y"})
-
