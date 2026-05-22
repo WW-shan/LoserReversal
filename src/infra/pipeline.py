@@ -68,7 +68,7 @@ def _candles_cover_range(candles: pd.DataFrame, config: PipelineConfig) -> bool:
 
     start_gap = first - start if first > start else pd.Timedelta(0)
     end_gap = end - last if last < end else pd.Timedelta(0)
-    return start_gap < interval and end_gap < interval
+    return start_gap < interval and end_gap <= interval
 
 
 def _coerce_utc_timestamp(value: datetime | pd.Timestamp) -> pd.Timestamp:

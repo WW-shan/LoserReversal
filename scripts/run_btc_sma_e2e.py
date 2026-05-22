@@ -8,7 +8,7 @@ import argparse
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from infra.backtest.engine import BacktestConfig
+from infra.backtest.engine import INTERVAL_TABLE, BacktestConfig
 from infra.backtest.toy import sma_crossover_signals
 from infra.pipeline import PipelineConfig, run_pipeline
 from infra.report import write_backtest_report
@@ -26,7 +26,7 @@ def main() -> int:
     args = parser.parse_args()
     _validate_args(parser, args)
 
-    end = datetime.now(tz=timezone.utc)
+    end = _last_completed_candle_end("1d", datetime.now(tz=timezone.utc))
     start = end - timedelta(days=args.days)
 
     config = PipelineConfig(
@@ -73,6 +73,34 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
         parser.error("--fast must be less than --slow")
     if "/" in args.symbol or "\\" in args.symbol or ".." in args.symbol:
         parser.error("--symbol must not contain path separators or '..'")
+
+
+def _last_completed_candle_end(interval: str, now: datetime) -> datetime:
+    delta = _fixed_interval_delta(interval)
+    aware_now = now if now.tzinfo is not None else now.replace(tzinfo=timezone.utc)
+    aware_now = aware_now.astimezone(timezone.utc)
+    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    completed = (aware_now - epoch) // delta
+    return epoch + completed * delta
+
+
+def _fixed_interval_delta(interval: str) -> timedelta:
+    unit = interval[-1]
+    if interval in INTERVAL_TABLE and unit in {"m", "h", "d", "D"}:
+        return INTERVAL_TABLE[interval][1].to_pytimedelta()
+
+    try:
+        amount = int(interval[:-1])
+    except ValueError as error:
+        raise ValueError(f"Unsupported fixed interval: {interval}") from error
+
+    if unit == "m":
+        return timedelta(minutes=amount)
+    if unit == "h":
+        return timedelta(hours=amount)
+    if unit in {"d", "D"}:
+        return timedelta(days=amount)
+    raise ValueError(f"Unsupported fixed interval: {interval}")
 
 
 if __name__ == "__main__":
