@@ -27,8 +27,8 @@ def test_single_event_emits_entry_before_unlock_and_exit_on_unlock():
     result = unlock_short_signal(events, prices)
 
     entries, exits = result["ARB"]
-    assert entries.loc["2026-01-08"] is True
-    assert exits.loc["2026-01-15"] is True
+    assert bool(entries.loc["2026-01-08"])
+    assert bool(exits.loc["2026-01-15"])
     assert entries.sum() == 1
     assert exits.sum() == 1
     assert entries.index.equals(prices["ARB"].index)
@@ -93,10 +93,10 @@ def test_two_spaced_events_emit_two_non_overlapping_pairs():
 
     entries, exits = unlock_short_signal(events, prices)["ARB"]
 
-    assert entries.loc["2026-01-08"] is True
-    assert exits.loc["2026-01-15"] is True
-    assert entries.loc["2026-01-18"] is True
-    assert exits.loc["2026-01-25"] is True
+    assert bool(entries.loc["2026-01-08"])
+    assert bool(exits.loc["2026-01-15"])
+    assert bool(entries.loc["2026-01-18"])
+    assert bool(exits.loc["2026-01-25"])
     assert entries.sum() == 2
     assert exits.sum() == 2
 
@@ -112,8 +112,8 @@ def test_overlapping_second_event_is_skipped():
 
     entries, exits = unlock_short_signal(events, prices)["ARB"]
 
-    assert entries.loc["2026-01-08"] is True
-    assert exits.loc["2026-01-15"] is True
+    assert bool(entries.loc["2026-01-08"])
+    assert bool(exits.loc["2026-01-15"])
     assert entries.sum() == 1
     assert exits.sum() == 1
 
@@ -150,7 +150,7 @@ def test_event_outside_price_index_is_skipped_while_other_events_are_processed()
 
     entries, exits = unlock_short_signal(events, prices)["ARB"]
 
-    assert entries.loc["2026-01-08"] is True
-    assert exits.loc["2026-01-15"] is True
+    assert bool(entries.loc["2026-01-08"])
+    assert bool(exits.loc["2026-01-15"])
     assert entries.sum() == 1
     assert exits.sum() == 1
