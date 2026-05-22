@@ -28,6 +28,8 @@ CACHE_ERRORS = (FileNotFoundError, OSError, duckdb.Error)
 
 @dataclass(frozen=True)
 class UnlockBacktestConfig:
+    """Backtest configuration. date_start is inclusive; date_end is exclusive."""
+
     pre_window_days: int = 7
     min_unlock_pct: float = 0.02
     interval: str = "1d"
@@ -69,7 +71,7 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
         events = events.loc[events["unlock_date"] >= config.date_start].copy()
     funnel["date_start_events"] = int(len(events))
     if config.date_end is not None:
-        events = events.loc[events["unlock_date"] <= config.date_end].copy()
+        events = events.loc[events["unlock_date"] < config.date_end].copy()
     funnel["date_end_events"] = int(len(events))
 
     if events.empty:
@@ -491,7 +493,7 @@ def _date_start_filter(config: UnlockBacktestConfig) -> str:
 def _date_end_filter(config: UnlockBacktestConfig) -> str:
     if config.date_end is None:
         return "date_end disabled"
-    return f"unlock_date <= {config.date_end:%Y-%m-%d}"
+    return f"unlock_date < {config.date_end:%Y-%m-%d}"
 
 
 def _coerce_bool_series(series: pd.Series) -> pd.Series:
