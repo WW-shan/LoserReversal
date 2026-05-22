@@ -23,7 +23,6 @@ from infra.storage import read_candles, read_unlocks, write_candles
 from signals.unlock_v1 import unlock_short_signal
 
 
-BACKTEST_FREQ = "1D"
 CACHE_ERRORS = (FileNotFoundError, OSError, duckdb.Error)
 
 
@@ -40,6 +39,7 @@ class UnlockBacktestConfig:
 
 def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
     started = time.perf_counter()
+    freq = _backtest_freq(config.interval)
     events = read_unlocks()
     funnel = {
         "total_events": int(len(events)),
@@ -60,7 +60,7 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
     funnel["pct_threshold_events"] = int(len(events))
 
     if events.empty:
-        result = _empty_result(config, started, funnel)
+        result = _empty_result(config, started, funnel, freq)
         if config.report is not None:
             _write_report(config.report, config, result)
         return result
@@ -116,7 +116,7 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
         init_cash=config.init_cash,
         fees=config.fees,
         slippage=config.slippage,
-        freq=BACKTEST_FREQ,
+        freq=freq,
     )
     token_stats: list[dict[str, Any]] = []
     equities: list[pd.Series] = []
@@ -145,9 +145,10 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
 
     portfolio_equity = _summed_equity(equities, config.init_cash)
     funnel["non_overlap_events"] = int(sum(int(entries.sum()) for entries, _ in signals.values()))
-    portfolio_stats = _portfolio_stats(portfolio_equity, token_stats, config)
+    portfolio_stats = _portfolio_stats(portfolio_equity, token_stats, config, freq)
     output = {
         "config": config,
+        "backtest_freq": freq,
         "n_tokens": len(tokens),
         "n_events_with_signal": funnel["non_overlap_events"],
         "funnel": funnel,
@@ -161,6 +162,12 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
     if config.report is not None:
         _write_report(config.report, config, output)
     return output
+
+
+def _backtest_freq(interval: str) -> str:
+    if interval.lower() == "1d":
+        return "1D"
+    return interval
 
 
 def _load_or_fetch_candles(
@@ -269,6 +276,7 @@ def _portfolio_stats(
     equity: pd.Series,
     token_stats: list[dict[str, Any]],
     config: UnlockBacktestConfig,
+    freq: str,
 ) -> dict[str, Any]:
     n_trades = sum(int(row["n_trades"]) for row in token_stats)
     trades_won = sum(float(row["trades_won"]) for row in token_stats)
@@ -276,8 +284,8 @@ def _portfolio_stats(
     equity_final = float(equity.iloc[-1]) if not equity.empty else 0.0
     equity_first = float(equity.iloc[0]) if not equity.empty else 0.0
     return {
-        "sharpe": sharpe_ratio(returns, _periods_per_year(BACKTEST_FREQ)),
-        "sortino": sortino_ratio(returns, _periods_per_year(BACKTEST_FREQ)),
+        "sharpe": sharpe_ratio(returns, _periods_per_year(freq)),
+        "sortino": sortino_ratio(returns, _periods_per_year(freq)),
         "max_dd": max_drawdown(equity),
         "n_trades": n_trades,
         "win_rate": trades_won / n_trades if n_trades else 0.0,
@@ -287,14 +295,20 @@ def _portfolio_stats(
     }
 
 
-def _empty_result(config: UnlockBacktestConfig, started: float, funnel: dict[str, int]) -> dict[str, Any]:
+def _empty_result(
+    config: UnlockBacktestConfig,
+    started: float,
+    funnel: dict[str, int],
+    freq: str,
+) -> dict[str, Any]:
     equity = pd.Series(dtype="float64", name="equity")
     return {
         "config": config,
+        "backtest_freq": freq,
         "n_tokens": 0,
         "n_events_with_signal": 0,
         "funnel": funnel,
-        "portfolio_stats": _portfolio_stats(equity, [], config),
+        "portfolio_stats": _portfolio_stats(equity, [], config, freq),
         "per_token_stats": [],
         "portfolio_equity": equity,
         "runtime_seconds": time.perf_counter() - started,
@@ -309,6 +323,7 @@ def _write_report(path: Path, config: UnlockBacktestConfig, result: dict[str, An
     equity = result["portfolio_equity"]
     per_token_stats = result["per_token_stats"]
     funnel = result["funnel"]
+    freq = result["backtest_freq"]
 
     lines = [
         "# Unlock Short V1 Backtest",
@@ -323,7 +338,7 @@ def _write_report(path: Path, config: UnlockBacktestConfig, result: dict[str, An
         f"| min_unlock_pct | {config.min_unlock_pct:.4f} |",
         f"| fees | {config.fees:.6f} |",
         f"| slippage | {config.slippage:.6f} |",
-        f"| freq | {BACKTEST_FREQ} |",
+        f"| freq | {freq} |",
         f"| n_tokens | {result['n_tokens']} |",
         f"| n_events_with_signal | {result['n_events_with_signal']} |",
         "| portfolio_model | equal cash per traded token; leading/trailing gaps use "
