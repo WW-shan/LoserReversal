@@ -35,11 +35,14 @@ class UnlockBacktestConfig:
     fees: float = 0.0005
     slippage: float = 0.0002
     report: Path | None = Path("reports/unlock_v1_backtest.md")
+    skip_tokens: set[str] | None = None
 
 
 def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
     started = time.perf_counter()
     freq = _backtest_freq(config.interval)
+    skip_tokens = set(config.skip_tokens or ())
+    failed_tokens: set[str] = set()
     events = read_unlocks()
     funnel = {
         "total_events": int(len(events)),
@@ -73,12 +76,16 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
     client = HyperliquidClient()
 
     for token in tokens:
+        if token in skip_tokens:
+            continue
+
         index = token_positions[token]
         token_started = time.perf_counter()
         cached = True
         try:
             candles, cached = _load_or_fetch_candles(token, config.interval, start, end, client)
         except (FileNotFoundError, OSError, duckdb.Error, ValueError, ConnectionError) as error:
+            failed_tokens.add(token)
             elapsed = time.perf_counter() - token_started
             _log(
                 f"[{index}/{len(tokens)}] warning: skipping {token} candles: "
@@ -157,6 +164,7 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
         "portfolio_equity": portfolio_equity,
         "runtime_seconds": time.perf_counter() - started,
         "report_path": config.report,
+        "failed_tokens": sorted(failed_tokens),
     }
 
     if config.report is not None:
@@ -313,6 +321,7 @@ def _empty_result(
         "portfolio_equity": equity,
         "runtime_seconds": time.perf_counter() - started,
         "report_path": config.report,
+        "failed_tokens": [],
     }
 
 
@@ -341,8 +350,9 @@ def _write_report(path: Path, config: UnlockBacktestConfig, result: dict[str, An
         f"| freq | {freq} |",
         f"| n_tokens | {result['n_tokens']} |",
         f"| n_events_with_signal | {result['n_events_with_signal']} |",
-        "| portfolio_model | equal cash per traded token; leading/trailing gaps use "
-        "first/last token equity |",
+        "| portfolio_model | Per-token init_cash held in cash until first signal; "
+        "leading gaps = init_cash (cash held); trailing gaps = last equity "
+        "(position held); portfolio = sum across all attempted tokens. |",
         "",
     ]
 
