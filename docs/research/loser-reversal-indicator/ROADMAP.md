@@ -144,6 +144,13 @@ P7                                                          [持续]    Alpha �
 ### 目标
 回测验证"解锁前 T-7→T0 做空"策略（已修订），决定是否进入组合。
 
+**Phase 1 verdict: RED — KILL**
+
+- OOS Sharpe mean: 0.00
+- OOS n_trades total: 0
+- Worst OOS MaxDD: 0.00%
+- Reason: Walk-forward selected high-IS-Sharpe configs with only 2 IS trades and produced 0 OOS trades, failing the insufficient-sample gate.
+
 ### 任务清单
 
 #### Week 3: 数据 + 信号
