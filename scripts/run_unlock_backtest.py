@@ -34,6 +34,8 @@ class UnlockBacktestConfig:
     init_cash: float = 10_000.0
     fees: float = 0.0005
     slippage: float = 0.0002
+    date_start: datetime | None = None
+    date_end: datetime | None = None
     report: Path | None = Path("reports/unlock_v1_backtest.md")
     skip_tokens: set[str] | None = None
 
@@ -48,6 +50,8 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
         "total_events": int(len(events)),
         "has_hl_perp_events": 0,
         "pct_threshold_events": 0,
+        "date_start_events": 0,
+        "date_end_events": 0,
         "candle_ok_events": 0,
         "in_range_events": 0,
         "non_overlap_events": 0,
@@ -61,6 +65,12 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
     events = events.dropna(subset=["unlock_pct"])
     events = events.loc[events["unlock_pct"] >= config.min_unlock_pct].copy()
     funnel["pct_threshold_events"] = int(len(events))
+    if config.date_start is not None:
+        events = events.loc[events["unlock_date"] >= config.date_start].copy()
+    funnel["date_start_events"] = int(len(events))
+    if config.date_end is not None:
+        events = events.loc[events["unlock_date"] <= config.date_end].copy()
+    funnel["date_end_events"] = int(len(events))
 
     if events.empty:
         result = _empty_result(config, started, funnel, freq)
@@ -464,10 +474,24 @@ def _event_funnel_rows(funnel: dict[str, int], config: UnlockBacktestConfig) -> 
         f"| total_events | {funnel['total_events']} | input rows |",
         f"| has_hl_perp_events | {funnel['has_hl_perp_events']} | has_hl_perp == True |",
         f"| pct_threshold_events | {funnel['pct_threshold_events']} | unlock_pct >= {config.min_unlock_pct:.4f} |",
+        f"| date_start_events | {funnel['date_start_events']} | {_date_start_filter(config)} |",
+        f"| date_end_events | {funnel['date_end_events']} | {_date_end_filter(config)} |",
         f"| candle_ok_events | {funnel['candle_ok_events']} | candles loaded successfully |",
         f"| in_range_events | {funnel['in_range_events']} | entry + unlock dates in candle index |",
         f"| non_overlap_events | {funnel['non_overlap_events']} | non-overlapping entries fired |",
     ]
+
+
+def _date_start_filter(config: UnlockBacktestConfig) -> str:
+    if config.date_start is None:
+        return "date_start disabled"
+    return f"unlock_date >= {config.date_start:%Y-%m-%d}"
+
+
+def _date_end_filter(config: UnlockBacktestConfig) -> str:
+    if config.date_end is None:
+        return "date_end disabled"
+    return f"unlock_date <= {config.date_end:%Y-%m-%d}"
 
 
 def _coerce_bool_series(series: pd.Series) -> pd.Series:

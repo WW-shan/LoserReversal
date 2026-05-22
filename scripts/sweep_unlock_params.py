@@ -46,6 +46,8 @@ def run_sweep(config: UnlockBacktestConfig) -> dict[str, Any]:
                 config,
                 pre_window_days=pre_window_days,
                 min_unlock_pct=min_unlock_pct,
+                date_start=config.date_start,
+                date_end=config.date_end,
                 report=None,
                 skip_tokens=set(failed_tokens),
             )
