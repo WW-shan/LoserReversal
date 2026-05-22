@@ -21,17 +21,15 @@ else:
 
 PRE_WINDOW_GRID = (3, 5, 7, 10, 14)
 MIN_UNLOCK_PCT_GRID = (0.01, 0.02, 0.03, 0.05)
-_failed_tokens: set[str] = set()
 
 
 def run_sweep(config: UnlockBacktestConfig) -> dict[str, Any]:
     started = time.perf_counter()
-    if config.skip_tokens:
-        _failed_tokens.update(config.skip_tokens)
-    if _failed_tokens:
+    failed_tokens: set[str] = set(config.skip_tokens or ())
+    if failed_tokens:
         _log(
             "skipping cached failed tokens for sweep: "
-            f"{', '.join(sorted(_failed_tokens))}"
+            f"{', '.join(sorted(failed_tokens))}"
         )
 
     rows: list[dict[str, Any]] = []
@@ -49,10 +47,10 @@ def run_sweep(config: UnlockBacktestConfig) -> dict[str, Any]:
                 pre_window_days=pre_window_days,
                 min_unlock_pct=min_unlock_pct,
                 report=None,
-                skip_tokens=set(_failed_tokens),
+                skip_tokens=set(failed_tokens),
             )
         )
-        _failed_tokens.update(result.get("failed_tokens", ()))
+        failed_tokens.update(result.get("failed_tokens", ()))
         stats = result["portfolio_stats"]
         n_trades = int(stats["n_trades"])
         row = {
