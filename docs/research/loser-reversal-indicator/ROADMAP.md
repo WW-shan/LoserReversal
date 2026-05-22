@@ -146,10 +146,11 @@ P7                                                          [持续]    Alpha �
 
 **Phase 1 verdict: RED — KILL**
 
-- OOS Sharpe mean: 0.00
+- OOS Sharpe mean: n/a
 - OOS n_trades total: 0
-- Worst OOS MaxDD: 0.00%
-- Reason: Walk-forward selected high-IS-Sharpe configs with only 2 IS trades and produced 0 OOS trades, failing the insufficient-sample gate.
+- Worst OOS MaxDD: n/a
+- Reason: `data_gap` — OOS events filter down to unsupported tokens (LISTA) or event windows outside available candle coverage.
+- Implication: current 348-day data cannot support a strategy edge claim. Rerun after 6+ months of additional unlock events; that would change the evidence base rather than the current Phase 1 kill decision.
 
 ### 任务清单
 
