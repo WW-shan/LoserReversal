@@ -65,6 +65,20 @@ def test_select_best_is_row_prefers_positive_trade_median_bucket():
     assert selection_mode == "positive_trades_median"
 
 
+def test_select_best_is_row_falls_back_to_any_positive_trade_row():
+    rows = [
+        {"pre_window": 3, "min_pct": 0.01, "sharpe": 0.5, "n_trades": 1},
+        {"pre_window": 5, "min_pct": 0.01, "sharpe": -0.1, "n_trades": 2},
+        {"pre_window": 7, "min_pct": 0.01, "sharpe": -0.2, "n_trades": 10},
+    ]
+
+    best_row, eligible_in_is, selection_mode = walkforward._select_best_is_row(rows, 2)
+
+    assert best_row["pre_window"] == 3
+    assert eligible_in_is is False
+    assert selection_mode == "positive_trades_any"
+
+
 def test_select_best_is_row_reports_zero_trade_fallback(capsys):
     rows = [
         {"pre_window": 3, "min_pct": 0.01, "sharpe": 0.0, "n_trades": 0},

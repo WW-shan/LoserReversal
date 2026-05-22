@@ -219,10 +219,6 @@ def _select_best_is_row(
                 "positive_trades_median",
             )
 
-        positive_sharpe_rows = [row for row in positive_trade_rows if float(row["sharpe"]) > 0]
-        if positive_sharpe_rows:
-            return max(positive_sharpe_rows, key=_sort_sharpe), False, "positive_trades_any"
-
         return max(positive_trade_rows, key=_sort_sharpe), False, "positive_trades_any"
 
     if split_index is not None:
@@ -270,11 +266,7 @@ def _verdict(aggregate: dict[str, Any]) -> Verdict:
         and oos_max_dd_worst >= -0.30
     ):
         return Verdict("YELLOW", "yellow_thresholds_met")
-    return Verdict("RED", _red_reason(oos_sharpe_mean, oos_n_trades_total, oos_max_dd_worst))
-
-
-def _red_reason(oos_sharpe_mean: float, oos_n_trades_total: int, oos_max_dd_worst: float) -> str:
-    return "thresholds_not_met"
+    return Verdict("RED", "thresholds_not_met")
 
 
 def _write_report(path: Path, result: dict[str, Any]) -> None:
