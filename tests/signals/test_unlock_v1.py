@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from signals.unlock_v1 import unlock_short_signal
 
@@ -154,3 +155,26 @@ def test_event_outside_price_index_is_skipped_while_other_events_are_processed()
     assert bool(exits.loc["2026-01-15"])
     assert entries.sum() == 1
     assert exits.sum() == 1
+
+
+def test_pre_window_days_must_be_positive():
+    prices = {"ARB": _prices()}
+    events = _events([{"token": "ARB", "unlock_date": pd.Timestamp("2026-01-15T00:00:00Z")}])
+
+    for pre_window_days in [0, -1]:
+        with pytest.raises(ValueError):
+            unlock_short_signal(events, prices, pre_window_days=pre_window_days)
+
+
+def test_naive_price_index_matches_utc_price_index_without_mutating_caller():
+    aware_prices = _prices()
+    naive_prices = aware_prices.copy()
+    naive_prices.index = naive_prices.index.tz_localize(None)
+    events = _events([{"token": "ARB", "unlock_date": pd.Timestamp("2026-01-15T00:00:00Z")}])
+
+    aware_entries, aware_exits = unlock_short_signal(events, {"ARB": aware_prices})["ARB"]
+    naive_entries, naive_exits = unlock_short_signal(events, {"ARB": naive_prices})["ARB"]
+
+    assert naive_prices.index.tz is None
+    assert naive_entries.equals(aware_entries)
+    assert naive_exits.equals(aware_exits)

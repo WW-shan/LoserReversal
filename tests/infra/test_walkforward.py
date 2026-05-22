@@ -103,3 +103,29 @@ def test_invalid_mode_raises():
             min_train_days=30,
             test_days=10,
         )
+
+
+def test_invalid_mode_is_validated_before_split_count():
+    with pytest.raises(ValueError, match="mode"):
+        walk_forward_splits(
+            START,
+            END,
+            n_splits=0,
+            mode="invalid",
+            min_train_days=30,
+            test_days=10,
+        )
+
+
+@pytest.mark.parametrize("field", ["min_train_days", "test_days"])
+def test_positive_window_lengths_are_required(field: str):
+    kwargs = {
+        "n_splits": 1,
+        "mode": "expanding",
+        "min_train_days": 30,
+        "test_days": 10,
+        field: 0,
+    }
+
+    with pytest.raises(ValueError):
+        walk_forward_splits(START, END, **kwargs)
