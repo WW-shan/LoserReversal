@@ -9,7 +9,7 @@ from typing import Callable
 import duckdb
 import pandas as pd
 
-from infra.backtest.engine import BacktestConfig, BacktestResult, run_backtest
+from infra.backtest.engine import INTERVAL_TABLE, BacktestConfig, BacktestResult, run_backtest
 from infra.fetchers.candles import fetch_candles
 from infra.hyperliquid_client import HyperliquidClient
 from infra.storage import read_candles, write_candles
@@ -79,16 +79,10 @@ def _coerce_utc_timestamp(value: datetime | pd.Timestamp) -> pd.Timestamp:
 
 
 def _interval_timedelta(interval: str) -> pd.Timedelta:
-    amount = int(interval[:-1])
-    unit = interval[-1]
-    if unit == "m":
-        return pd.Timedelta(minutes=amount)
-    if unit == "h":
-        return pd.Timedelta(hours=amount)
-    if unit == "d":
-        return pd.Timedelta(days=amount)
-    if unit == "w":
-        return pd.Timedelta(weeks=amount)
-    if unit == "M":
-        return pd.Timedelta(days=31 * amount)
-    raise ValueError(f"Unsupported candle interval: {interval}")
+    if interval in INTERVAL_TABLE:
+        return INTERVAL_TABLE[interval][1]
+
+    try:
+        return pd.Timedelta(interval)
+    except ValueError as error:
+        raise ValueError(f"Unsupported candle interval: {interval}") from error
