@@ -14,11 +14,11 @@ from typing import Any
 import duckdb
 import pandas as pd
 
-from infra.backtest.engine import BacktestConfig, BacktestResult, _periods_per_year, run_backtest
+from infra.backtest.engine import BacktestConfig, BacktestResult, periods_per_year, run_backtest
 from infra.backtest.risk import max_drawdown, sharpe_ratio, sortino_ratio
 from infra.fetchers.candles import fetch_candles
 from infra.hyperliquid_client import HyperliquidClient
-from infra.pipeline import PipelineConfig, _candles_cover_range, _interval_timedelta
+from infra.pipeline import PipelineConfig, candles_cover_range, interval_timedelta
 from infra.storage import read_candles, read_unlocks, write_candles
 from signals.unlock_v1 import unlock_short_signal
 
@@ -183,7 +183,7 @@ def _load_or_fetch_candles(
     except CACHE_ERRORS:
         return _fetch_store_load_candles(token, interval, start, end, client), False
 
-    if not _candles_cover_range(candles, pipeline_config):
+    if not candles_cover_range(candles, pipeline_config):
         return _fetch_store_load_candles(token, interval, start, end, client), False
     return candles, True
 
@@ -284,8 +284,8 @@ def _portfolio_stats(
     equity_final = float(equity.iloc[-1]) if not equity.empty else 0.0
     equity_first = float(equity.iloc[0]) if not equity.empty else 0.0
     return {
-        "sharpe": sharpe_ratio(returns, _periods_per_year(freq)),
-        "sortino": sortino_ratio(returns, _periods_per_year(freq)),
+        "sharpe": sharpe_ratio(returns, periods_per_year(freq)),
+        "sortino": sortino_ratio(returns, periods_per_year(freq)),
         "max_dd": max_drawdown(equity),
         "n_trades": n_trades,
         "win_rate": trades_won / n_trades if n_trades else 0.0,
@@ -503,7 +503,7 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
     if not args.interval:
         parser.error("--interval must not be empty")
     try:
-        _interval_timedelta(args.interval)
+        interval_timedelta(args.interval)
     except ValueError as error:
         parser.error(str(error))
 

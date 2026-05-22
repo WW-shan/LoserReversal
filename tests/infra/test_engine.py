@@ -5,8 +5,8 @@ import pytest
 
 from datetime import datetime, timezone
 
-from infra.backtest.engine import BacktestConfig, _periods_per_year, run_backtest
-from infra.pipeline import PipelineConfig, _candles_cover_range
+from infra.backtest.engine import BacktestConfig, periods_per_year, run_backtest
+from infra.pipeline import PipelineConfig, candles_cover_range
 from scripts.run_btc_sma_e2e import _last_completed_candle_end
 
 
@@ -67,8 +67,8 @@ def test_run_backtest_no_signals_preserves_initial_cash():
         ("1h", 8760),
     ],
 )
-def test_periods_per_year_uses_lookup_for_supported_frequencies(freq, expected):
-    assert _periods_per_year(freq) == expected
+def test_period_lookup_uses_supported_frequencies(freq, expected):
+    assert periods_per_year(freq) == expected
 
 
 @pytest.mark.parametrize(
@@ -122,7 +122,7 @@ def test_last_completed_candle_end_rejects_anchored_intervals():
         _last_completed_candle_end("1w", datetime(2026, 5, 22, 15, 30, tzinfo=timezone.utc))
 
 
-def test_candles_cover_range_accepts_last_open_at_completed_end_boundary():
+def test_candle_range_cover_accepts_last_open_at_completed_end_boundary():
     candles = pd.DataFrame(
         {"close": [100.0]},
         index=pd.DatetimeIndex([pd.Timestamp("2026-05-21T00:00:00Z")], name="timestamp"),
@@ -134,4 +134,4 @@ def test_candles_cover_range_accepts_last_open_at_completed_end_boundary():
         end=datetime(2026, 5, 22, tzinfo=timezone.utc),
     )
 
-    assert _candles_cover_range(candles, config)
+    assert candles_cover_range(candles, config)

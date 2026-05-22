@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from infra.pipeline import _interval_timedelta
+from infra.pipeline import interval_timedelta
 
 if __package__:
     from scripts.run_unlock_backtest import UnlockBacktestConfig, run_unlock_backtest
@@ -150,7 +150,7 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
     if not args.interval:
         parser.error("--interval must not be empty")
     try:
-        _interval_timedelta(args.interval)
+        interval_timedelta(args.interval)
     except ValueError as error:
         parser.error(str(error))
 

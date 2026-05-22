@@ -68,8 +68,8 @@ def run_backtest(
     n_trades = int(portfolio.trades.count())
 
     stats = {
-        "sharpe": sharpe_ratio(returns, _periods_per_year(config.freq)),
-        "sortino": sortino_ratio(returns, _periods_per_year(config.freq)),
+        "sharpe": sharpe_ratio(returns, periods_per_year(config.freq)),
+        "sortino": sortino_ratio(returns, periods_per_year(config.freq)),
         "max_dd": max_drawdown(equity),
         "total_return": float(equity.iloc[-1] / config.init_cash - 1.0) if not equity.empty else 0.0,
         "win_rate": float(portfolio.trades.win_rate()) if n_trades else 0.0,
@@ -82,7 +82,7 @@ def _align_bool_signals(signals: pd.Series, index: pd.Index) -> pd.Series:
     return signals.reindex(index).fillna(False).astype(bool)
 
 
-def _periods_per_year(freq: str) -> int:
+def periods_per_year(freq: str) -> int:
     if freq in INTERVAL_TABLE:
         return INTERVAL_TABLE[freq][0]
 

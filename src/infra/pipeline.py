@@ -39,7 +39,7 @@ def run_pipeline(
         except (FileNotFoundError, OSError, duckdb.IOException):
             candles = _fetch_store_load_candles(config)
         else:
-            if not _candles_cover_range(candles, config):
+            if not candles_cover_range(candles, config):
                 candles = _fetch_store_load_candles(config)
     else:
         candles = _fetch_store_load_candles(config)
@@ -56,11 +56,11 @@ def _fetch_store_load_candles(config: PipelineConfig) -> pd.DataFrame:
     return read_candles(config.symbol, config.interval, start=config.start, end=config.end)
 
 
-def _candles_cover_range(candles: pd.DataFrame, config: PipelineConfig) -> bool:
+def candles_cover_range(candles: pd.DataFrame, config: PipelineConfig) -> bool:
     if candles.empty:
         return False
 
-    interval = _interval_timedelta(config.interval)
+    interval = interval_timedelta(config.interval)
     start = _coerce_utc_timestamp(config.start)
     end = _coerce_utc_timestamp(config.end)
     first = _coerce_utc_timestamp(candles.index.min())
@@ -78,7 +78,7 @@ def _coerce_utc_timestamp(value: datetime | pd.Timestamp) -> pd.Timestamp:
     return ts.tz_convert("UTC")
 
 
-def _interval_timedelta(interval: str) -> pd.Timedelta:
+def interval_timedelta(interval: str) -> pd.Timedelta:
     if interval in INTERVAL_TABLE:
         return INTERVAL_TABLE[interval][1]
 
