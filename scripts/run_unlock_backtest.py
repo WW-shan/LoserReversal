@@ -41,13 +41,26 @@ class UnlockBacktestConfig:
 def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
     started = time.perf_counter()
     events = read_unlocks()
+    funnel = {
+        "total_events": int(len(events)),
+        "has_hl_perp_events": 0,
+        "pct_threshold_events": 0,
+        "candle_ok_events": 0,
+        "in_range_events": 0,
+        "non_overlap_events": 0,
+    }
     events = events.loc[_coerce_bool_series(events["has_hl_perp"])].copy()
+    funnel["has_hl_perp_events"] = int(len(events))
     events["token"] = events["token"].astype("string")
     events["unlock_date"] = pd.to_datetime(events["unlock_date"], utc=True, errors="coerce")
     events = events.dropna(subset=["token", "unlock_date"])
+    events["unlock_pct"] = pd.to_numeric(events["unlock_pct"], errors="coerce")
+    events = events.dropna(subset=["unlock_pct"])
+    events = events.loc[events["unlock_pct"] >= config.min_unlock_pct].copy()
+    funnel["pct_threshold_events"] = int(len(events))
 
     if events.empty:
-        result = _empty_result(config, started)
+        result = _empty_result(config, started, funnel)
         if config.report is not None:
             _write_report(config.report, config, result)
         return result
@@ -86,6 +99,9 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
             _log(f"[{index}/{len(tokens)}] warning: skipping {token}: no candle data")
             continue
         prices[token] = close
+
+    funnel["candle_ok_events"] = int(events.loc[events["token"].isin(prices)].shape[0])
+    funnel["in_range_events"] = _count_in_range_events(events, prices, config.pre_window_days)
 
     signals = unlock_short_signal(
         events,
@@ -127,11 +143,13 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
         )
 
     portfolio_equity = _summed_equity(equities)
+    funnel["non_overlap_events"] = int(sum(int(entries.sum()) for entries, _ in signals.values()))
     portfolio_stats = _portfolio_stats(portfolio_equity, token_stats, config)
     output = {
         "config": config,
         "n_tokens": len(tokens),
-        "n_events_with_signal": sum(int(entries.sum()) for entries, _ in signals.values()),
+        "n_events_with_signal": funnel["non_overlap_events"],
+        "funnel": funnel,
         "portfolio_stats": portfolio_stats,
         "per_token_stats": sorted(token_stats, key=_sort_sharpe, reverse=True),
         "portfolio_equity": portfolio_equity,
@@ -205,6 +223,37 @@ def _summed_equity(equities: list[pd.Series]) -> pd.Series:
     return aligned.sum(axis=1, min_count=1).dropna().rename("equity")
 
 
+def _count_in_range_events(
+    events: pd.DataFrame,
+    prices: dict[str, pd.Series],
+    pre_window_days: int,
+) -> int:
+    if events.empty or not prices:
+        return 0
+
+    count = 0
+    for token, token_events in events.groupby("token", sort=False):
+        token_name = str(token)
+        series = prices.get(token_name)
+        if series is None:
+            continue
+
+        price_index = pd.DatetimeIndex(series.index)
+        if price_index.tz is None:
+            close_index = pd.DatetimeIndex(price_index, tz="UTC")
+        else:
+            close_index = price_index.tz_convert("UTC")
+        if close_index.empty:
+            continue
+
+        for unlock_ts in token_events["unlock_date"]:
+            entry_ts = unlock_ts - pd.Timedelta(days=pre_window_days)
+            if entry_ts in close_index and unlock_ts in close_index:
+                count += 1
+
+    return count
+
+
 def _portfolio_stats(
     equity: pd.Series,
     token_stats: list[dict[str, Any]],
@@ -227,12 +276,13 @@ def _portfolio_stats(
     }
 
 
-def _empty_result(config: UnlockBacktestConfig, started: float) -> dict[str, Any]:
+def _empty_result(config: UnlockBacktestConfig, started: float, funnel: dict[str, int]) -> dict[str, Any]:
     equity = pd.Series(dtype="float64", name="equity")
     return {
         "config": config,
         "n_tokens": 0,
         "n_events_with_signal": 0,
+        "funnel": funnel,
         "portfolio_stats": _portfolio_stats(equity, [], config),
         "per_token_stats": [],
         "portfolio_equity": equity,
@@ -247,6 +297,7 @@ def _write_report(path: Path, config: UnlockBacktestConfig, result: dict[str, An
     stats = result["portfolio_stats"]
     equity = result["portfolio_equity"]
     per_token_stats = result["per_token_stats"]
+    funnel = result["funnel"]
 
     lines = [
         "# Unlock Short V1 Backtest",
@@ -267,30 +318,62 @@ def _write_report(path: Path, config: UnlockBacktestConfig, result: dict[str, An
         "| portfolio_model | equal cash per traded token; leading/trailing gaps use "
         "first/last token equity |",
         "",
-        "## Portfolio Stats",
-        "",
-        "| Metric | Value |",
-        "| --- | --- |",
-        f"| Sharpe | {_fmt_num(stats['sharpe'], 2)} |",
-        f"| Sortino | {_fmt_num(stats['sortino'], 2)} |",
-        f"| Max DD | {_fmt_pct(stats['max_dd'])} |",
-        f"| n_trades | {stats['n_trades']} |",
-        f"| win_rate | {_fmt_pct(stats['win_rate'])} |",
-        f"| total_return | {_fmt_pct(stats['total_return'])} |",
-        f"| final equity | {_fmt_money(stats['equity_final'])} |",
-        "",
-        "## Per-Token Stats",
-        "",
-        "| token | sharpe | sortino | max_dd | n_trades | total_return | win_rate | equity_final |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
-        *_per_token_rows(per_token_stats),
-        "",
-        "## Equity Curve",
-        "",
-        "| date | summed_equity |",
-        "| --- | ---: |",
-        *_equity_rows(equity),
     ]
+
+    if stats["n_trades"] < 30:
+        lines.extend(
+            [
+                "> [WARN] INSUFFICIENT SAMPLE: only "
+                f"{stats['n_trades']} trades. Sharpe is NOT decision-quality. "
+                "Do not use this report for Pass/Kill.",
+                "",
+            ]
+        )
+
+    lines.extend(
+        [
+            "## Decision Gate Check",
+            "",
+            "| Check | Threshold | Value | Status |",
+            "| --- | --- | --- | --- |",
+            f"| n_trades | >= 30 | {stats['n_trades']} | "
+            f"{'**PASS**' if stats['n_trades'] >= 30 else '**FAIL**'} |",
+            f"| Sharpe | >= 1.0 | {_fmt_num(stats['sharpe'], 2)} | "
+            f"{'**PASS**' if float(stats['sharpe']) >= 1.0 else '**FAIL**'} |",
+            f"| Max DD | >= -25% | {_fmt_pct(stats['max_dd'])} | "
+            f"{'**PASS**' if float(stats['max_dd']) >= -0.25 else '**FAIL**'} |",
+            "",
+            "## Event Funnel",
+            "",
+            "| step | events | filter |",
+            "| --- | ---: | --- |",
+            *_event_funnel_rows(funnel, config),
+            "",
+            "## Portfolio Stats",
+            "",
+            "| Metric | Value |",
+            "| --- | --- |",
+            f"| Sharpe | {_fmt_num(stats['sharpe'], 2)} |",
+            f"| Sortino | {_fmt_num(stats['sortino'], 2)} |",
+            f"| Max DD | {_fmt_pct(stats['max_dd'])} |",
+            f"| n_trades | {stats['n_trades']} |",
+            f"| win_rate | {_fmt_pct(stats['win_rate'])} |",
+            f"| total_return | {_fmt_pct(stats['total_return'])} |",
+            f"| final equity | {_fmt_money(stats['equity_final'])} |",
+            "",
+            "## Per-Token Stats",
+            "",
+            "| token | sharpe | sortino | max_dd | n_trades | total_return | win_rate | equity_final |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            *_per_token_rows(per_token_stats),
+            "",
+            "## Equity Curve",
+            "",
+            "| date | summed_equity |",
+            "| --- | ---: |",
+            *_equity_rows(equity),
+        ]
+    )
     path.write_text("\n".join(lines) + "\n")
 
 
@@ -323,6 +406,17 @@ def _equity_rows(equity: pd.Series) -> list[str]:
         last = equity.dropna().iloc[-1]
         return [f"| {equity.dropna().index[-1].strftime('%Y-%m-%d')} | {_fmt_money(last)} |"]
     return [f"| {index.strftime('%Y-%m-%d')} | {_fmt_money(value)} |" for index, value in monthly.items()]
+
+
+def _event_funnel_rows(funnel: dict[str, int], config: UnlockBacktestConfig) -> list[str]:
+    return [
+        f"| total_events | {funnel['total_events']} | input rows |",
+        f"| has_hl_perp_events | {funnel['has_hl_perp_events']} | has_hl_perp == True |",
+        f"| pct_threshold_events | {funnel['pct_threshold_events']} | unlock_pct >= {config.min_unlock_pct:.4f} |",
+        f"| candle_ok_events | {funnel['candle_ok_events']} | candles loaded successfully |",
+        f"| in_range_events | {funnel['in_range_events']} | entry + unlock dates in candle index |",
+        f"| non_overlap_events | {funnel['non_overlap_events']} | non-overlapping entries fired |",
+    ]
 
 
 def _coerce_bool_series(series: pd.Series) -> pd.Series:
