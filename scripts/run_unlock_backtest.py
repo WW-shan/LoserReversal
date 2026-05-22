@@ -130,9 +130,10 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
         signal_trades = int(token_signal[0].sum()) if token_signal is not None else 0
         _log(f"[{index}/{len(tokens)}] signal generated: {signal_trades} trades")
         if token_signal is None:
-            continue
-
-        entries, exits = token_signal
+            entries = pd.Series(False, index=prices[token].index, dtype=bool)
+            exits = pd.Series(False, index=prices[token].index, dtype=bool)
+        else:
+            entries, exits = token_signal
         result = run_backtest(prices[token], entries, exits, backtest_config)
         stats = _token_stats(token, result)
         token_stats.append(stats)
@@ -142,7 +143,7 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
             f"MaxDD={stats['max_dd']:.1%}"
         )
 
-    portfolio_equity = _summed_equity(equities)
+    portfolio_equity = _summed_equity(equities, config.init_cash)
     funnel["non_overlap_events"] = int(sum(int(entries.sum()) for entries, _ in signals.values()))
     portfolio_stats = _portfolio_stats(portfolio_equity, token_stats, config)
     output = {
@@ -215,12 +216,22 @@ def _token_stats(token: str, result: BacktestResult) -> dict[str, Any]:
     }
 
 
-def _summed_equity(equities: list[pd.Series]) -> pd.Series:
+def _summed_equity(equities: list[pd.Series], init_cash: float) -> pd.Series:
+    """Per-token equity reindexed to union date range, leading gaps filled with init_cash
+    (holding cash), trailing gaps ffilled (position held)."""
     if not equities:
         return pd.Series(dtype="float64", name="equity")
 
-    aligned = pd.concat(equities, axis=1, sort=True).sort_index().ffill().bfill()
-    return aligned.sum(axis=1, min_count=1).dropna().rename("equity")
+    union_index = equities[0].index
+    for equity in equities[1:]:
+        union_index = union_index.union(equity.index)
+
+    aligned = pd.concat(
+        [equity.reindex(union_index).ffill().fillna(init_cash) for equity in equities],
+        axis=1,
+        sort=True,
+    ).sort_index()
+    return aligned.sum(axis=1).rename("equity")
 
 
 def _count_in_range_events(
