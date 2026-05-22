@@ -220,6 +220,8 @@ def _verdict(aggregate: dict[str, Any]) -> Verdict:
     oos_n_trades_total = int(aggregate["oos_n_trades_total"])
     oos_max_dd_worst = float(aggregate["oos_max_dd_worst"])
 
+    if oos_n_trades_total == 0:
+        return Verdict("RED", "data_gap")
     if oos_n_trades_total < 15:
         return Verdict("RED", "insufficient_sample")
     if (
@@ -240,14 +242,6 @@ def _verdict(aggregate: dict[str, Any]) -> Verdict:
 
 
 def _red_reason(oos_sharpe_mean: float, oos_n_trades_total: int, oos_max_dd_worst: float) -> str:
-    if not math.isfinite(oos_sharpe_mean):
-        return "oos_sharpe_nonfinite"
-    if oos_sharpe_mean < 0.3:
-        return "oos_sharpe_below_yellow"
-    if oos_n_trades_total < 30:
-        return "min_trades_below_green"
-    if oos_max_dd_worst < -0.30:
-        return "max_drawdown_breach"
     return "thresholds_not_met"
 
 
@@ -324,32 +318,43 @@ def _split_rows(rows: list[dict[str, Any]]) -> list[str]:
 
 
 def _aggregate_rows(aggregate: dict[str, Any]) -> list[str]:
+    oos_n_trades_total = int(aggregate["oos_n_trades_total"])
+    no_sample = oos_n_trades_total == 0
+    oos_sharpe_mean = aggregate["oos_sharpe_mean"]
+    oos_sharpe_min = aggregate["oos_sharpe_min"]
+    oos_max_dd_worst = aggregate["oos_max_dd_worst"]
+    is_oos_decay = aggregate["is_oos_decay"]
     return [
         "| OOS Sharpe (mean) | "
-        f"{_fmt_num(aggregate['oos_sharpe_mean'], 2)} | "
+        f"{_fmt_num(oos_sharpe_mean, 2) if not no_sample else 'n/a'} | "
         ">= 0.7 (GREEN) / >= 0.3 (YELLOW) | "
-        f"{_sharpe_status(aggregate['oos_sharpe_mean'])} |",
+        f"{_no_sample_status(no_sample, _sharpe_status(oos_sharpe_mean))} |",
         "| OOS Sharpe (min/worst) | "
-        f"{_fmt_num(aggregate['oos_sharpe_min'], 2)} | >= 0 desired | "
-        f"{_pass_fail(float(aggregate['oos_sharpe_min']) >= 0)} |",
+        f"{_fmt_num(oos_sharpe_min, 2) if not no_sample else 'n/a'} | >= 0 desired | "
+        f"{_no_sample_status(no_sample, _pass_fail(float(oos_sharpe_min) >= 0))} |",
         "| OOS n_trades (total) | "
-        f"{aggregate['oos_n_trades_total']} | >= 30 (GREEN) / >= 15 (YELLOW) | "
-        f"{_trades_status(aggregate['oos_n_trades_total'])} |",
+        f"{oos_n_trades_total} | >= 30 (GREEN) / >= 15 (YELLOW) | "
+        f"{_trades_status(oos_n_trades_total)} |",
         "| OOS Max DD (worst) | "
-        f"{_fmt_pct(aggregate['oos_max_dd_worst'])} | "
+        f"{_fmt_pct(oos_max_dd_worst) if not no_sample else 'n/a'} | "
         ">= -25% (GREEN) / >= -30% (YELLOW) | "
-        f"{_drawdown_status(aggregate['oos_max_dd_worst'])} |",
-        f"| {IS_OOS_DECAY_LABEL} | {_fmt_pct(aggregate['is_oos_decay'])} | "
-        f"<= 30% desired | {_decay_status(aggregate['is_oos_decay'])} |",
+        f"{_no_sample_status(no_sample, _drawdown_status(oos_max_dd_worst))} |",
+        f"| {IS_OOS_DECAY_LABEL} | "
+        f"{_fmt_pct(is_oos_decay) if not no_sample else 'n/a'} | "
+        f"<= 30% desired | {_no_sample_status(no_sample, _decay_status(is_oos_decay))} |",
     ]
 
 
 def _decision_paragraph(verdict: Verdict, aggregate: dict[str, Any]) -> str:
+    oos_n_trades_total = int(aggregate["oos_n_trades_total"])
+    no_sample = oos_n_trades_total == 0
     stats = (
-        f"OOS Sharpe mean {_fmt_num(aggregate['oos_sharpe_mean'], 2)}, "
-        f"{aggregate['oos_n_trades_total']} OOS trades, worst MaxDD "
-        f"{_fmt_pct(aggregate['oos_max_dd_worst'])}, and "
-        f"{IS_OOS_DECAY_LABEL} {_fmt_pct(aggregate['is_oos_decay'])}"
+        f"OOS Sharpe mean "
+        f"{_fmt_num(aggregate['oos_sharpe_mean'], 2) if not no_sample else 'n/a'}, "
+        f"{oos_n_trades_total} OOS trades, worst MaxDD "
+        f"{_fmt_pct(aggregate['oos_max_dd_worst']) if not no_sample else 'n/a'}, and "
+        f"{IS_OOS_DECAY_LABEL} "
+        f"{_fmt_pct(aggregate['is_oos_decay']) if not no_sample else 'n/a'}"
     )
     if verdict.label == "GREEN":
         action = "include it in the paper portfolio candidate set at 10% starting weight."
@@ -415,6 +420,12 @@ def _fmt_pct_or_na(value: Any, n_trades: int) -> str:
     if int(n_trades) == 0:
         return "n/a"
     return _fmt_pct(value)
+
+
+def _no_sample_status(no_sample: bool, status: str) -> str:
+    if no_sample:
+        return "NO SAMPLE"
+    return status
 
 
 def _fmt_bool(value: bool) -> str:
