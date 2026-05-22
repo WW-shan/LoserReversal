@@ -43,13 +43,15 @@ def run_sweep(config: UnlockBacktestConfig) -> dict[str, Any]:
             )
         )
         stats = result["portfolio_stats"]
+        n_trades = int(stats["n_trades"])
         row = {
             "pre_window": pre_window_days,
             "min_pct": min_unlock_pct,
             "sharpe": float(stats["sharpe"]),
             "sortino": float(stats["sortino"]),
             "max_dd": float(stats["max_dd"]),
-            "n_trades": int(stats["n_trades"]),
+            "n_trades": n_trades,
+            "eligible": n_trades >= 30,
             "win_rate": float(stats["win_rate"]),
             "total_return": float(stats["total_return"]),
         }
@@ -60,7 +62,7 @@ def run_sweep(config: UnlockBacktestConfig) -> dict[str, Any]:
             f"→ Sharpe={row['sharpe']:.2f} ({elapsed:.1f}s)"
         )
 
-    ranked = sorted(rows, key=_sort_sharpe, reverse=True)
+    ranked = sorted(rows, key=_sort_eligible_sharpe, reverse=True)
     output = {
         "rows": ranked,
         "total_combinations": len(grid),
@@ -76,30 +78,55 @@ def _write_sweep_report(path: Path, result: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     generated = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     rows = result["rows"]
+    eligible_rows = [row for row in rows if row["eligible"]]
+    best_eligible_sharpe = _fmt_num(eligible_rows[0]["sharpe"], 2) if eligible_rows else "n/a"
 
     lines = [
         "# Unlock Short V1 Parameter Sweep",
         "",
         f"_Generated {generated}_",
         "",
+        "## Decision Gate Summary",
+        "",
+        f"{len(eligible_rows)} of {result['total_combinations']} combinations are eligible.",
+        f"Best eligible Sharpe: {best_eligible_sharpe}",
+        "",
         f"Total combinations: {result['total_combinations']}",
         f"Runtime seconds: {result['runtime_seconds']:.1f}",
         "",
-        "| rank | pre_window | min_pct | sharpe | sortino | max_dd | n_trades | win_rate | total_return |",
-        "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "## Eligible-only Ranking",
+        "",
+        *_eligible_ranking_rows(eligible_rows),
+        "",
+        "## Full Ranking",
+        "",
+        "| rank | eligible | pre_window | min_pct | sharpe | sortino | max_dd | n_trades | win_rate | total_return |",
+        "| ---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
         *_sweep_rows(rows),
     ]
     path.write_text("\n".join(lines) + "\n")
 
 
+def _eligible_ranking_rows(rows: list[dict[str, Any]]) -> list[str]:
+    if not rows:
+        return ["No eligible rows (n_trades >= 30)."]
+
+    return [
+        "| rank | eligible | pre_window | min_pct | sharpe | sortino | max_dd | n_trades | win_rate | total_return |",
+        "| ---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        *_sweep_rows(rows),
+    ]
+
+
 def _sweep_rows(rows: list[dict[str, Any]]) -> list[str]:
     if not rows:
-        return ["| - | - | - | - | - | - | - | - | - |"]
+        return ["| - | - | - | - | - | - | - | - | - | - |"]
 
     output = []
     for rank, row in enumerate(rows, start=1):
         output.append(
-            f"| {rank} | {row['pre_window']} | {row['min_pct']:.2f} | "
+            f"| {rank} | {_fmt_bool(row['eligible'])} | "
+            f"{row['pre_window']} | {row['min_pct']:.2f} | "
             f"{_fmt_num(row['sharpe'], 2)} | {_fmt_num(row['sortino'], 2)} | "
             f"{_fmt_pct(row['max_dd'])} | "
             f"{row['n_trades']} | {_fmt_pct(row['win_rate'])} | "
@@ -117,6 +144,14 @@ def _fmt_num(value: Any, decimals: int) -> str:
     if not math.isfinite(number):
         return "n/a"
     return f"{number:.{decimals}f}"
+
+
+def _fmt_bool(value: bool) -> str:
+    return "yes" if value else "no"
+
+
+def _sort_eligible_sharpe(row: dict[str, Any]) -> tuple[bool, float]:
+    return bool(row["eligible"]), _sort_sharpe(row)
 
 
 def _sort_sharpe(row: dict[str, Any]) -> float:
