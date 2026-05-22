@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 import time
 from dataclasses import dataclass
@@ -17,7 +18,7 @@ from infra.backtest.engine import BacktestConfig, BacktestResult, _periods_per_y
 from infra.backtest.risk import max_drawdown, sharpe_ratio, sortino_ratio
 from infra.fetchers.candles import fetch_candles
 from infra.hyperliquid_client import HyperliquidClient
-from infra.pipeline import PipelineConfig, _candles_cover_range
+from infra.pipeline import PipelineConfig, _candles_cover_range, _interval_timedelta
 from infra.storage import read_candles, read_unlocks, write_candles
 from signals.unlock_v1 import unlock_short_signal
 
@@ -132,7 +133,7 @@ def run_unlock_backtest(config: UnlockBacktestConfig) -> dict[str, Any]:
         "n_tokens": len(tokens),
         "n_events_with_signal": sum(int(entries.sum()) for entries, _ in signals.values()),
         "portfolio_stats": portfolio_stats,
-        "per_token_stats": sorted(token_stats, key=lambda row: row["sharpe"], reverse=True),
+        "per_token_stats": sorted(token_stats, key=_sort_sharpe, reverse=True),
         "portfolio_equity": portfolio_equity,
         "runtime_seconds": time.perf_counter() - started,
         "report_path": config.report,
@@ -263,6 +264,8 @@ def _write_report(path: Path, config: UnlockBacktestConfig, result: dict[str, An
         f"| freq | {BACKTEST_FREQ} |",
         f"| n_tokens | {result['n_tokens']} |",
         f"| n_events_with_signal | {result['n_events_with_signal']} |",
+        "| portfolio_model | equal cash per traded token; leading/trailing gaps use "
+        "first/last token equity |",
         "",
         "## Portfolio Stats",
         "",
@@ -315,7 +318,10 @@ def _equity_rows(equity: pd.Series) -> list[str]:
     if equity.empty:
         return ["| - | - |"]
 
-    monthly = equity.resample("ME").last()
+    monthly = equity.resample("ME").last().dropna()
+    if monthly.empty:
+        last = equity.dropna().iloc[-1]
+        return [f"| {equity.dropna().index[-1].strftime('%Y-%m-%d')} | {_fmt_money(last)} |"]
     return [f"| {index.strftime('%Y-%m-%d')} | {_fmt_money(value)} |" for index, value in monthly.items()]
 
 
@@ -330,7 +336,10 @@ def _fmt_pct(value: Any) -> str:
 
 
 def _fmt_num(value: Any, decimals: int) -> str:
-    return f"{float(value):.{decimals}f}"
+    number = float(value)
+    if not math.isfinite(number):
+        return "n/a"
+    return f"{number:.{decimals}f}"
 
 
 def _fmt_money(value: Any) -> str:
@@ -339,6 +348,11 @@ def _fmt_money(value: Any) -> str:
 
 def _log(message: str) -> None:
     print(message, file=sys.stderr)
+
+
+def _sort_sharpe(row: dict[str, Any]) -> float:
+    value = float(row["sharpe"])
+    return value if math.isfinite(value) else float("-inf")
 
 
 def _parse_args() -> argparse.Namespace:
@@ -368,6 +382,10 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
         parser.error("--slippage must be non-negative")
     if not args.interval:
         parser.error("--interval must not be empty")
+    try:
+        _interval_timedelta(args.interval)
+    except ValueError as error:
+        parser.error(str(error))
 
 
 def main() -> int:
