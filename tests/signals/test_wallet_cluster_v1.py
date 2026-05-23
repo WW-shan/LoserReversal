@@ -98,6 +98,27 @@ def test_cluster_dedup_when_wallets_fire_at_identical_timestamp():
     assert not bool(duplicate_keys.any())
 
 
+def test_cluster_emits_max_cluster_size_when_more_wallets_join_within_window():
+    events = cluster_signal(
+        _pool(
+            [
+                {"wallet": "0x1", "time": "2026-01-01T00:00:00Z"},
+                {"wallet": "0x2", "time": "2026-01-01T00:10:00Z"},
+                {"wallet": "0x3", "time": "2026-01-01T00:20:00Z"},
+                {"wallet": "0x4", "time": "2026-01-01T00:25:00Z"},
+            ]
+        ),
+        min_wallets=3,
+        window_minutes=30,
+        holding_hours=4,
+    )
+
+    btc = events["BTC"]
+    assert len(btc) == 1
+    assert btc.iloc[0]["entry_time"] == pd.Timestamp("2026-01-01T00:25:00Z")
+    assert btc.iloc[0]["cluster_size"] == 4
+
+
 def test_mixed_long_short_openings_form_independent_direction_clusters():
     events = cluster_signal(
         _pool(
