@@ -55,7 +55,7 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
         "skip_no_open_dir": 0,
         "skip_no_retail_size": 0,
         "skip_no_candle": 0,
-        "skip_no_valid_pair": 0,
+        "skip_no_qualifying_event": 0,
     }
     failed_wallets: list[str] = []
     skipped_wallets: list[str] = []
@@ -95,9 +95,9 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
         funnel["with_candle"] += int(wallet_result["events_with_candles"])
         stats = wallet_result["stats"]
         if int(stats["n_trades"]) == 0:
-            funnel["skip_no_valid_pair"] += 1
+            funnel["skip_no_qualifying_event"] += 1
             skipped_wallets.append(address)
-            _log(f"[{position}/{len(wallets)}] {address} skipped: skip_no_valid_pair")
+            _log(f"[{position}/{len(wallets)}] {address} skipped: skip_no_qualifying_event")
             continue
 
         wallet_stats.append(stats)
@@ -496,7 +496,8 @@ def _write_report(path: Path, result: dict[str, Any]) -> None:
             f"| skip_no_open_dir | {funnel['skip_no_open_dir']} | wallets with no open long/short fills |",
             f"| skip_no_retail_size | {funnel['skip_no_retail_size']} | wallets with no $1k-$200k open fills |",
             f"| skip_no_candle | {funnel['skip_no_candle']} | wallets whose signal coins had no candles |",
-            f"| skip_no_valid_pair | {funnel['skip_no_valid_pair']} | wallets with no aligned entry/exit pair |",
+            f"| skip_no_qualifying_event | {funnel['skip_no_qualifying_event']} | "
+            "wallets with no qualifying signal event |",
             "",
             "## Portfolio Stats",
             "",
@@ -580,6 +581,10 @@ def _coerce_utc_timestamp(value: Any) -> pd.Timestamp:
 def _skip_reason_for_empty_events(fills: pd.DataFrame) -> str:
     if fills.empty:
         return "skip_no_fills"
+    if not _has_non_null_time(fills):
+        return "skip_no_qualifying_event"
+    if "coin" not in fills.columns or fills["coin"].astype("string").isna().all():
+        return "skip_no_qualifying_event"
     if "dir" not in fills.columns:
         return "skip_no_open_dir"
 
@@ -596,7 +601,16 @@ def _skip_reason_for_empty_events(fills: pd.DataFrame) -> str:
     retail_mask = notional.between(MIN_RETAIL_NOTIONAL, MAX_RETAIL_NOTIONAL, inclusive="both")
     if not bool((open_mask & retail_mask).any()):
         return "skip_no_retail_size"
-    return "skip_no_valid_pair"
+    return "skip_no_qualifying_event"
+
+
+def _has_non_null_time(fills: pd.DataFrame) -> bool:
+    if "time" in fills.columns:
+        time_values = pd.to_datetime(fills["time"], utc=True, errors="coerce")
+        return not bool(time_values.isna().all())
+    if isinstance(fills.index, pd.DatetimeIndex):
+        return not bool(pd.isna(fills.index).all())
+    return False
 
 
 def _daily_sharpe(equity: pd.Series) -> float:
