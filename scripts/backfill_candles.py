@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -16,6 +17,8 @@ from infra.storage import PARQUET_DIR, read_unlocks, write_candles
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_UNLOCKS_PATH = REPO_ROOT / "data" / "parquet" / "unlocks.parquet"
 CANDLES_DIR = PARQUET_DIR / "candles"
+_VALID_TOKEN = re.compile(r"^[A-Z0-9:_-]{1,32}$")
+_VALID_INTERVAL = {"1m", "5m", "15m", "30m", "1h", "4h", "8h", "12h", "1d", "1w"}
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     start = _coerce_utc_timestamp(args.start)
     end = _coerce_utc_timestamp(args.end)
+    interval = _validate_interval(args.interval)
     tokens = _requested_tokens(args.tokens)
     if tokens is None:
         tokens = _unlock_tokens(DEFAULT_UNLOCKS_PATH)
@@ -34,14 +38,21 @@ def main(argv: list[str] | None = None) -> int:
     ranges: dict[str, tuple[pd.Timestamp, pd.Timestamp]] = {}
 
     for token in tokens:
-        target = CANDLES_DIR / f"{token}_{args.interval}.parquet"
+        try:
+            target = _target_path(token, interval)
+        except ValueError:
+            if args.tokens is not None:
+                raise
+            skipped += 1
+            logger.warning("skipping invalid token from unlocks: %s", token)
+            continue
         if args.missing_only and _existing_covers_start(target, start):
             skipped += 1
             continue
 
         try:
-            frame = fetch_candles(token, args.interval, start.to_pydatetime(), end.to_pydatetime())
-            write_candles(frame, token, args.interval, path=target)
+            frame = fetch_candles(token, interval, start.to_pydatetime(), end.to_pydatetime())
+            write_candles(frame, token, interval, path=target)
         except Exception as exc:
             failed += 1
             logger.warning("failed to backfill %s: %s", token, exc)
@@ -98,6 +109,27 @@ def _stable_unique(values) -> list[str]:
             out.append(value)
             seen.add(value)
     return out
+
+
+def _validate_interval(interval: str) -> str:
+    if interval not in _VALID_INTERVAL:
+        raise ValueError(f"invalid interval: {interval}")
+    return interval
+
+
+def _validate_token(token: str) -> str:
+    if not _VALID_TOKEN.match(token):
+        raise ValueError(f"invalid token: {token}")
+    return token
+
+
+def _target_path(token: str, interval: str) -> Path:
+    safe_token = _validate_token(token)
+    safe_interval = _validate_interval(interval)
+    target = CANDLES_DIR / f"{safe_token}_{safe_interval}.parquet"
+    if not target.resolve().is_relative_to(CANDLES_DIR.resolve()):
+        raise ValueError(f"target path outside candles dir: {target}")
+    return target
 
 
 def _existing_covers_start(path: Path, start: pd.Timestamp) -> bool:
