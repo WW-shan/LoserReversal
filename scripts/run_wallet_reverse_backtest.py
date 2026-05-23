@@ -441,7 +441,7 @@ def _write_report(path: Path, result: dict[str, Any]) -> None:
         lines.extend(
             [
                 "> [WARN] INSUFFICIENT SAMPLE: fewer than 100 trades. "
-                "Sharpe is not decision-quality.",
+                "Trade-level IR is not decision-quality.",
                 "",
             ]
         )
@@ -456,8 +456,11 @@ def _write_report(path: Path, result: dict[str, Any]) -> None:
             f"{'**PASS**' if result['n_backtested_wallets'] > 0 else '**FAIL**'} |",
             f"| n_trades | >= 100 | {stats['n_trades']} | "
             f"{'**PASS**' if stats['n_trades'] >= 100 else '**FAIL**'} |",
-            f"| Sharpe | >= 1.2 | {_fmt_num(stats['sharpe'], 2)} | "
-            f"{'**PASS**' if float(stats['sharpe']) >= 1.2 else '**FAIL**'} |",
+            f"| Trade-level IR | >= 1.2 | {_fmt_num(stats['trade_level_ir'], 2)} | "
+            f"{'**PASS**' if float(stats['trade_level_ir']) >= 1.2 else '**FAIL**'} |",
+            f"| Daily Sharpe | >= 1.0 | {_fmt_num(stats['daily_sharpe'], 2)} | "
+            f"{'**PASS**' if float(stats['daily_sharpe']) >= 1.0 else '**FAIL**'} |",
+            f"| Hourly Sharpe (informational) | n/a | {_fmt_num(stats['sharpe'], 2)} | n/a |",
             f"| Max DD | >= -25% | {_fmt_pct(stats['max_dd'])} | "
             f"{'**PASS**' if float(stats['max_dd']) >= -0.25 else '**FAIL**'} |",
             "",
