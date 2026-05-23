@@ -149,6 +149,17 @@ def test_fetch_user_fills_warns_when_cap_page_has_one_timestamp():
     assert client.calls[1]["startTime"] == base_ms + 1
 
 
+def test_fetch_user_fills_stops_when_single_ms_cap_lands_on_end_ms():
+    end_ms = 1767225600000
+    client = FakeClient([[_fill(end_ms, index) for index in range(2000)]])
+
+    with pytest.warns(RuntimeWarning, match="single millisecond"):
+        df = fetch_user_fills("0xabc", end_ms, end_ms, client=client)
+
+    assert len(df) == 2000
+    assert len(client.calls) == 1
+
+
 def test_fetch_user_fills_rejects_unix_seconds_ints():
     client = FakeClient([[]])
 

@@ -71,3 +71,12 @@ def test_build_wallet_pool_rejects_positive_max_roi_cli_arg(mocker, capsys):
         builder._parse_args()
 
     assert "--max-roi must be less than or equal to 0" in capsys.readouterr().err
+
+
+def test_build_wallet_pool_rejects_positive_max_pnl_vlm_ratio_cli_arg(mocker, capsys):
+    mocker.patch("sys.argv", ["build_wallet_pool.py", "--max-pnl-vlm-ratio", "0.1"])
+
+    with pytest.raises(SystemExit):
+        builder._parse_args()
+
+    assert "--max-pnl-vlm-ratio must be less than or equal to 0" in capsys.readouterr().err
