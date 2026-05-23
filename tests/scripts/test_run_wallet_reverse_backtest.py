@@ -33,6 +33,10 @@ def _fills(rows: list[dict[str, object]]) -> pd.DataFrame:
     return frame.set_index("time")
 
 
+def _fills_with_time_column(rows: list[dict[str, object]]) -> pd.DataFrame:
+    return _fills(rows).reset_index()
+
+
 def _empty_fills() -> pd.DataFrame:
     return pd.DataFrame(
         {
@@ -238,6 +242,8 @@ def test_skip_reason_bucket_counts_match_non_backtested_wallets(mocker, tmp_path
         "0xnosize",
         "0xnocandle",
         "0xnopair",
+        "0xnotime",
+        "0xnocoin",
     ]
     mocker.patch.object(runner, "HyperliquidClient", return_value=object())
     mocker.patch.object(runner, "read_wallets", return_value=_wallets(addresses))
@@ -265,6 +271,8 @@ def test_skip_reason_bucket_counts_match_non_backtested_wallets(mocker, tmp_path
         ),
         "0xnocandle": _fills([{"time": "2026-01-01T00:00:00Z", "coin": "NOCANDLE"}]),
         "0xnopair": _fills([{"time": "2026-01-05T00:00:00Z", "coin": "NOPAIR"}]),
+        "0xnotime": _fills_with_time_column([{"time": None, "coin": "BTC"}]),
+        "0xnocoin": _fills([{"time": "2026-01-01T00:00:00Z", "coin": None}]),
     }
     mocker.patch.object(runner, "read_fills", side_effect=lambda address: fills_by_address[address])
 
@@ -306,7 +314,8 @@ def test_skip_reason_bucket_counts_match_non_backtested_wallets(mocker, tmp_path
     assert funnel["skip_no_open_dir"] == 1
     assert funnel["skip_no_retail_size"] == 1
     assert funnel["skip_no_candle"] == 1
-    assert funnel["skip_no_valid_pair"] == 1
+    assert funnel["skip_no_qualifying_event"] == 3
+    assert "skip_no_valid_pair" not in funnel
     skipped_total = sum(
         funnel[key]
         for key in [
@@ -314,7 +323,7 @@ def test_skip_reason_bucket_counts_match_non_backtested_wallets(mocker, tmp_path
             "skip_no_open_dir",
             "skip_no_retail_size",
             "skip_no_candle",
-            "skip_no_valid_pair",
+            "skip_no_qualifying_event",
         ]
     )
     assert (
@@ -328,4 +337,5 @@ def test_skip_reason_bucket_counts_match_non_backtested_wallets(mocker, tmp_path
     assert "| skip_no_open_dir | 1 |" in report
     assert "| skip_no_retail_size | 1 |" in report
     assert "| skip_no_candle | 1 |" in report
-    assert "| skip_no_valid_pair | 1 |" in report
+    assert "| skip_no_qualifying_event | 3 |" in report
+    assert "skip_no_valid_pair" not in report
