@@ -41,7 +41,14 @@ def test_select_best_config_returns_highest_sharpe_eligible(monkeypatch):
 
     monkeypatch.setattr("signals.unlock_walkforward.run_cell", fake_run_cell)
 
-    cell = select_best_config(grid_df, "v1", _events(), {"ARB": _prices()}, _coverage())
+    cell = select_best_config(
+        grid_df,
+        "v1",
+        _events(),
+        {"ARB": _prices()},
+        _coverage(),
+        min_n_trades=15,
+    )
 
     assert cell is not None
     assert cell.code == "v1"
@@ -62,7 +69,7 @@ def test_select_best_config_returns_none_when_no_eligible(monkeypatch):
             "signal": cell.code,
             "min_unlock_pct": cell.min_unlock_pct,
             "cohort": cell.cohort_name,
-            "n_trades": 14,
+            "n_trades": 4,
             "win_rate": 0.5,
             "sharpe": 9.0,
             "sortino": 1.0,
@@ -77,6 +84,76 @@ def test_select_best_config_returns_none_when_no_eligible(monkeypatch):
     cell = select_best_config(grid_df, "v1", _events(), {"ARB": _prices()}, _coverage())
 
     assert cell is None
+
+
+def test_select_best_config_default_threshold_accepts_five_trades(monkeypatch):
+    grid_df = pd.DataFrame(
+        [
+            {"signal": "v1", "min_unlock_pct": 0.01, "cohort": "team"},
+            {"signal": "v1", "min_unlock_pct": 0.02, "cohort": "team"},
+        ]
+    )
+    stats = {
+        (0.01, "team"): {"n_trades": 4, "sharpe": 9.0},
+        (0.02, "team"): {"n_trades": 5, "sharpe": 1.0},
+    }
+
+    def fake_run_cell(events, prices, coverage, cell, *, init_cash, fees, slippage):
+        row = stats[(cell.min_unlock_pct, cell.cohort_name)]
+        return {
+            "signal": cell.code,
+            "min_unlock_pct": cell.min_unlock_pct,
+            "cohort": cell.cohort_name,
+            "n_trades": row["n_trades"],
+            "win_rate": 0.5,
+            "sharpe": row["sharpe"],
+            "sortino": 1.0,
+            "max_dd": -0.02,
+            "total_return": 0.03,
+            "mean_pnl": 1.0,
+            "median_pnl": 1.0,
+        }
+
+    monkeypatch.setattr("signals.unlock_walkforward.run_cell", fake_run_cell)
+
+    cell = select_best_config(grid_df, "v1", _events(), {"ARB": _prices()}, _coverage())
+
+    assert cell is not None
+    assert cell.min_unlock_pct == 0.02
+
+
+def test_run_per_signal_walkforward_uses_default_threshold_five(monkeypatch):
+    splits = [_split("2026-01-01", "2026-02-01", "2026-02-01", "2026-03-01")]
+    captured_min_n_trades: list[int] = []
+
+    def fake_select_best_config(
+        grid_df,
+        signal_code,
+        train_events,
+        train_prices,
+        train_coverage,
+        min_n_trades=15,
+        **kwargs,
+    ):
+        captured_min_n_trades.append(min_n_trades)
+        return _cell(signal_code, 0.02, "team")
+
+    monkeypatch.setattr("signals.unlock_walkforward.select_best_config", fake_select_best_config)
+    monkeypatch.setattr(
+        "signals.unlock_walkforward.run_cell",
+        lambda events, prices, coverage, cell, **kwargs: _stats(cell, n_trades=3, sharpe=1.0),
+    )
+
+    run_per_signal_walkforward(
+        _events(),
+        {"ARB": _prices()},
+        _coverage(),
+        splits,
+        ["v1"],
+        grid_df=_grid_df(),
+    )
+
+    assert captured_min_n_trades == [5]
 
 
 def test_run_per_signal_walkforward_yields_one_row_per_signal_per_split(monkeypatch):
@@ -208,6 +285,45 @@ def test_run_per_signal_walkforward_falls_back_to_best_positive_trade(monkeypatc
     split_row = result.loc[result["split_idx"].eq(0)].iloc[0]
     assert split_row["selected_min_pct"] == 0.02
     assert split_row["n_trades"] == 2
+
+
+def test_run_per_signal_walkforward_marks_no_train_signal_when_fallback_has_no_trades(
+    monkeypatch,
+):
+    splits = [_split("2026-01-01", "2026-02-01", "2026-02-01", "2026-03-01")]
+    grid_df = pd.DataFrame(
+        [
+            {"signal": "v1", "min_unlock_pct": 0.01, "cohort": "team"},
+            {"signal": "v1", "min_unlock_pct": 0.02, "cohort": "team"},
+        ]
+    )
+
+    monkeypatch.setattr(
+        "signals.unlock_walkforward.select_best_config",
+        lambda *args, **kwargs: None,
+    )
+
+    def fake_run_cell(events, prices, coverage, cell, *, init_cash, fees, slippage):
+        if events["unlock_date"].max() < pd.Timestamp("2026-02-01T00:00:00Z"):
+            return _stats(cell, n_trades=0, sharpe=0.0)
+        return _stats(cell, n_trades=2, sharpe=3.0)
+
+    monkeypatch.setattr("signals.unlock_walkforward.run_cell", fake_run_cell)
+
+    result = run_per_signal_walkforward(
+        _events(),
+        {"ARB": _prices()},
+        _coverage(),
+        splits,
+        ["v1"],
+        grid_df=grid_df,
+    )
+
+    split_row = result.loc[result["split_idx"].eq(0)].iloc[0]
+    assert pd.isna(split_row["selected_min_pct"])
+    assert split_row["selected_cohort"] == "no_train_signal"
+    assert split_row["n_trades"] == 0
+    assert split_row["sharpe"] == 0.0
 
 
 def test_compose_portfolio_equal_weights_K2(monkeypatch):
