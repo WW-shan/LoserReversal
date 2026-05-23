@@ -1,6 +1,6 @@
 # Phase 1.5 Unlock Walk-Forward
 
-_Generated 2026-05-23 22:04 UTC_
+_Generated 2026-05-23 22:15 UTC_
 
 ## Methodology
 
@@ -32,6 +32,7 @@ _Generated 2026-05-23 22:04 UTC_
 ## Verdict-Ready Summary
 
 Best signal by OOS Sharpe: v2, sharpe=0.61, n_trades=36
+No-train-signal splits: 0
 If n_trades ≥ 50 AND sharpe ≥ 1.0 → GREEN
 If n_trades ≥ 30 AND sharpe ∈ [0.3, 1.0) → YELLOW
 Else → RED
