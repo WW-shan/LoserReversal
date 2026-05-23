@@ -14,6 +14,8 @@ from infra.storage import WALLET_COLUMNS, write_wallets_parquet
 def build_wallet_pool(
     min_loss: float = -10_000.0,
     min_volume: float = 500_000.0,
+    max_roi: float = -0.05,
+    max_pnl_vlm_ratio: float = -0.005,
     top_n: int = 500,
     out: Path = Path("data/parquet/anti_alpha_wallets.parquet"),
     limit: int | None = None,
@@ -21,11 +23,15 @@ def build_wallet_pool(
     leaderboard = fetch_leaderboard()
     total_fetched = len(leaderboard)
     source = leaderboard.head(limit).copy() if limit is not None else leaderboard
+    pnl_vlm_ratio = source["pnl_alltime"] / source["vlm_alltime"]
     filtered = source.loc[
         (source["pnl_alltime"] <= min_loss)
         & (source["vlm_alltime"] >= min_volume)
         & ((source["account_value"] > 0) | (source["vlm_alltime"] >= 10_000_000))
+        & (source["roi_alltime"] <= max_roi)
+        & (pnl_vlm_ratio <= max_pnl_vlm_ratio)
     ].copy()
+    filtered["pnl_vlm_ratio"] = pnl_vlm_ratio.loc[filtered.index]
     pool = (
         filtered.sort_values(["vlm_alltime", "pnl_alltime"], ascending=[False, True])
         .head(top_n)
@@ -49,6 +55,8 @@ def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build the Hyperliquid anti-alpha wallet pool.")
     parser.add_argument("--min-loss", type=float, default=-10_000.0)
     parser.add_argument("--min-volume", type=float, default=500_000.0)
+    parser.add_argument("--max-roi", type=float, default=-0.05)
+    parser.add_argument("--max-pnl-vlm-ratio", type=float, default=-0.005)
     parser.add_argument("--top-n", type=int, default=500)
     parser.add_argument("--out", type=Path, default=Path("data/parquet/anti_alpha_wallets.parquet"))
     parser.add_argument("--limit", type=int, default=None)
@@ -62,6 +70,10 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
         parser.error("--top-n must be greater than 0")
     if args.min_volume < 0:
         parser.error("--min-volume must be non-negative")
+    if args.max_roi > 0:
+        parser.error("--max-roi must be less than or equal to 0")
+    if args.max_pnl_vlm_ratio > 0:
+        parser.error("--max-pnl-vlm-ratio must be less than or equal to 0")
     if args.limit is not None and args.limit <= 0:
         parser.error("--limit must be greater than 0 when provided")
 
@@ -78,7 +90,14 @@ def _print_summary(result: dict[str, object]) -> None:
     if isinstance(sample, pd.DataFrame) and not sample.empty:
         print(
             sample[
-                ["eth_address", "pnl_alltime", "vlm_alltime", "account_value", "display_name"]
+                [
+                    "eth_address",
+                    "pnl_alltime",
+                    "vlm_alltime",
+                    "pnl_vlm_ratio",
+                    "account_value",
+                    "display_name",
+                ]
             ].to_string(index=False)
         )
     else:
@@ -90,6 +109,8 @@ def main() -> int:
     result = build_wallet_pool(
         min_loss=args.min_loss,
         min_volume=args.min_volume,
+        max_roi=args.max_roi,
+        max_pnl_vlm_ratio=args.max_pnl_vlm_ratio,
         top_n=args.top_n,
         out=args.out,
         limit=args.limit,
