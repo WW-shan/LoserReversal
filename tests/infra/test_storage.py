@@ -109,6 +109,7 @@ def test_write_unlocks_csv_to_parquet_preserves_schema(tmp_path: Path):
         "unlock_pct",
         "category",
         "has_hl_perp",
+        "vesting_type",
     ]
     assert schema.field("unlock_date").type == pa.date32()
 

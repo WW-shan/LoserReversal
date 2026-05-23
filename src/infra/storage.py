@@ -20,6 +20,7 @@ UNLOCK_COLUMNS = [
     "unlock_pct",
     "category",
     "has_hl_perp",
+    "vesting_type",
 ]
 UNLOCK_SCHEMA = pa.schema(
     [
@@ -29,6 +30,7 @@ UNLOCK_SCHEMA = pa.schema(
         ("unlock_pct", pa.float64()),
         ("category", pa.string()),
         ("has_hl_perp", pa.bool_()),
+        ("vesting_type", pa.string()),
     ]
 )
 WALLET_COLUMNS = [
@@ -143,10 +145,14 @@ def write_unlocks_csv_to_parquet(csv_path: Path, parquet_path: Path | None = Non
     target = parquet_path or PARQUET_DIR / "unlocks.parquet"
     target.parent.mkdir(parents=True, exist_ok=True)
 
-    frame = pd.read_csv(csv_path)[UNLOCK_COLUMNS]
+    frame = pd.read_csv(csv_path, dtype={"vesting_type": "string"})
+    if "vesting_type" not in frame.columns:
+        frame["vesting_type"] = pd.Series(pd.NA, index=frame.index, dtype="string")
+    frame = frame[UNLOCK_COLUMNS]
     frame["unlock_date"] = pd.to_datetime(frame["unlock_date"]).dt.date
     frame["unlock_pct"] = frame["unlock_pct"].astype("float64")
     frame["has_hl_perp"] = _coerce_bool_series(frame["has_hl_perp"])
+    frame["vesting_type"] = frame["vesting_type"].astype("string")
 
     table = pa.Table.from_pandas(frame, schema=UNLOCK_SCHEMA, preserve_index=False)
     pq.write_table(table, target, compression=None, use_dictionary=False, row_group_size=64)
@@ -160,10 +166,13 @@ def read_unlocks(path: Path | None = None, category: str | None = None) -> pd.Da
     if category is not None:
         params["category"] = category
         sql = f"{sql} WHERE category = $category"
-    sql = f"{sql} ORDER BY unlock_date, token, category"
+    sql = f"{sql} ORDER BY unlock_date, token, category, vesting_type"
 
     with duckdb.connect(database=":memory:") as conn:
-        return conn.execute(sql, params).df()
+        frame = conn.execute(sql, params).df()
+
+    frame["vesting_type"] = frame["vesting_type"].astype(pd.StringDtype(storage="python"))
+    return frame
 
 
 def write_wallets_parquet(df: pd.DataFrame, path: Path | None = None) -> Path:
