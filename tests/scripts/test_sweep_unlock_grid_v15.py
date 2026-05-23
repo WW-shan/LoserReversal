@@ -204,6 +204,23 @@ def test_top5_table_lists_only_eligible_rows():
     assert "v1" not in table
 
 
+def test_render_report_includes_vesting_subsection(tmp_path):
+    report = tmp_path / "grid_report.md"
+    rows = [
+        _row(signal="v1", min_unlock_pct=0.02, cohort="team", sharpe=1.6, n_trades=47),
+        *_vesting_rows(),
+    ]
+
+    sweep._write_report(report, rows, sweep.GridSweepConfig(report=report))
+
+    text = report.read_text(encoding="utf-8")
+    assert "## Vesting Sub-Sweep" in text
+    assert "| vesting_type | n_trades | win_rate | sharpe | max_dd | total_return |" in text
+    assert "| cliff |" in text
+    assert "| step |" in text
+    assert "| linear |" in text
+
+
 def _prices() -> pd.Series:
     index = pd.date_range("2026-01-01", periods=10, freq="1D", tz="UTC")
     return pd.Series(range(10), index=index, name="close", dtype="float64")
