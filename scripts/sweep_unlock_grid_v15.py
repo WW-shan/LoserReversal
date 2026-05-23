@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any, Sequence
 
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 from infra.storage import read_unlocks
 from signals.unlock_grid import GridCell, iter_grid, run_cell
@@ -68,7 +70,7 @@ def run_sweep(config: GridSweepConfig) -> dict[str, Any]:
 
     frame = pd.DataFrame(rows)
     config.out.parent.mkdir(parents=True, exist_ok=True)
-    frame.to_parquet(config.out, index=False)
+    _write_parquet(frame, config.out, config)
     _write_report(config.report, rows, config)
     top_table = _top5_table(rows)
     print(top_table)
@@ -142,6 +144,14 @@ def run_vesting_sub_sweep(
 
 def load_coverage(path: Path) -> pd.DataFrame:
     return pd.read_parquet(path)
+
+
+def _write_parquet(frame: pd.DataFrame, path: Path, config: GridSweepConfig) -> None:
+    table = pa.Table.from_pandas(frame, preserve_index=False)
+    metadata = dict(table.schema.metadata or {})
+    metadata[b"methodology"] = _methodology_text(config).encode("utf-8")
+    metadata[b"cell_budget_per_token"] = f"{config.init_cash:.2f}".encode("utf-8")
+    pq.write_table(table.replace_schema_metadata(metadata), path)
 
 
 def load_prices(events: pd.DataFrame, candles_dir: Path) -> dict[str, pd.Series]:
@@ -220,6 +230,10 @@ def _write_report(path: Path, rows: list[dict[str, Any]], config: GridSweepConfi
         "",
         f"_Generated {generated}_",
         "",
+        "## Methodology",
+        "",
+        *_methodology_lines(config),
+        "",
         "## Config",
         "",
         "| key | value |",
@@ -249,6 +263,21 @@ def _write_report(path: Path, rows: list[dict[str, Any]], config: GridSweepConfi
         *_cohort_breakdown_rows(rows),
     ]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _methodology_lines(config: GridSweepConfig) -> list[str]:
+    return [
+        f"- Each token's signal is backtested independently with ${config.init_cash:,.2f} "
+        "starting capital.",
+        "- Portfolio equity is the sum of per-token equities at each timestamp.",
+        "- Inactive tokens contribute zero (no flat-cash padding).",
+        "- Total return is relative to summed initial capital, NOT to a single $10k account.",
+        "- This is an active-capital view; live deployment requires position sizing.",
+    ]
+
+
+def _methodology_text(config: GridSweepConfig) -> str:
+    return "\n".join(line.removeprefix("- ") for line in _methodology_lines(config))
 
 
 def _top5_table(rows: list[dict[str, Any]]) -> str:
