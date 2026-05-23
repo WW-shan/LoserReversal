@@ -23,7 +23,6 @@ EVENT_COLUMNS = [
 
 def cluster_signal(
     pool_fills: dict[str, pd.DataFrame],
-    coin_universe: set[str] | None = None,
     min_wallets: int = 3,
     window_minutes: int = 30,
     holding_hours: float = 4.0,
@@ -37,7 +36,7 @@ def cluster_signal(
     if holding_hours <= 0:
         raise ValueError("holding_hours must be greater than 0")
 
-    fills = _cluster_input_frame(pool_fills, coin_universe, coin_filter)
+    fills = _cluster_input_frame(pool_fills, coin_filter)
     if fills.empty:
         return {}
 
@@ -56,7 +55,6 @@ def cluster_signal(
 
 def _cluster_input_frame(
     pool_fills: dict[str, pd.DataFrame],
-    coin_universe: set[str] | None,
     coin_filter: Iterable[str] | None,
 ) -> pd.DataFrame:
     frames = [
@@ -70,8 +68,6 @@ def _cluster_input_frame(
     if combined.empty:
         return _empty_input_frame()
 
-    if coin_universe is not None:
-        combined = combined.loc[combined["coin"].isin({str(coin) for coin in coin_universe})].copy()
     if coin_filter is not None:
         combined = combined.loc[combined["coin"].isin({str(coin) for coin in coin_filter})].copy()
     if combined.empty:
