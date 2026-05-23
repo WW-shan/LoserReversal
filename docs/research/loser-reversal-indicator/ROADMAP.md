@@ -212,63 +212,52 @@ P7                                                          [持续]    Alpha �
 
 > **这是你最初想法的真正可量化版本。如果这个不工作，原始假设就被证伪。**
 
-### 目标
-回测验证"反向跟踪特定亏钱钱包"策略，找出能持续产生正反向 alpha 的钱包池。
+### ✅ Phase 2 完成（2026-05-23）
 
-### 任务清单
+**Verdict: RED — KILL**
+**Reason: `data_gap`**（OOS n_trades = 0 across all 3 walk-forward splits）
 
-#### Week 6: 钱包选择 + 数据
-- [ ] **种子钱包池**（约 200 个）：
-  - 从 Hyperdash 抓 Top Losers（手动 + Selenium）
-  - 加入历史巨亏地址：James Wynn `0x5078c2fbea2b2ad61bc840bc023e35fce56bedb6` 等
-  - 从 Hyperliquid leaderboard 取负 PnL 排名 top 200
-- [ ] **拉历史成交**：
-  ```python
-  for addr in wallet_pool:
-      fills = info.user_fills(addr)  # 最近 ~10k 笔
-      save_to_parquet(fills, f"data/fills/{addr}.parquet")
-  ```
-- [ ] **过滤器实现**（`signals/wallet_filter.py`）：
-  ```python
-  def is_anti_alpha_wallet(wallet_df, min_trades=50, lookback_days=90):
-      recent = wallet_df.filter(timestamp > now - 90d)
-      if len(recent) < min_trades: return False
-      sharpe_90d = calc_realized_sharpe(recent)
-      if sharpe_90d > -0.5: return False
-      avg_size = recent.size.mean()
-      if avg_size < 1000 or avg_size > 200_000: return False  # 排除巨鲸和试探
-      return True
-  ```
+**关键数据**：
+- 数据 span: 89 days (2026-02-22 → 2026-05-23)
+- Wallet pool: 500 anti-alpha 钱包（leaderboard 36,890 → filter → top 500 by vlm）
+- Active wallet fills: 116,618 fills / 16 wallets actually cached & active
+- Single-wallet sweep: **Trade-level IR = -4.83**（远低于 1.2 阈值，所有 holding 1h/4h/12h/24h 全负）
+- Cluster signal sweep: 48 配置（N×W×holding grid）× 3 walk-forward splits = 144 backtest，OOS n_trades **全部 0**
 
-#### Week 7: 单钱包反向 PnL 回测
-- [ ] **核心函数**（`backtest/reverse_pnl.py`）：
-  ```python
-  def reverse_backtest(wallet_fills, price_df, holding_hours):
-      pnls = []
-      for fill in wallet_fills:
-          reverse_side = "sell" if fill.is_buy else "buy"
-          entry_px = price_at(fill.timestamp, fill.coin)
-          exit_px = price_at(fill.timestamp + holding_hours, fill.coin)
-          pnl = compute_pnl(reverse_side, entry_px, exit_px, fees, slippage)
-          pnls.append(pnl)
-      return analyze(pnls)
-  ```
-- [ ] 对每个候选钱包跑 4 个持仓时长：1h / 4h / 12h / 24h
-- [ ] 输出每个钱包的反向 Sharpe 排序表
+**根因（Codex + subagent + Claude 三方验证）**：
+1. **数据稀疏**：89 days 的 fill 历史 + 16 active wallets，cluster N≥3 同 coin 同方向 W=15-60min 窗口在 OOS 期触发频率为 0
+2. **Walk-forward fallback**：min_train_days 120→30, test_days 30→15（已在 report 透明展示）
+3. **真实策略表现也是 RED**：单钱包 sweep 即使 IR=-4.83 在大 sample 下也是 negative alpha（不是 Phase 1 的 lucky-window，是真亏）
 
-#### Week 8: 集群信号 + Walk-forward
-- [ ] **共振信号**：当 N≥3 个 Top anti-alpha 钱包在 30 分钟内同向开仓 → 反向开仓
-- [ ] 测试 N = [3, 5, 7, 10] 的 Sharpe
-- [ ] Walk-forward：每 3 个月重新选 Top 钱包池（避免幸存者偏差）
-- [ ] 决策报告 `phase2_decision.md`
+**与 ROADMAP Phase 4 关系**：
+- ROADMAP 原文："集群信号 IR < 1.0 → Kill 单钱包路线，跳过 #4（因为反 Sybil 是它的进化版）"
+- **执行此规则：跳过 Phase 4（sybil 集群），直接进 Phase 3 (funding arb)**
 
-### Pass Criteria
+**实施细节**：
+- 数据源 spike: `https://stats-data.hyperliquid.xyz/Mainnet/leaderboard` (公开 GET，36,894 钱包)，避免了 Hyperdash Cloudflare 拦截问题
+- 三视角 review 循环（Claude semantic + Codex reviewer + superpowers requesting-code-review subagent）持久化到 `~/.claude/.ccg/engine/strategies/{guided-develop,full-collaborate}.md`
+- 全部代码 LGTM 100/100 (Codex) + Ready to merge (subagent)
+- 见 `reports/wallet_reverse_v1_backtest.md`、`reports/wallet_reverse_v1_sweep.md`、`reports/wallet_reverse_walkforward.md`
+
+### Pass Criteria（原定）
+
 - **绿灯**：Top 钱包池反向 IR ≥ 1.2 + 集群共振 IR ≥ 1.5（OOS）
 - **黄灯**：集群信号 IR 1.0-1.5 → 候选组合
-- **红灯**：集群信号 IR < 1.0 → **Kill 单钱包路线**，跳过 #4（因为反 Sybil 是它的进化版）
+- **红灯**：集群信号 IR < 1.0 → **Kill 单钱包路线**，跳过 #4 ✅ 触发
 
-### Kill 后该做什么
-- 如果 Phase 2 失败 → Phase 4 也基本无望，直接跳到 Phase 3
+### 任务清单（已完成）
+
+- [x] **种子钱包池**：HL 公开 leaderboard endpoint → 36,890 → filter (PnL≤-10k, vlm≥500k, ROI≤-5%) → 500 retail anti-alpha wallets
+- [x] **拉历史成交**：`userFillsByTime` paginated fetch, 50 wallets × 90d lookback = 116,618 fills
+- [x] **过滤器**：trade-level retail size filter ($1k-$200k)
+- [x] **单钱包反向 PnL 回测**：4 holdings sweep (1h/4h/12h/24h) — best 24h IR=-3.89
+- [x] **集群信号**：N×W grid (3,5,7,10) × (15min, 30min, 60min)
+- [x] **Walk-forward**：3 expanding splits + IS fallback selection modes + Pass/Kill verdict
+- [x] **决策报告**：`reports/wallet_reverse_walkforward.md`
+
+### Kill 后该做什么 ✅
+
+- 如果 Phase 2 失败 → Phase 4 也基本无望，直接跳到 Phase 3 — **执行**
 - 节省 4 周时间
 
 ### 交付物
