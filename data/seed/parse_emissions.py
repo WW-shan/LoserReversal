@@ -54,17 +54,19 @@ CATEGORY_CANON = {
     "staking": "community",
     "team": "insiders",
 }
-TOTAL_SUPPLY_ENV_KEYS = (
+_PRIMARY_SUPPLY_ENV_KEYS = (
     "total",
     "totalSupply",
     "TOTAL_SUPPLY",
     "total_supply",
-    "qty",
     "totalQty",
     "maximumSupply",
+    "maxSupply",
+)
+_FALLBACK_SUPPLY_ENV_KEYS = (
+    "qty",
     "initialSupply",
     "initialTotalSupply",
-    "maxSupply",
 )
 
 
@@ -413,11 +415,15 @@ def build_env(text: str) -> dict[str, Any]:
     return env
 
 
-def parse_meta(protocol_block: str, env: dict[str, Any]) -> tuple[float | None, str | None]:
+def parse_meta(
+    protocol_block: str,
+    env: dict[str, Any],
+    max_manual_amount: float | None = None,
+) -> tuple[float | None, str | None]:
     props = dict(object_properties(protocol_block))
     meta_expr = props.get("meta")
     if not meta_expr or not meta_expr.strip().startswith("{"):
-        return infer_total_supply(env), None
+        return infer_total_supply(env, max_manual_amount), None
     total: float | None = None
     token: str | None = None
     for key, value_expr in object_properties(meta_expr):
@@ -435,14 +441,24 @@ def parse_meta(protocol_block: str, env: dict[str, Any]) -> tuple[float | None, 
             if isinstance(token_value, str) and token_value.startswith("coingecko:"):
                 token = token_value.split(":", 1)[1]
     if total is None:
-        total = infer_total_supply(env)
+        total = infer_total_supply(env, max_manual_amount)
     return total, token
 
 
-def infer_total_supply(env: dict[str, Any]) -> float | None:
-    for key in TOTAL_SUPPLY_ENV_KEYS:
+def infer_total_supply(
+    env: dict[str, Any],
+    max_manual_amount: float | None = None,
+) -> float | None:
+    for key in _PRIMARY_SUPPLY_ENV_KEYS:
         value = env.get(key)
         if isinstance(value, (int, float)) and value > 0:
+            return float(value)
+    if max_manual_amount is None:
+        return None
+    minimum_plausible_total = max_manual_amount * 1.5
+    for key in _FALLBACK_SUPPLY_ENV_KEYS:
+        value = env.get(key)
+        if isinstance(value, (int, float)) and value >= minimum_plausible_total:
             return float(value)
     return None
 
@@ -472,6 +488,24 @@ def extract_manual_calls(value: str) -> list[ManualCall]:
         args = split_top_level(value[open_pos + 1 : close_pos])
         calls.append(ManualCall(match.group(1).lower(), args))
     return calls
+
+
+def max_manual_call_amount(protocol_block: str, env: dict[str, Any]) -> float | None:
+    amounts: list[float] = []
+    for section, value_expr in object_properties(protocol_block):
+        if section in {"meta", "categories"} or not value_expr:
+            continue
+        for call in extract_manual_calls(value_expr):
+            amount_index = {"cliff": 1, "linear": 2, "step": 3}[call.kind]
+            if len(call.args) <= amount_index:
+                continue
+            try:
+                amount = float(eval_value(call.args[amount_index], env))
+            except Exception:
+                continue
+            if amount > 0:
+                amounts.append(amount)
+    return max(amounts) if amounts else None
 
 
 def to_timestamp(value: Any, date_format: str | None = None) -> int:
@@ -561,7 +595,8 @@ def parse_file(path: Path, by_id: dict[str, Coin], by_symbol: dict[str, list[Coi
     if not protocol_block:
         return []
     env = build_env(text)
-    total, meta_coin_id = parse_meta(protocol_block, env)
+    max_manual_amount = max_manual_call_amount(protocol_block, env)
+    total, meta_coin_id = parse_meta(protocol_block, env, max_manual_amount)
     if total is None or total <= 0:
         return []
     coin = resolve_coin(path, meta_coin_id, by_id, by_symbol)
