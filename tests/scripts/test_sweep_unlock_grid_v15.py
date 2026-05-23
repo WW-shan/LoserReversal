@@ -289,6 +289,30 @@ def test_date_range_clips_price_window_not_just_events(monkeypatch, tmp_path):
     ]
 
 
+def test_parquet_has_sweep_kind_column(monkeypatch, tmp_path):
+    out = tmp_path / "unlock_grid.parquet"
+    report = tmp_path / "grid_report.md"
+
+    def fake_run_cell(events, prices, coverage, cell, *, init_cash, fees, slippage):
+        return _row(
+            signal=cell.code,
+            min_unlock_pct=cell.min_unlock_pct,
+            cohort=cell.cohort_name,
+            n_trades=31,
+        )
+
+    monkeypatch.setattr(sweep, "read_unlocks", lambda path=None: _vesting_events(), raising=False)
+    monkeypatch.setattr(sweep, "load_coverage", lambda path: _coverage(), raising=False)
+    monkeypatch.setattr(sweep, "load_prices", lambda events_arg, candles_dir: {"ARB": _prices()})
+    monkeypatch.setattr(sweep, "run_cell", fake_run_cell)
+
+    sweep.run_sweep(sweep.GridSweepConfig(out=out, report=report))
+
+    frame = pd.read_parquet(out)
+    assert "sweep_kind" in frame.columns
+    assert frame["sweep_kind"].value_counts().to_dict() == {"category": 60, "vesting": 3}
+
+
 def _prices() -> pd.Series:
     index = pd.date_range("2026-01-01", periods=10, freq="1D", tz="UTC")
     return pd.Series(range(10), index=index, name="close", dtype="float64")
