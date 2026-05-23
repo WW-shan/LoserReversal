@@ -192,6 +192,26 @@ def test_synthetic_wallets_compute_hourly_sharpe_trade_level_ir_and_daily_sharpe
     assert math.isfinite(stats["sharpe"])
     assert math.isfinite(stats["trade_level_ir"])
     assert math.isfinite(stats["daily_sharpe"])
+    # Net returns from the six synthetic 4h trades after 2*(fees+slippage)=0.0014:
+    # BTC long +4%, BTC short +5/110, BTC long -3%, ETH long +6%,
+    # ETH short +2/60, ETH short -2/55. The trade window spans 58 hours.
+    expected_returns = pd.Series(
+        [
+            0.04 - 0.0014,
+            5 / 110 - 0.0014,
+            -0.03 - 0.0014,
+            0.06 - 0.0014,
+            2 / 60 - 0.0014,
+            -2 / 55 - 0.0014,
+        ],
+        dtype="float64",
+    )
+    expected_trade_level_ir = (
+        expected_returns.mean()
+        / expected_returns.std(ddof=0)
+        * math.sqrt(len(expected_returns) / (58 / 24) * 365)
+    )
+    assert stats["trade_level_ir"] == pytest.approx(expected_trade_level_ir, rel=1e-3)
     assert stats["trade_level_ir"] != 0.0
     assert stats["daily_sharpe"] != 0.0
     assert all("trade_level_ir" in row for row in result["per_wallet_stats"])
