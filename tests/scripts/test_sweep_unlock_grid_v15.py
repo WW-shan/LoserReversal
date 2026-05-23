@@ -5,6 +5,36 @@ import pandas as pd
 from scripts import sweep_unlock_grid_v15 as sweep
 
 
+def test_cli_smoke_writes_parquet_and_report(monkeypatch, tmp_path, capsys):
+    out = tmp_path / "unlock_grid.parquet"
+    report = tmp_path / "grid_report.md"
+
+    monkeypatch.setattr(sweep, "read_unlocks", lambda path=None: _events(), raising=False)
+    monkeypatch.setattr(sweep, "load_coverage", lambda path: _coverage(), raising=False)
+    monkeypatch.setattr(sweep, "load_prices", lambda events, candles_dir: {"ARB": _prices()}, raising=False)
+    monkeypatch.setattr(sweep, "run_main_grid", lambda *args, **kwargs: _grid_rows(60))
+
+    exit_code = sweep.main(
+        [
+            "--out",
+            str(out),
+            "--report",
+            str(report),
+            "--init-cash",
+            "5000",
+            "--fees",
+            "0",
+            "--slippage",
+            "0",
+        ]
+    )
+
+    assert exit_code == 0
+    assert len(pd.read_parquet(out)) == 60
+    assert "Top-5 by Sharpe" in report.read_text(encoding="utf-8")
+    assert "Top-5 by Sharpe" in capsys.readouterr().out
+
+
 def test_run_main_grid_returns_60_cells(monkeypatch):
     seen_cells = []
 
@@ -67,3 +97,23 @@ def _coverage() -> pd.DataFrame:
     return pd.DataFrame(
         [{"token": "ARB", "unlock_date": "2026-01-05", "coverage_status": "ok"}]
     )
+
+
+def _grid_rows(count: int) -> list[dict]:
+    return [
+        {
+            "signal": "v1",
+            "min_unlock_pct": 0.01,
+            "cohort": "team",
+            "n_trades": 31,
+            "win_rate": 0.5,
+            "sharpe": float(count - index),
+            "sortino": 1.0,
+            "max_dd": -0.02,
+            "total_return": 0.03,
+            "mean_pnl": 1.0,
+            "median_pnl": 1.0,
+            "eligible": True,
+        }
+        for index in range(count)
+    ]
