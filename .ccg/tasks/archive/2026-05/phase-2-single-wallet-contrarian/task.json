@@ -1,0 +1,31 @@
+{
+  "id": "phase-2-single-wallet-contrarian",
+  "title": "Phase 2 — 单钱包反向策略 + Pass/Kill 决策",
+  "status": "archived",
+  "strategy": "guided-develop",
+  "currentPhase": "completed",
+  "nextAction": "Phase 2 RED (data_gap) — Skip Phase 4 sybil, jump to Phase 3 (funding arb)",
+  "executionMode": "codex-builder",
+  "gate": null,
+  "branch": "main",
+  "scope": "phase-2-single-wallet-contrarian",
+  "createdAt": "2026-05-23T04:57:42Z",
+  "overlays": ["superpowers:test-driven-development", "superpowers:verification-before-completion"],
+  "decisionGate": "反向 Sharpe 是否达标 → 单钱包进组合 / 升级到集群 / Kill",
+  "dependsOn": [
+    "phase-0-infrastructure (archived, LGTM 97/100)",
+    "phase-1-unlock-strategy (archived, RED data_gap)"
+  ],
+  "hypothesis": {
+    "thesis": "持续亏钱的散户钱包在 Hyperliquid 上具有 anti-alpha — 反向跟踪他们的开仓应该产生正收益",
+    "source": "原始项目动机（LoserReversal），ROADMAP Phase 2",
+    "expected_sharpe_single_wallet": ">= 1.2 OOS",
+    "expected_sharpe_cluster": ">= 1.5 OOS"
+  },
+  "passCriteria": {
+    "single_wallet_oos_ir": ">= 1.2",
+    "cluster_oos_ir": ">= 1.5",
+    "max_drawdown": "<= 25%",
+    "min_trades": 100
+  }
+}
