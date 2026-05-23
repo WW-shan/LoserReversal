@@ -18,7 +18,13 @@ from infra.fetchers.candles import fetch_candles
 from infra.hyperliquid_client import HyperliquidClient
 from infra.pipeline import PipelineConfig, candles_cover_range, interval_timedelta
 from infra.storage import read_candles, read_fills, read_wallets, write_candles
-from signals.wallet_reverse_v1 import reverse_signal, reverse_signal_events
+from signals.wallet_reverse_v1 import (
+    MAX_RETAIL_NOTIONAL,
+    MIN_RETAIL_NOTIONAL,
+    OPEN_DIR_TO_REVERSE_SIDE,
+    reverse_signal,
+    reverse_signal_events,
+)
 
 
 CACHE_ERRORS = (FileNotFoundError, OSError, duckdb.Error)
@@ -45,6 +51,11 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
         "in_size": 0,
         "with_candle": 0,
         "trades": 0,
+        "skip_no_fills": 0,
+        "skip_no_open_dir": 0,
+        "skip_no_retail_size": 0,
+        "skip_no_candle": 0,
+        "skip_no_valid_pair": 0,
     }
     failed_wallets: list[str] = []
     skipped_wallets: list[str] = []
@@ -68,21 +79,30 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
         signal_count = sum(int(entries.sum()) for entries, _, _ in signals.values())
         funnel["in_size"] += int(len(events))
         if events.empty:
+            skip_reason = _skip_reason_for_empty_events(fills)
+            funnel[skip_reason] += 1
             skipped_wallets.append(address)
-            _log(f"[{position}/{len(wallets)}] {address} no qualifying fills")
+            _log(f"[{position}/{len(wallets)}] {address} skipped: {skip_reason}")
             continue
 
         wallet_result = _backtest_wallet(address, events, config, freq, client)
         if wallet_result["n_backtested_coins"] == 0:
-            failed_wallets.append(address)
-            _log(f"[{position}/{len(wallets)}] warning: {address} no coins backtested")
+            funnel["skip_no_candle"] += 1
+            skipped_wallets.append(address)
+            _log(f"[{position}/{len(wallets)}] {address} skipped: skip_no_candle")
             continue
 
+        funnel["with_candle"] += int(wallet_result["events_with_candles"])
         stats = wallet_result["stats"]
+        if int(stats["n_trades"]) == 0:
+            funnel["skip_no_valid_pair"] += 1
+            skipped_wallets.append(address)
+            _log(f"[{position}/{len(wallets)}] {address} skipped: skip_no_valid_pair")
+            continue
+
         wallet_stats.append(stats)
         wallet_equities.append(wallet_result["equity"].rename(address))
         portfolio_trades.extend(wallet_result["trades"])
-        funnel["with_candle"] += int(wallet_result["events_with_candles"])
         funnel["trades"] += int(stats["n_trades"])
         elapsed = time.perf_counter() - wallet_started
         _log(
@@ -472,6 +492,11 @@ def _write_report(path: Path, result: dict[str, Any]) -> None:
             f"| in_size | {funnel['in_size']} | open fills with $1k-$200k notional |",
             f"| with_candle | {funnel['with_candle']} | signal fills whose coin candles loaded |",
             f"| trades | {funnel['trades']} | aligned entry/exit trades executed |",
+            f"| skip_no_fills | {funnel['skip_no_fills']} | wallets with no cached fills |",
+            f"| skip_no_open_dir | {funnel['skip_no_open_dir']} | wallets with no open long/short fills |",
+            f"| skip_no_retail_size | {funnel['skip_no_retail_size']} | wallets with no $1k-$200k open fills |",
+            f"| skip_no_candle | {funnel['skip_no_candle']} | wallets whose signal coins had no candles |",
+            f"| skip_no_valid_pair | {funnel['skip_no_valid_pair']} | wallets with no aligned entry/exit pair |",
             "",
             "## Portfolio Stats",
             "",
@@ -546,6 +571,28 @@ def _coerce_utc_timestamp(value: Any) -> pd.Timestamp:
     if ts.tz is None:
         return ts.tz_localize("UTC")
     return ts.tz_convert("UTC")
+
+
+def _skip_reason_for_empty_events(fills: pd.DataFrame) -> str:
+    if fills.empty:
+        return "skip_no_fills"
+    if "dir" not in fills.columns:
+        return "skip_no_open_dir"
+
+    open_mask = fills["dir"].astype("string").isin(OPEN_DIR_TO_REVERSE_SIDE)
+    if not bool(open_mask.any()):
+        return "skip_no_open_dir"
+    if not {"px", "sz"}.issubset(fills.columns):
+        return "skip_no_retail_size"
+
+    notional = pd.to_numeric(fills["px"], errors="coerce") * pd.to_numeric(
+        fills["sz"],
+        errors="coerce",
+    )
+    retail_mask = notional.between(MIN_RETAIL_NOTIONAL, MAX_RETAIL_NOTIONAL, inclusive="both")
+    if not bool((open_mask & retail_mask).any()):
+        return "skip_no_retail_size"
+    return "skip_no_valid_pair"
 
 
 def _daily_sharpe(equity: pd.Series) -> float:
