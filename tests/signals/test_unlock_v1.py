@@ -37,6 +37,28 @@ def test_single_event_emits_entry_before_unlock_and_exit_on_unlock():
     assert exits.index.equals(prices["ARB"].index)
 
 
+@pytest.mark.xfail(reason="unlock_v1 still requires the full event schema", strict=True)
+def test_works_on_legacy_event_schema_without_category_or_vesting_type():
+    prices = {"ARB": _prices()}
+    events = pd.DataFrame(
+        [
+            {
+                "token": "ARB",
+                "unlock_date": pd.Timestamp("2026-01-15T00:00:00Z"),
+                "unlock_pct": 0.05,
+                "has_hl_perp": True,
+            }
+        ]
+    )
+
+    entries, exits = unlock_short_signal(events, prices)["ARB"]
+
+    assert bool(entries.loc["2026-01-08"])
+    assert bool(exits.loc["2026-01-15"])
+    assert entries.sum() == 1
+    assert exits.sum() == 1
+
+
 def test_event_below_min_unlock_pct_omits_token():
     prices = {"ARB": _prices()}
     events = _events(
