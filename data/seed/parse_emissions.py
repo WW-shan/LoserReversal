@@ -573,8 +573,13 @@ def add_event(
     category: str,
     has_hl_perp: bool,
     vesting_type: str,
+    counters: defaultdict[str, int] | None = None,
 ) -> None:
-    if not (WINDOW_START <= event_date <= WINDOW_END) or amount <= 0 or total <= 0:
+    if not (WINDOW_START <= event_date <= WINDOW_END):
+        if counters is not None:
+            counters["events_dropped_out_of_window"] += 1
+        return
+    if amount <= 0 or total <= 0:
         return
     rows.append(
         {
@@ -589,7 +594,13 @@ def add_event(
     )
 
 
-def parse_file(path: Path, by_id: dict[str, Coin], by_symbol: dict[str, list[Coin]], hl_symbols: set[str]) -> list[dict[str, Any]]:
+def parse_file(
+    path: Path,
+    by_id: dict[str, Coin],
+    by_symbol: dict[str, list[Coin]],
+    hl_symbols: set[str],
+    counters: defaultdict[str, int] | None = None,
+) -> list[dict[str, Any]]:
     text = strip_comments(path.read_text())
     protocol_block = find_protocol_block(text)
     if not protocol_block:
@@ -598,12 +609,22 @@ def parse_file(path: Path, by_id: dict[str, Coin], by_symbol: dict[str, list[Coi
     max_manual_amount = max_manual_call_amount(protocol_block, env)
     total, meta_coin_id = parse_meta(protocol_block, env, max_manual_amount)
     if total is None or total <= 0:
+        if counters is not None:
+            counters["protocols_dropped_no_supply"] += 1
         return []
     coin = resolve_coin(path, meta_coin_id, by_id, by_symbol)
     if not coin:
+        if counters is not None:
+            counters["protocols_dropped_no_coin_match"] += 1
         return []
 
     section_categories = parse_categories(protocol_block)
+    if not section_categories:
+        if counters is not None:
+            counters["protocols_dropped_no_categories"] += 1
+        return []
+    if counters is not None:
+        counters["protocols_parsed"] += 1
     token = coin.symbol.upper()
     has_hl_perp = token in hl_symbols
     rows: list[dict[str, Any]] = []
@@ -643,6 +664,7 @@ def parse_file(path: Path, by_id: dict[str, Coin], by_symbol: dict[str, list[Coi
                         category,
                         has_hl_perp,
                         call.kind,
+                        counters,
                     )
                 elif call.kind == "step" and len(call.args) >= 4:
                     start = to_timestamp(eval_value(call.args[0], env), date_format)
@@ -662,6 +684,7 @@ def parse_file(path: Path, by_id: dict[str, Coin], by_symbol: dict[str, list[Coi
                             category,
                             has_hl_perp,
                             call.kind,
+                            counters,
                         )
                 elif call.kind == "linear" and len(call.args) >= 3:
                     start = to_timestamp(eval_value(call.args[0], env), date_format)
@@ -682,13 +705,17 @@ def parse_file(path: Path, by_id: dict[str, Coin], by_symbol: dict[str, list[Coi
                             category,
                             has_hl_perp,
                             call.kind,
+                            counters,
                         )
             except Exception:
                 continue
     return rows
 
 
-def aggregate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def aggregate_rows(
+    rows: list[dict[str, Any]],
+    counters: defaultdict[str, int] | None = None,
+) -> list[dict[str, Any]]:
     grouped: dict[tuple[str, str, str, str, bool, str], float] = defaultdict(float)
     for row in rows:
         key = (
@@ -723,6 +750,8 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "vesting_type": vesting_type,
                 }
             )
+        elif counters is not None:
+            counters["events_dropped_out_of_pct_range"] += 1
     return sorted(
         out,
         key=lambda row: (row["unlock_date"], row["token"], row["category"], row["vesting_type"]),
@@ -736,14 +765,14 @@ def main() -> int:
     by_id, by_symbol = load_coins()
     hl_symbols = hyperliquid_symbols()
     raw_rows: list[dict[str, Any]] = []
-    parsed_files = 0
-    for path in sorted(PROTOCOLS_DIR.glob("*.ts")):
-        rows = parse_file(path, by_id, by_symbol, hl_symbols)
-        if rows:
-            parsed_files += 1
-            raw_rows.extend(rows)
+    counters: defaultdict[str, int] = defaultdict(int)
+    paths = sorted(PROTOCOLS_DIR.glob("*.ts"))
+    counters["protocols_scanned"] = len(paths)
+    for path in paths:
+        raw_rows.extend(parse_file(path, by_id, by_symbol, hl_symbols, counters))
 
-    rows = aggregate_rows(raw_rows)
+    rows = aggregate_rows(raw_rows, counters)
+    counters["events_emitted_total"] = len(rows)
     OUT_CSV.parent.mkdir(parents=True, exist_ok=True)
     with OUT_CSV.open("w", newline="") as fh:
         writer = csv.DictWriter(
@@ -775,9 +804,17 @@ def main() -> int:
     categories = defaultdict(int)
     for row in rows:
         categories[row["category"]] += 1
-    print(f"scanned_files: {len(list(PROTOCOLS_DIR.glob('*.ts')))}")
-    print(f"parsed_files: {parsed_files}")
-    print(f"rows: {len(rows)}")
+    for key in [
+        "protocols_scanned",
+        "protocols_parsed",
+        "protocols_dropped_no_supply",
+        "protocols_dropped_no_coin_match",
+        "protocols_dropped_no_categories",
+        "events_emitted_total",
+        "events_dropped_out_of_window",
+        "events_dropped_out_of_pct_range",
+    ]:
+        print(f"{key}: {counters[key]}")
     print(f"categories: {dict(sorted(categories.items()))}")
     print(f"wrote: {OUT_CSV}")
     return 0
