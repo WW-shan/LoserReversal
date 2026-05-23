@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from scripts import backfill_candles
 
@@ -98,6 +99,83 @@ def test_backfill_tokens_option_bypasses_unlocks_and_prints_summary(
     assert "total tokens: 2" in out
     assert "tokens fetched OK: 2" in out
     assert "range covered: 2023-01-01T00:00:00+00:00 -> 2023-01-02T00:00:00+00:00" in out
+
+
+def test_backfill_rejects_path_traversal_token_in_cli_args(mocker, tmp_path: Path):
+    outside = tmp_path.parent / "evil_1d.parquet"
+    mocker.patch.object(backfill_candles, "CANDLES_DIR", tmp_path)
+    fetch_candles = mocker.patch.object(backfill_candles, "fetch_candles", return_value=_candles())
+    write_candles = mocker.patch.object(backfill_candles, "write_candles")
+
+    with pytest.raises(ValueError, match="invalid token"):
+        backfill_candles.main(
+            ["--start", "2023-01-01", "--end", "2023-01-03", "--tokens", "../evil"]
+        )
+
+    fetch_candles.assert_not_called()
+    write_candles.assert_not_called()
+    assert not outside.exists()
+
+
+def test_backfill_rejects_invalid_interval(mocker, tmp_path: Path):
+    mocker.patch.object(backfill_candles, "CANDLES_DIR", tmp_path)
+    fetch_candles = mocker.patch.object(backfill_candles, "fetch_candles", return_value=_candles())
+    write_candles = mocker.patch.object(backfill_candles, "write_candles")
+
+    with pytest.raises(ValueError, match="invalid interval"):
+        backfill_candles.main(
+            ["--start", "2023-01-01", "--end", "2023-01-03", "--tokens", "BTC", "--interval", "foo"]
+        )
+
+    fetch_candles.assert_not_called()
+    write_candles.assert_not_called()
+
+
+def test_backfill_logs_and_skips_invalid_token_from_unlocks(
+    mocker,
+    tmp_path: Path,
+    caplog,
+    capsys,
+):
+    unlocks = _unlocks_frame()
+    unlocks.loc[len(unlocks)] = [
+        "../evil",
+        "evil",
+        pd.Timestamp("2026-01-04"),
+        0.05,
+        "insiders",
+        True,
+        "cliff",
+    ]
+    mocker.patch.object(backfill_candles, "CANDLES_DIR", tmp_path)
+    mocker.patch.object(backfill_candles, "read_unlocks", return_value=unlocks)
+    fetch_candles = mocker.patch.object(backfill_candles, "fetch_candles", return_value=_candles())
+    mocker.patch.object(backfill_candles, "write_candles")
+
+    assert backfill_candles.main(["--start", "2023-01-01", "--end", "2023-01-03"]) == 0
+
+    assert [call.args[0] for call in fetch_candles.call_args_list] == ["BTC", "ETH"]
+    assert "skipping invalid token from unlocks: ../EVIL" in caplog.text
+    assert "tokens skipped: 1" in capsys.readouterr().out
+
+
+def test_backfill_target_path_outside_dir_is_rejected(mocker, tmp_path: Path):
+    class AcceptAllPattern:
+        def match(self, value: str):
+            return True
+
+    mocker.patch.object(backfill_candles, "CANDLES_DIR", tmp_path)
+    mocker.patch.object(backfill_candles, "_VALID_TOKEN", AcceptAllPattern(), create=True)
+    fetch_candles = mocker.patch.object(backfill_candles, "fetch_candles", return_value=_candles())
+    write_candles = mocker.patch.object(backfill_candles, "write_candles")
+
+    with pytest.raises(ValueError, match="outside candles dir"):
+        backfill_candles.main(
+            ["--start", "2023-01-01", "--end", "2023-01-03", "--tokens", "../evil"]
+        )
+
+    fetch_candles.assert_not_called()
+    write_candles.assert_not_called()
 
 
 def _unlocks_frame() -> pd.DataFrame:
