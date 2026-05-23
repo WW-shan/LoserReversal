@@ -22,6 +22,7 @@ UNLOCK_COLUMNS = [
     "has_hl_perp",
     "vesting_type",
 ]
+VALID_VESTING_TYPES = {"cliff", "step", "linear"}
 UNLOCK_SCHEMA = pa.schema(
     [
         ("token", pa.string()),
@@ -152,7 +153,12 @@ def write_unlocks_csv_to_parquet(csv_path: Path, parquet_path: Path | None = Non
     frame["unlock_date"] = pd.to_datetime(frame["unlock_date"]).dt.date
     frame["unlock_pct"] = frame["unlock_pct"].astype("float64")
     frame["has_hl_perp"] = _coerce_bool_series(frame["has_hl_perp"])
-    frame["vesting_type"] = frame["vesting_type"].astype("string")
+    frame["vesting_type"] = frame["vesting_type"].astype("string").str.lower()
+    bad_vesting_types = sorted(
+        set(frame.loc[frame["vesting_type"].notna(), "vesting_type"]) - VALID_VESTING_TYPES
+    )
+    if bad_vesting_types:
+        raise ValueError(f"invalid vesting_type values: {bad_vesting_types}")
 
     table = pa.Table.from_pandas(frame, schema=UNLOCK_SCHEMA, preserve_index=False)
     pq.write_table(table, target, compression=None, use_dictionary=False, row_group_size=64)
