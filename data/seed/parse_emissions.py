@@ -22,8 +22,8 @@ COINS_LIST_PATH = REPO_ROOT / "data" / "cache" / "seed_build" / "coins_list.json
 OUT_CSV = REPO_ROOT / "data" / "seed" / "unlocks_curated.csv"
 
 HL_INFO = "https://api.hyperliquid.xyz/info"
-WINDOW_START = date(2025, 5, 22)
-WINDOW_END = date(2026, 5, 22)
+WINDOW_START = date(2023, 1, 1)
+WINDOW_END = max(date(2026, 5, 22), datetime.now(timezone.utc).date())
 MIN_UNLOCK_PCT = 0.005
 MAX_UNLOCK_PCT = 0.30
 
