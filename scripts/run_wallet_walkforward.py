@@ -401,15 +401,20 @@ def _aggregate_split_results(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _verdict(aggregate: dict[str, Any]) -> Verdict:
-    """Return the walk-forward verdict.
+    """
+    Determine verdict label and reason from aggregate stats.
 
-    RED reason taxonomy:
-    - data_gap: oos_n_trades_total == 0.
-    - insufficient_sample: 1 <= oos_n_trades_total < 50.
-    - insufficient_oos_trades: 50 <= oos_n_trades_total < 100.
-    - oos_ir_below_yellow: oos_n_trades_total >= 100 but oos_ir_mean < 1.0.
-    - max_drawdown_breach: drawdown is worse than -0.30.
-    - thresholds_not_met: residual catch-all for unmet RED criteria.
+    RED reason order (first match wins):
+    - data_gap: oos_n_trades_total == 0
+    - insufficient_sample: 0 < oos_n_trades_total < 50
+    - max_drawdown_breach: oos_n_trades_total >= 50 AND oos_max_dd_worst < -0.25
+    - oos_ir_below_yellow: oos_n_trades_total >= 50, dd ok, but oos_ir_mean < 1.0
+    - insufficient_oos_trades: 50 <= oos_n_trades_total < 100, ir >= 1.0, dd ok
+
+    YELLOW: oos_n_trades_total >= 100 AND 1.0 <= oos_ir_mean < 1.2 AND dd >= -0.25 (yellow_thresholds_met)
+    GREEN: oos_n_trades_total >= 100 AND oos_ir_mean >= 1.2 AND dd >= -0.25 (green_thresholds_met)
+
+    Note: thresholds_not_met is NOT emitted by this function (only by unlock_walkforward).
     """
     oos_ir_mean = float(aggregate["oos_ir_mean"])
     oos_n_trades_total = int(aggregate["oos_n_trades_total"])
