@@ -187,6 +187,19 @@ def test_emit_pair_signals_rejects_non_increasing_offsets():
         )
 
 
+def test_emit_pair_signals_rejects_non_increasing_offsets_before_empty_guard():
+    prices = {"ARB": _prices()}
+    events = pd.DataFrame(columns=["token", "unlock_date"])
+
+    with pytest.raises(ValueError, match=r"exit_offset_days \(0\) must be > entry_offset_days \(0\)"):
+        emit_pair_signals(
+            events=events,
+            prices=prices,
+            entry_offset_days=0,
+            exit_offset_days=0,
+        )
+
+
 def test_emit_pair_signals_skips_overlap():
     prices = {"ARB": _prices()}
     events = _events(

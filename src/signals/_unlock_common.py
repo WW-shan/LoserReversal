@@ -55,9 +55,6 @@ def emit_pair_signals(
     exit_offset_days: int | None = None,
 ) -> dict[str, tuple[pd.Series, pd.Series]]:
     """Generic entry/exit signal emitter using offsets relative to unlock_date."""
-    if events.empty or not prices or not {"token", "unlock_date"}.issubset(events.columns):
-        return {}
-
     entry_offset, exit_offset = _resolve_offsets(
         entry_offset_days=entry_offset_days,
         exit_offset_days=exit_offset_days,
@@ -67,6 +64,9 @@ def emit_pair_signals(
             f"exit_offset_days ({exit_offset_days}) must be > "
             f"entry_offset_days ({entry_offset_days})"
         )
+    if events.empty or not prices or not {"token", "unlock_date"}.issubset(events.columns):
+        return {}
+
     frame = events.copy()
     frame["token"] = frame["token"].astype("string")
     frame["unlock_date"] = pd.to_datetime(frame["unlock_date"], utc=True, errors="coerce")

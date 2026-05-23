@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Protocol
-
 import pandas as pd
 import pytest
 
@@ -10,16 +8,6 @@ from signals.unlock_v2 import unlock_short_30d
 from signals.unlock_v3 import unlock_short_tactical
 from signals.unlock_v4 import unlock_short_72h
 from signals.unlock_v5 import unlock_reversal_long
-
-
-class SignalFn(Protocol):
-    def __call__(
-        self,
-        events: pd.DataFrame,
-        prices: dict[str, pd.Series],
-        *,
-        coverage: pd.DataFrame | None = None,
-    ) -> dict[str, tuple[pd.Series, pd.Series]]: ...
 
 
 def _events() -> pd.DataFrame:
@@ -83,7 +71,7 @@ def _coverage() -> pd.DataFrame:
 )
 def test_unlock_signals_emit_with_shared_covered_fixture(
     signal_name: str,
-    signal_fn: SignalFn,
+    signal_fn,
 ) -> None:
     result = signal_fn(_events(), _prices(), coverage=_coverage())
 
