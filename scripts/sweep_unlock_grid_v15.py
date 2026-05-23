@@ -46,7 +46,11 @@ def run_sweep(config: GridSweepConfig) -> dict[str, Any]:
         date_end=config.date_end,
     )
     coverage = load_coverage(config.coverage_path)
-    prices = load_prices(events, config.candles_dir)
+    prices = _clip_prices_by_date(
+        load_prices(events, config.candles_dir),
+        date_start=config.date_start,
+        date_end=config.date_end,
+    )
     main_rows = run_main_grid(
         events,
         prices,
@@ -173,6 +177,33 @@ def load_prices(events: pd.DataFrame, candles_dir: Path) -> dict[str, pd.Series]
         if not series.empty:
             prices[token] = series.sort_index()
     return prices
+
+
+def _clip_prices_by_date(
+    prices: dict[str, pd.Series],
+    *,
+    date_start: pd.Timestamp | None,
+    date_end: pd.Timestamp | None,
+) -> dict[str, pd.Series]:
+    if date_start is None and date_end is None:
+        return prices
+
+    clipped: dict[str, pd.Series] = {}
+    for token, series in prices.items():
+        price_index = pd.DatetimeIndex(series.index)
+        if price_index.tz is None:
+            price_index = price_index.tz_localize("UTC")
+        else:
+            price_index = price_index.tz_convert("UTC")
+
+        token_series = series.copy()
+        token_series.index = price_index
+        if date_start is not None:
+            token_series = token_series.loc[token_series.index >= date_start]
+        if date_end is not None:
+            token_series = token_series.loc[token_series.index <= date_end]
+        clipped[token] = token_series
+    return clipped
 
 
 def _filter_events_by_date(
