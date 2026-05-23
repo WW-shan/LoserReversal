@@ -170,6 +170,9 @@ def test_walkforward_verdict_logic_for_green_yellow_and_red_reasons():
         {"oos_ir_mean": 0.9, "oos_n_trades_total": 100, "oos_max_dd_worst": 0.0}
     ) == walkforward.Verdict("RED", "oos_ir_below_yellow")
     assert walkforward._verdict(
+        {"oos_ir_mean": 1.4, "oos_n_trades_total": 70, "oos_max_dd_worst": 0.0}
+    ) == walkforward.Verdict("RED", "insufficient_oos_trades")
+    assert walkforward._verdict(
         {"oos_ir_mean": 1.0, "oos_n_trades_total": 100, "oos_max_dd_worst": 0.0}
     ) == walkforward.Verdict("YELLOW", "yellow_thresholds_met")
     assert walkforward._verdict(
