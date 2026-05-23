@@ -211,6 +211,19 @@ def _walk_forward_splits_with_fallback(
                 except ValueError as error:
                     last_error = error
                     continue
+                if (
+                    candidate_splits < n_splits
+                    or candidate_min_train_days < min_train_days
+                    or candidate_test_days < test_days
+                ):
+                    _log(
+                        "[WARN] walk-forward fallback: requested "
+                        f"(n_splits={n_splits}, min_train_days={min_train_days}, "
+                        f"test_days={test_days}); using "
+                        f"(n_splits={candidate_splits}, "
+                        f"min_train_days={candidate_min_train_days}, "
+                        f"test_days={candidate_test_days})"
+                    )
                 return (
                     splits,
                     candidate_splits,
