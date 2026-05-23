@@ -6,10 +6,12 @@ from pathlib import Path
 
 def test_no_underscore_prefix_cross_script_imports():
     scripts_dir = Path(__file__).resolve().parents[2] / "scripts"
-    script_stems = {script.stem for script in scripts_dir.glob("*.py")}
+    script_stems = {script.stem for script in scripts_dir.glob("*.py") if script.name != "__init__.py"}
     violations: list[str] = []
 
     for script in sorted(scripts_dir.glob("*.py")):
+        if script.name == "__init__.py":
+            continue
         tree = ast.parse(script.read_text(encoding="utf-8"), filename=str(script))
         for node in ast.walk(tree):
             if not isinstance(node, ast.ImportFrom) or node.module is None:

@@ -408,7 +408,7 @@ def _verdict(aggregate: dict[str, Any]) -> Verdict:
     - data_gap: oos_n_trades_total == 0
     - insufficient_sample: 0 < oos_n_trades_total < 50
     - max_drawdown_breach: oos_n_trades_total >= 50 AND oos_max_dd_worst < -0.25
-    - oos_ir_below_yellow: oos_n_trades_total >= 50, dd ok, but oos_ir_mean < 1.0
+    - oos_ir_below_yellow: oos_n_trades_total >= 50, dd ok, but oos_ir_mean < 1.0 (or non-finite)
     - insufficient_oos_trades: 50 <= oos_n_trades_total < 100, ir >= 1.0, dd ok
 
     YELLOW: oos_n_trades_total >= 100 AND 1.0 <= oos_ir_mean < 1.2 AND dd >= -0.25 (yellow_thresholds_met)
