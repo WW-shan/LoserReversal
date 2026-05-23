@@ -5,6 +5,9 @@ import pandas as pd
 from signals._unlock_common import emit_pair_signals, filter_events
 
 
+V1_REQUIRED_EVENT_COLUMNS = {"token", "unlock_date", "unlock_pct", "has_hl_perp"}
+
+
 def unlock_short_signal(
     events: pd.DataFrame,
     prices: dict[str, pd.Series],
@@ -20,6 +23,7 @@ def unlock_short_signal(
         min_unlock_pct=min_unlock_pct,
         require_hl_perp=require_hl_perp,
         coverage=coverage,
+        required_columns=V1_REQUIRED_EVENT_COLUMNS,
     )
     return emit_pair_signals(
         events=frame,

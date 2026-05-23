@@ -37,7 +37,6 @@ def test_single_event_emits_entry_before_unlock_and_exit_on_unlock():
     assert exits.index.equals(prices["ARB"].index)
 
 
-@pytest.mark.xfail(reason="unlock_v1 still requires the full event schema", strict=True)
 def test_works_on_legacy_event_schema_without_category_or_vesting_type():
     prices = {"ARB": _prices()}
     events = pd.DataFrame(
