@@ -3,6 +3,16 @@ from __future__ import annotations
 import pandas as pd
 
 
+REQUIRED_EVENT_COLUMNS = {
+    "token",
+    "unlock_date",
+    "unlock_pct",
+    "category",
+    "has_hl_perp",
+    "vesting_type",
+}
+
+
 def filter_events(
     events: pd.DataFrame,
     *,
@@ -11,10 +21,7 @@ def filter_events(
     coverage: pd.DataFrame | None,
 ) -> pd.DataFrame:
     """Apply common filters: pct threshold, has_hl_perp, coverage_status == 'ok'."""
-    required_columns = {"token", "unlock_date", "unlock_pct"}
-    if require_hl_perp:
-        required_columns.add("has_hl_perp")
-    if events.empty or not required_columns.issubset(events.columns):
+    if events.empty or not REQUIRED_EVENT_COLUMNS.issubset(events.columns):
         return pd.DataFrame(columns=events.columns)
 
     frame = events.copy()

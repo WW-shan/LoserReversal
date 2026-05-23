@@ -17,6 +17,7 @@ def _events(rows: list[dict]) -> pd.DataFrame:
         "unlock_pct": 0.05,
         "category": "team",
         "has_hl_perp": True,
+        "vesting_type": "cliff",
     }
     return pd.DataFrame([{**defaults, **row} for row in rows])
 
