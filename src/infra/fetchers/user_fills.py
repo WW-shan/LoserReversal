@@ -76,6 +76,8 @@ def fetch_user_fills(
             next_cursor = last_time + 1
         else:
             next_cursor = last_time
+        if next_cursor > end_ms:
+            break
         if next_cursor < cursor:
             break
         if next_cursor == cursor and last_tids == previous_boundary_tids:
