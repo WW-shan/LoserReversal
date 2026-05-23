@@ -22,14 +22,14 @@ if __package__:
         MIN_WALLETS_GRID,
         WINDOW_MINUTES_GRID,
         WalletClusterBacktestConfig,
-        _backtest_cluster_events,
+        backtest_cluster_events,
     )
     from scripts.run_wallet_reverse_backtest import (
         CACHE_ERRORS,
-        _backtest_freq,
-        _coerce_utc_timestamp,
-        _filter_fills_by_end,
-        _filter_fills_by_start,
+        backtest_freq,
+        coerce_utc_timestamp,
+        filter_fills_by_end,
+        filter_fills_by_start,
     )
 else:
     from run_wallet_cluster_backtest import (
@@ -37,14 +37,14 @@ else:
         MIN_WALLETS_GRID,
         WINDOW_MINUTES_GRID,
         WalletClusterBacktestConfig,
-        _backtest_cluster_events,
+        backtest_cluster_events,
     )
     from run_wallet_reverse_backtest import (
         CACHE_ERRORS,
-        _backtest_freq,
-        _coerce_utc_timestamp,
-        _filter_fills_by_end,
-        _filter_fills_by_start,
+        backtest_freq,
+        coerce_utc_timestamp,
+        filter_fills_by_end,
+        filter_fills_by_start,
     )
 
 
@@ -167,8 +167,8 @@ def _filter_pool_fills_by_date(
 ) -> dict[str, pd.DataFrame]:
     filtered = {}
     for address, fills in pool_fills.items():
-        window_fills = _filter_fills_by_start(fills, date_start)
-        window_fills = _filter_fills_by_end(window_fills, date_end)
+        window_fills = filter_fills_by_start(fills, date_start)
+        window_fills = filter_fills_by_end(window_fills, date_end)
         if not window_fills.empty:
             filtered[address] = window_fills
     return filtered
@@ -324,14 +324,14 @@ def _run_cluster_backtest_for_pool(
     pool_fills: dict[str, pd.DataFrame],
     config: WalletClusterBacktestConfig,
 ) -> dict[str, Any]:
-    freq = _backtest_freq(config.candle_interval)
+    freq = backtest_freq(config.candle_interval)
     events_by_coin = cluster_signal(
         pool_fills,
         min_wallets=config.min_wallets,
         window_minutes=config.window_minutes,
         holding_hours=config.holding_hours,
     )
-    return _backtest_cluster_events(events_by_coin, config, freq)
+    return backtest_cluster_events(events_by_coin, config, freq)
 
 
 def _cluster_config_from_row(
@@ -665,7 +665,7 @@ def _decay_status(value: Any) -> str:
 
 def _parse_datetime_arg(value: str) -> datetime:
     try:
-        return _coerce_utc_timestamp(value).to_pydatetime()
+        return coerce_utc_timestamp(value).to_pydatetime()
     except (TypeError, ValueError) as error:
         raise argparse.ArgumentTypeError(f"invalid datetime {value!r}") from error
 

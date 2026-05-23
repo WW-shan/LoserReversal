@@ -47,7 +47,7 @@ class WalletReverseBacktestConfig:
 
 def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str, Any]:
     started = time.perf_counter()
-    freq = _backtest_freq(config.candle_interval)
+    freq = backtest_freq(config.candle_interval)
     wallets = read_wallets().head(config.top_wallet_n).copy()
     client = HyperliquidClient()
     funnel = {
@@ -80,9 +80,9 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
             continue
 
         funnel["fills"] += int(len(fills))
-        fills = _filter_fills_by_start(fills, config.date_start)
+        fills = filter_fills_by_start(fills, config.date_start)
         funnel["date_start_fills"] += int(len(fills))
-        fills = _filter_fills_by_end(fills, config.date_end)
+        fills = filter_fills_by_end(fills, config.date_end)
         funnel["date_end_fills"] += int(len(fills))
         events = reverse_signal_events(fills, config.holding_hours)
         signals = reverse_signal(fills, config.holding_hours)
@@ -593,7 +593,7 @@ def _coerce_utc_index(index: pd.Index) -> pd.DatetimeIndex:
     return ts_index
 
 
-def _coerce_utc_timestamp(value: Any) -> pd.Timestamp:
+def coerce_utc_timestamp(value: Any) -> pd.Timestamp:
     ts = pd.Timestamp(value)
     if ts.tz is None:
         return ts.tz_localize("UTC")
@@ -637,18 +637,18 @@ def _has_non_null_time(fills: pd.DataFrame) -> bool:
     return False
 
 
-def _filter_fills_by_start(fills: pd.DataFrame, date_start: datetime | None) -> pd.DataFrame:
+def filter_fills_by_start(fills: pd.DataFrame, date_start: datetime | None) -> pd.DataFrame:
     if date_start is None or fills.empty:
         return fills.copy()
     fill_times = _fill_times(fills)
-    return fills.loc[fill_times >= _coerce_utc_timestamp(date_start)].copy()
+    return fills.loc[fill_times >= coerce_utc_timestamp(date_start)].copy()
 
 
-def _filter_fills_by_end(fills: pd.DataFrame, date_end: datetime | None) -> pd.DataFrame:
+def filter_fills_by_end(fills: pd.DataFrame, date_end: datetime | None) -> pd.DataFrame:
     if date_end is None or fills.empty:
         return fills.copy()
     fill_times = _fill_times(fills)
-    return fills.loc[fill_times < _coerce_utc_timestamp(date_end)].copy()
+    return fills.loc[fill_times < coerce_utc_timestamp(date_end)].copy()
 
 
 def _fill_times(fills: pd.DataFrame) -> pd.Series:
@@ -675,8 +675,8 @@ def _trade_level_ir(trades: list[dict[str, Any]]) -> float:
     if returns.empty:
         return 0.0
 
-    entry_times = [_coerce_utc_timestamp(trade["entry_time"]) for trade in trades]
-    exit_times = [_coerce_utc_timestamp(trade["exit_time"]) for trade in trades]
+    entry_times = [coerce_utc_timestamp(trade["entry_time"]) for trade in trades]
+    exit_times = [coerce_utc_timestamp(trade["exit_time"]) for trade in trades]
     total_days = (max(exit_times) - min(entry_times)).total_seconds() / 86_400.0
     if total_days <= 0:
         return 0.0
@@ -689,10 +689,21 @@ def _trade_level_ir(trades: list[dict[str, Any]]) -> float:
     return mean_return / volatility * math.sqrt(annual_trade_freq)
 
 
-def _backtest_freq(interval: str) -> str:
+def backtest_freq(interval: str) -> str:
     if interval.lower() == "1d":
         return "1D"
     return interval
+
+
+daily_sharpe = _daily_sharpe
+load_or_fetch_candles = _load_or_fetch_candles
+run_path_backtest = _run_path_backtest
+summed_equity = _summed_equity
+trade_level_ir = _trade_level_ir
+_backtest_freq = backtest_freq
+_coerce_utc_timestamp = coerce_utc_timestamp
+_filter_fills_by_end = filter_fills_by_end
+_filter_fills_by_start = filter_fills_by_start
 
 
 def _fmt_pct(value: Any) -> str:
@@ -713,19 +724,19 @@ def _fmt_money(value: Any) -> str:
 def _fmt_optional_date(value: datetime | None) -> str:
     if value is None:
         return "disabled"
-    return _coerce_utc_timestamp(value).strftime("%Y-%m-%d")
+    return coerce_utc_timestamp(value).strftime("%Y-%m-%d")
 
 
 def _date_start_filter(config: WalletReverseBacktestConfig) -> str:
     if config.date_start is None:
         return "date_start disabled"
-    return f"fill_time >= {_coerce_utc_timestamp(config.date_start):%Y-%m-%d}"
+    return f"fill_time >= {coerce_utc_timestamp(config.date_start):%Y-%m-%d}"
 
 
 def _date_end_filter(config: WalletReverseBacktestConfig) -> str:
     if config.date_end is None:
         return "date_end disabled"
-    return f"fill_time < {_coerce_utc_timestamp(config.date_end):%Y-%m-%d}"
+    return f"fill_time < {coerce_utc_timestamp(config.date_end):%Y-%m-%d}"
 
 
 def _sort_sharpe(row: dict[str, Any]) -> float:
@@ -755,7 +766,7 @@ def _parse_args() -> argparse.Namespace:
 
 def _parse_datetime_arg(value: str) -> datetime:
     try:
-        return _coerce_utc_timestamp(value).to_pydatetime()
+        return coerce_utc_timestamp(value).to_pydatetime()
     except (TypeError, ValueError) as error:
         raise argparse.ArgumentTypeError(f"invalid datetime {value!r}") from error
 

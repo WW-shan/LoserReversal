@@ -21,28 +21,28 @@ from signals.wallet_cluster_v1 import cluster_signal
 if __package__:
     from scripts.run_wallet_reverse_backtest import (
         CACHE_ERRORS,
-        _backtest_freq,
-        _coerce_utc_timestamp,
-        _daily_sharpe,
-        _filter_fills_by_end,
-        _filter_fills_by_start,
-        _load_or_fetch_candles,
-        _run_path_backtest,
-        _summed_equity,
-        _trade_level_ir,
+        backtest_freq,
+        coerce_utc_timestamp,
+        daily_sharpe,
+        filter_fills_by_end,
+        filter_fills_by_start,
+        load_or_fetch_candles,
+        run_path_backtest,
+        summed_equity,
+        trade_level_ir,
     )
 else:
     from run_wallet_reverse_backtest import (
         CACHE_ERRORS,
-        _backtest_freq,
-        _coerce_utc_timestamp,
-        _daily_sharpe,
-        _filter_fills_by_end,
-        _filter_fills_by_start,
-        _load_or_fetch_candles,
-        _run_path_backtest,
-        _summed_equity,
-        _trade_level_ir,
+        backtest_freq,
+        coerce_utc_timestamp,
+        daily_sharpe,
+        filter_fills_by_end,
+        filter_fills_by_start,
+        load_or_fetch_candles,
+        run_path_backtest,
+        summed_equity,
+        trade_level_ir,
     )
 
 
@@ -68,7 +68,7 @@ class WalletClusterBacktestConfig:
 
 def run_wallet_cluster_backtest(config: WalletClusterBacktestConfig) -> dict[str, Any]:
     started = time.perf_counter()
-    freq = _backtest_freq(config.candle_interval)
+    freq = backtest_freq(config.candle_interval)
     wallets = read_wallets().head(config.top_wallet_n).copy()
     pool_fills: dict[str, pd.DataFrame] = {}
     funnel = {
@@ -92,9 +92,9 @@ def run_wallet_cluster_backtest(config: WalletClusterBacktestConfig) -> dict[str
             continue
 
         funnel["fills"] += int(len(fills))
-        fills = _filter_fills_by_start(fills, config.date_start)
+        fills = filter_fills_by_start(fills, config.date_start)
         funnel["date_start_fills"] += int(len(fills))
-        fills = _filter_fills_by_end(fills, config.date_end)
+        fills = filter_fills_by_end(fills, config.date_end)
         funnel["date_end_fills"] += int(len(fills))
         if fills.empty:
             continue
@@ -109,7 +109,7 @@ def run_wallet_cluster_backtest(config: WalletClusterBacktestConfig) -> dict[str
     )
     funnel["cluster_events"] = sum(int(len(events)) for events in events_by_coin.values())
 
-    backtest = _backtest_cluster_events(events_by_coin, config, freq)
+    backtest = backtest_cluster_events(events_by_coin, config, freq)
     funnel["with_candle"] = int(backtest["events_with_candles"])
     funnel["trades"] = int(backtest["portfolio_stats"]["n_trades"])
     result = {
@@ -132,7 +132,7 @@ def run_wallet_cluster_backtest(config: WalletClusterBacktestConfig) -> dict[str
     return result
 
 
-def _backtest_cluster_events(
+def backtest_cluster_events(
     events_by_coin: dict[str, pd.DataFrame],
     config: WalletClusterBacktestConfig,
     freq: str,
@@ -147,7 +147,7 @@ def _backtest_cluster_events(
         start = events["entry_time"].min()
         end = events["exit_time"].max() + interval_timedelta(config.candle_interval)
         try:
-            candles, cached = _load_or_fetch_candles(coin, config.candle_interval, start, end, client)
+            candles, cached = load_or_fetch_candles(coin, config.candle_interval, start, end, client)
         except (FileNotFoundError, OSError, ValueError, ConnectionError) as error:
             _log(f"warning: skipping {coin} candles: {error}")
             continue
@@ -167,7 +167,7 @@ def _backtest_cluster_events(
     per_coin_cash = config.init_cash / len(coin_inputs)
     coin_results = []
     for coin, prices, events in coin_inputs:
-        result = _run_path_backtest(
+        result = run_path_backtest(
             prices=prices,
             events=events,
             init_cash=per_coin_cash,
@@ -179,7 +179,7 @@ def _backtest_cluster_events(
 
     equities = [result["equity"].rename(coin) for coin, result in coin_results]
     trades = [trade for _, result in coin_results for trade in result["trades"]]
-    portfolio_equity = _summed_equity(equities, per_coin_cash)
+    portfolio_equity = summed_equity(equities, per_coin_cash)
     per_coin_stats = [_coin_stats(coin, result, per_coin_cash) for coin, result in coin_results]
     portfolio_stats = _portfolio_stats(portfolio_equity, trades, config, freq)
     return {
@@ -189,6 +189,9 @@ def _backtest_cluster_events(
         "per_coin_stats": sorted(per_coin_stats, key=_sort_ir, reverse=True),
         "portfolio_equity": portfolio_equity,
     }
+
+
+_backtest_cluster_events = backtest_cluster_events
 
 
 def _empty_backtest_result(config: WalletClusterBacktestConfig, freq: str) -> dict[str, Any]:
@@ -209,8 +212,8 @@ def _coin_stats(coin: str, result: dict[str, Any], init_cash: float) -> dict[str
     return {
         "coin": coin,
         "sharpe": float(stats["sharpe"]),
-        "daily_sharpe": _daily_sharpe(equity),
-        "trade_level_ir": _trade_level_ir(result["trades"]),
+        "daily_sharpe": daily_sharpe(equity),
+        "trade_level_ir": trade_level_ir(result["trades"]),
         "sortino": float(stats["sortino"]),
         "max_dd": float(stats["max_dd"]),
         "n_trades": int(stats["n_trades"]),
@@ -233,8 +236,8 @@ def _portfolio_stats(
     trades_won = sum(1 for trade in trades if float(trade["return"]) > 0)
     return {
         "sharpe": sharpe_ratio(returns, periods_per_year(freq)),
-        "daily_sharpe": _daily_sharpe(equity),
-        "trade_level_ir": _trade_level_ir(trades),
+        "daily_sharpe": daily_sharpe(equity),
+        "trade_level_ir": trade_level_ir(trades),
         "sortino": sortino_ratio(returns, periods_per_year(freq)),
         "max_dd": max_drawdown(equity),
         "n_trades": n_trades,
@@ -321,7 +324,7 @@ def _coin_rows(rows: list[dict[str, Any]]) -> list[str]:
 def _fmt_optional_date(value: datetime | None) -> str:
     if value is None:
         return "disabled"
-    return _coerce_utc_timestamp(value).strftime("%Y-%m-%d")
+    return coerce_utc_timestamp(value).strftime("%Y-%m-%d")
 
 
 def _fmt_num(value: Any, decimals: int) -> str:
@@ -349,7 +352,7 @@ def _sort_ir(row: dict[str, Any]) -> float:
 
 def _parse_datetime_arg(value: str) -> datetime:
     try:
-        return _coerce_utc_timestamp(value).to_pydatetime()
+        return coerce_utc_timestamp(value).to_pydatetime()
     except (TypeError, ValueError) as error:
         raise argparse.ArgumentTypeError(f"invalid datetime {value!r}") from error
 

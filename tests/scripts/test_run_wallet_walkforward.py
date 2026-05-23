@@ -155,7 +155,7 @@ def test_run_wallet_cluster_backtest_runs_single_config_on_synthetic_cluster(
     )
     mocker.patch.object(
         cluster_runner,
-        "_load_or_fetch_candles",
+        "load_or_fetch_candles",
         return_value=(
             _candles(
                 {
