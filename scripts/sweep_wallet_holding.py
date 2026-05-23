@@ -37,6 +37,7 @@ def run_sweep(config: WalletReverseBacktestConfig) -> dict[str, Any]:
         row = {
             "holding": holding_hours,
             "n_trades": n_trades,
+            "trade_level_ir": float(stats["trade_level_ir"]),
             "sharpe": float(stats["sharpe"]),
             "sortino": float(stats["sortino"]),
             "max_dd": float(stats["max_dd"]),
@@ -48,7 +49,8 @@ def run_sweep(config: WalletReverseBacktestConfig) -> dict[str, Any]:
         elapsed = time.perf_counter() - combo_started
         _log(
             f"[{index}/{len(HOLDING_GRID)}] holding={holding_hours:g}h "
-            f"trades={n_trades} Sharpe={row['sharpe']:.2f} ({elapsed:.1f}s)"
+            f"trades={n_trades} IR={row['trade_level_ir']:.2f} "
+            f"Sharpe={row['sharpe']:.2f} ({elapsed:.1f}s)"
         )
 
     ranked = sorted(rows, key=_sort_eligible_sharpe, reverse=True)
@@ -83,8 +85,8 @@ def _write_sweep_report(path: Path, result: dict[str, Any]) -> None:
         "",
         "## Sweep Results",
         "",
-        "| holding | n_trades | sharpe | sortino | max_dd | total_return | win_rate | eligible |",
-        "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | :---: |",
+        "| holding | n_trades | trade_level_ir | sharpe | sortino | max_dd | total_return | win_rate | eligible |",
+        "| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | :---: |",
         *_sweep_rows(rows),
     ]
     path.write_text("\n".join(lines) + "\n")
@@ -92,9 +94,10 @@ def _write_sweep_report(path: Path, result: dict[str, Any]) -> None:
 
 def _sweep_rows(rows: list[dict[str, Any]]) -> list[str]:
     if not rows:
-        return ["| - | - | - | - | - | - | - | - |"]
+        return ["| - | - | - | - | - | - | - | - | - |"]
     return [
-        f"| {row['holding']:g}h | {row['n_trades']} | {_fmt_num(row['sharpe'], 2)} | "
+        f"| {row['holding']:g}h | {row['n_trades']} | "
+        f"{_fmt_num(row['trade_level_ir'], 2)} | {_fmt_num(row['sharpe'], 2)} | "
         f"{_fmt_num(row['sortino'], 2)} | {_fmt_pct(row['max_dd'])} | "
         f"{_fmt_pct(row['total_return'])} | {_fmt_pct(row['win_rate'])} | "
         f"{_fmt_bool(row['eligible'])} |"

@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 
 import pandas as pd
+import pytest
 
 from scripts import run_wallet_reverse_backtest as runner
 
@@ -198,6 +199,37 @@ def test_synthetic_wallets_compute_hourly_sharpe_trade_level_ir_and_daily_sharpe
     assert "| Daily Sharpe |" in report
 
 
+def test_trade_level_ir_uses_net_trade_returns_and_annual_trade_frequency():
+    trades = [
+        {
+            "entry_time": pd.Timestamp("2026-01-01T00:00:00Z"),
+            "exit_time": pd.Timestamp("2026-01-02T00:00:00Z"),
+            "return": 0.01,
+        },
+        {
+            "entry_time": pd.Timestamp("2026-01-04T00:00:00Z"),
+            "exit_time": pd.Timestamp("2026-01-05T00:00:00Z"),
+            "return": 0.03,
+        },
+        {
+            "entry_time": pd.Timestamp("2026-01-07T00:00:00Z"),
+            "exit_time": pd.Timestamp("2026-01-08T00:00:00Z"),
+            "return": -0.02,
+        },
+        {
+            "entry_time": pd.Timestamp("2026-01-10T00:00:00Z"),
+            "exit_time": pd.Timestamp("2026-01-11T00:00:00Z"),
+            "return": 0.04,
+        },
+    ]
+    returns = pd.Series([0.01, 0.03, -0.02, 0.04], dtype="float64")
+    annual_trade_freq = len(returns) / 10 * 365
+    expected = returns.mean() / returns.std(ddof=0) * math.sqrt(annual_trade_freq)
+
+    assert runner._trade_level_ir(trades) == pytest.approx(expected)
+    assert runner._trade_level_ir(trades[:1]) == 0.0
+
+
 def test_skip_reason_bucket_counts_match_non_backtested_wallets(mocker, tmp_path):
     addresses = [
         "0xvalid",
@@ -240,7 +272,18 @@ def test_skip_reason_bucket_counts_match_non_backtested_wallets(mocker, tmp_path
         if coin == "NOCANDLE":
             raise FileNotFoundError("missing candles")
         if coin == "NOPAIR":
-            return _candles({"2026-01-01T00:00:00Z": 100.0}), True
+            index = pd.DatetimeIndex([pd.Timestamp("2026-01-05T00:00:00Z")], name="timestamp")
+            close = pd.Series([100.0], index=index)
+            return pd.DataFrame(
+                {
+                    "open": close,
+                    "high": close,
+                    "low": close,
+                    "close": close,
+                    "volume": 1.0,
+                },
+                index=index,
+            ), True
         return _candles(
             {
                 "2026-01-01T00:00:00Z": 100.0,

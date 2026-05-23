@@ -596,6 +596,8 @@ def _skip_reason_for_empty_events(fills: pd.DataFrame) -> str:
 
 
 def _daily_sharpe(equity: pd.Series) -> float:
+    if equity.empty or not isinstance(equity.index, pd.DatetimeIndex):
+        return 0.0
     daily_equity = equity.resample("1D").last().dropna()
     returns = daily_equity.pct_change().dropna()
     return sharpe_ratio(returns, periods_per_year("1D"))
@@ -608,6 +610,8 @@ def _trade_level_ir(trades: list[dict[str, Any]]) -> float:
     returns = pd.Series([float(trade["return"]) for trade in trades], dtype="float64").dropna()
     if returns.empty:
         return 0.0
+    if len(returns) < 2:
+        return 0.0
 
     entry_times = [_coerce_utc_timestamp(trade["entry_time"]) for trade in trades]
     exit_times = [_coerce_utc_timestamp(trade["exit_time"]) for trade in trades]
@@ -618,11 +622,7 @@ def _trade_level_ir(trades: list[dict[str, Any]]) -> float:
     annual_trade_freq = len(returns) / total_days * 365.0
     volatility = float(returns.std(ddof=0))
     mean_return = float(returns.mean())
-    if volatility == 0:
-        if mean_return > 0:
-            return float("inf")
-        if mean_return < 0:
-            return float("-inf")
+    if math.isclose(volatility, 0.0, abs_tol=1e-12):
         return 0.0
     return mean_return / volatility * math.sqrt(annual_trade_freq)
 
