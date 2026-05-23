@@ -162,17 +162,25 @@ def write_unlocks_csv_to_parquet(csv_path: Path, parquet_path: Path | None = Non
 def read_unlocks(path: Path | None = None, category: str | None = None) -> pd.DataFrame:
     source = path or PARQUET_DIR / "unlocks.parquet"
     params: dict[str, Any] = {"path": str(source)}
-    sql = f"SELECT {', '.join(UNLOCK_COLUMNS)} FROM read_parquet($path)"
+    existing_columns = set(pq.read_schema(source).names)
+    selected_columns = [column for column in UNLOCK_COLUMNS if column in existing_columns]
+    sql = f"SELECT {', '.join(selected_columns)} FROM read_parquet($path)"
     if category is not None:
         params["category"] = category
         sql = f"{sql} WHERE category = $category"
-    sql = f"{sql} ORDER BY unlock_date, token, category, vesting_type"
 
     with duckdb.connect(database=":memory:") as conn:
         frame = conn.execute(sql, params).df()
 
+    for column in UNLOCK_COLUMNS:
+        if column not in frame.columns:
+            frame[column] = pd.NA
+    frame = frame[UNLOCK_COLUMNS].sort_values(
+        ["unlock_date", "token", "category", "vesting_type"],
+        na_position="last",
+    )
     frame["vesting_type"] = frame["vesting_type"].astype(pd.StringDtype(storage="python"))
-    return frame
+    return frame.reset_index(drop=True)
 
 
 def write_wallets_parquet(df: pd.DataFrame, path: Path | None = None) -> Path:
