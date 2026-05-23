@@ -121,6 +121,72 @@ def run_per_signal_walkforward(
     return pd.DataFrame(rows)
 
 
+def compose_portfolio(
+    per_signal_df: pd.DataFrame,
+    events: pd.DataFrame,
+    prices: dict[str, pd.Series],
+    coverage: pd.DataFrame,
+    splits: Sequence[tuple[tuple[pd.Timestamp, pd.Timestamp], tuple[pd.Timestamp, pd.Timestamp]]],
+    top_k: int = 2,
+    *,
+    init_cash: float = DEFAULT_INIT_CASH,
+    fees: float = DEFAULT_FEES,
+    slippage: float = DEFAULT_SLIPPAGE,
+) -> pd.DataFrame:
+    selected_signals = _top_signals_by_oos(per_signal_df, top_k)
+    portfolio_signal = f"top_{len(selected_signals)}_equal_weight"
+    rows: list[dict[str, Any]] = []
+
+    for split_idx, ((train_start, train_end), (test_start, test_end)) in enumerate(splits):
+        train_window_start = _utc_timestamp(train_start)
+        train_window_end = _utc_timestamp(train_end)
+        test_window_start = _utc_timestamp(test_start)
+        test_window_end = _utc_timestamp(test_end)
+        test_events = _filter_events_by_window(events, test_window_start, test_window_end)
+        test_coverage = _filter_coverage_by_window(coverage, test_window_start, test_window_end)
+        components: list[dict[str, Any]] = []
+        selection_labels: list[str] = []
+        fallback_used = False
+
+        for signal_code in selected_signals:
+            selection = _split_selection(per_signal_df, signal_code, split_idx)
+            fallback_used = fallback_used or bool(selection.get("fallback_used", False))
+            cell = _cell_from_selection(selection)
+            if cell is None:
+                continue
+            components.append(
+                run_cell(
+                    test_events,
+                    prices,
+                    test_coverage,
+                    cell,
+                    init_cash=init_cash,
+                    fees=fees,
+                    slippage=slippage,
+                )
+            )
+            selection_labels.append(f"{cell.code}:{cell.cohort_name}")
+
+        rows.append(
+            {
+                "kind": "portfolio",
+                "signal": portfolio_signal,
+                "split_idx": split_idx,
+                "train_start": train_window_start,
+                "train_end": train_window_end,
+                "test_start": test_window_start,
+                "test_end": test_window_end,
+                "selected_min_pct": float("nan"),
+                "selected_cohort": ";".join(selection_labels),
+                **_combine_equal_weight_stats(portfolio_signal, components),
+                "fallback_used": fallback_used,
+            }
+        )
+
+    rows.extend(_aggregate_rows(rows, kind="portfolio"))
+    return pd.DataFrame(rows)
+
+
 def _candidate_cells(grid_df: pd.DataFrame, signal_code: str) -> list[GridCell]:
     lookup = {
         (cell.code, float(cell.min_unlock_pct), cell.cohort_name): cell for cell in iter_grid()
@@ -148,6 +214,83 @@ def _grid_frame(grid_df: pd.DataFrame | None) -> pd.DataFrame:
     if DEFAULT_GRID_PATH.exists():
         return pd.read_parquet(DEFAULT_GRID_PATH)
     return pd.DataFrame()
+
+
+def _top_signals_by_oos(per_signal_df: pd.DataFrame, top_k: int) -> list[str]:
+    if top_k < 1:
+        raise ValueError("top_k must be at least 1")
+    if per_signal_df.empty:
+        return []
+
+    aggregate = per_signal_df.loc[
+        per_signal_df["kind"].eq("per_signal") & per_signal_df["split_idx"].eq(-1)
+    ]
+    if aggregate.empty:
+        aggregate = (
+            per_signal_df.loc[per_signal_df["kind"].eq("per_signal")]
+            .groupby("signal", as_index=False, sort=False)["sharpe"]
+            .mean()
+        )
+    ranked = aggregate.copy()
+    ranked["_sort_sharpe"] = ranked["sharpe"].map(_finite_sharpe)
+    ranked = ranked.sort_values("_sort_sharpe", ascending=False)
+    return [str(signal) for signal in ranked["signal"].head(top_k)]
+
+
+def _split_selection(
+    per_signal_df: pd.DataFrame,
+    signal_code: str,
+    split_idx: int,
+) -> dict[str, Any]:
+    rows = per_signal_df.loc[
+        per_signal_df["kind"].eq("per_signal")
+        & per_signal_df["signal"].eq(signal_code)
+        & per_signal_df["split_idx"].eq(split_idx)
+    ]
+    if rows.empty:
+        return {}
+    return rows.iloc[0].to_dict()
+
+
+def _cell_from_selection(selection: dict[str, Any]) -> GridCell | None:
+    if not selection or pd.isna(selection.get("selected_min_pct")):
+        return None
+    signal_code = str(selection["signal"])
+    min_unlock_pct = float(selection["selected_min_pct"])
+    cohort = str(selection["selected_cohort"])
+    for cell in iter_grid():
+        if (
+            cell.code == signal_code
+            and math.isclose(cell.min_unlock_pct, min_unlock_pct)
+            and cell.cohort_name == cohort
+        ):
+            return cell
+    return None
+
+
+def _combine_equal_weight_stats(
+    signal_code: str,
+    components: list[dict[str, Any]],
+) -> dict[str, Any]:
+    if not components:
+        return _empty_stats(signal_code)
+
+    n_trades = sum(int(component["n_trades"]) for component in components)
+    trades_won = sum(
+        float(component["win_rate"]) * int(component["n_trades"]) for component in components
+    )
+    return {
+        "n_trades": n_trades,
+        "win_rate": float(trades_won / n_trades) if n_trades else 0.0,
+        "sharpe": _weighted_average(components, "sharpe"),
+        "sortino": _weighted_average(components, "sortino"),
+        "max_dd": _weighted_average(components, "max_dd"),
+        "total_return": _weighted_average(components, "total_return"),
+    }
+
+
+def _weighted_average(rows: list[dict[str, Any]], column: str) -> float:
+    return float(sum(float(row[column]) for row in rows) / len(rows))
 
 
 def _filter_events_by_window(
