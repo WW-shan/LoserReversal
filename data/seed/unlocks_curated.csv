@@ -438,7 +438,6 @@ PINKSALE,pinksale,2023-07-28,0.008327,insiders,false,step
 PINKSALE,pinksale,2023-07-28,0.005217,noncirculating,false,step
 STELLA,stellaswap,2023-07-30,0.015279,noncirculating,false,step
 STELLA,stellaswap,2023-07-30,0.015000,other,false,step
-BSWAP,baseswap,2023-08-01,0.020500,publicSale,false,cliff
 FORT,forta,2023-08-01,0.012000,insiders,false,cliff
 SYNTH,synthswap,2023-08-02,0.030000,insiders,false,cliff
 SYNTH,synthswap,2023-08-02,0.050000,publicSale,false,cliff
@@ -783,7 +782,6 @@ CETUS,cetus-protocol,2024-05-02,0.012500,privateSale,false,step
 SUI,sui,2024-05-02,0.030200,insiders,true,cliff
 SUI,sui,2024-05-02,0.005478,noncirculating,true,step
 SUI,sui,2024-05-02,0.058900,privateSale,true,cliff
-TNGBL,tangible,2024-05-03,0.061500,other,false,cliff
 SD,stader,2024-05-04,0.005903,insiders,false,step
 SD,stader,2024-05-04,0.005608,privateSale,false,step
 GMT,stepn,2024-05-07,0.005395,privateSale,true,step
@@ -1328,8 +1326,6 @@ SUI,sui,2025-07-01,0.005478,noncirculating,true,step
 CETUS,cetus-protocol,2025-07-02,0.008333,insiders,false,step
 SD,stader,2025-07-04,0.005903,insiders,false,step
 SD,stader,2025-07-04,0.005608,privateSale,false,step
-S,sonic-3,2025-07-05,0.015000,airdrop,true,cliff
-S,sonic-3,2025-07-05,0.015000,noncirculating,true,step
 ENS,ethereum-name-service,2025-07-08,0.009375,insiders,true,step
 FLR,flare-networks,2025-07-09,0.007421,airdrop,false,step
 FLR,flare-networks,2025-07-09,0.009670,insiders,false,step
@@ -1748,7 +1744,6 @@ NUM,numbers-protocol,2026-05-01,0.005400,community,false,step
 SUI,sui,2026-05-02,0.005478,noncirculating,true,step
 STO,stakestone,2026-05-03,0.007544,noncirculating,false,step
 STO,stakestone,2026-05-03,0.008958,privateSale,false,step
-TNGBL,tangible,2026-05-03,0.277200,other,false,cliff
 STABLE,stable-2,2026-05-09,0.008889,community,true,step
 AGI,delysium,2026-05-10,0.008333,insiders,false,step
 AGI,delysium,2026-05-10,0.011458,noncirculating,false,step
