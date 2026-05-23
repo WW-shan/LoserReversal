@@ -130,6 +130,24 @@ def test_parse_emissions_canonicalizes_farming_as_community_category(
     assert rows[0]["category"] == "community"
 
 
+def test_parse_emissions_keeps_smaller_daily_linear_unlocks(
+    monkeypatch,
+    tmp_path: Path,
+):
+    _write_protocol(
+        tmp_path / "linear-token.ts",
+        "linear-token",
+        "LIN",
+        'team: manualLinear("2026-01-01", "2026-01-03", 4)',
+    )
+    out_csv = _run_parser(monkeypatch, tmp_path)
+
+    rows = _read_rows(out_csv)
+
+    assert [row["vesting_type"] for row in rows] == ["linear", "linear"]
+    assert {row["unlock_pct"] for row in rows} == {"0.002000"}
+
+
 def _run_parser(monkeypatch, protocols_dir: Path) -> Path:
     out_csv = protocols_dir / "unlocks.csv"
     coins = {
