@@ -35,6 +35,8 @@ def main(argv: list[str] | None = None) -> int:
     ok = 0
     skipped = 0
     failed = 0
+    empty = 0
+    stale = 0
     ranges: dict[str, tuple[pd.Timestamp, pd.Timestamp]] = {}
 
     for token in tokens:
@@ -52,18 +54,26 @@ def main(argv: list[str] | None = None) -> int:
 
         try:
             frame = fetch_candles(token, interval, start.to_pydatetime(), end.to_pydatetime())
+            if frame.empty:
+                empty += 1
+                logger.warning("empty candle response for %s", token)
+                continue
             write_candles(frame, token, interval, path=target)
         except Exception as exc:
             failed += 1
             logger.warning("failed to backfill %s: %s", token, exc)
             continue
 
-        ok += 1
-        if not frame.empty:
-            index = pd.DatetimeIndex(pd.to_datetime(frame.index, utc=True))
-            ranges[token] = (index.min(), index.max())
+        index = pd.DatetimeIndex(pd.to_datetime(frame.index, utc=True))
+        ranges[token] = (index.min(), index.max())
+        if index.max() < end - pd.Timedelta(days=30):
+            stale += 1
+            logger.warning("stale candle response for %s: latest=%s end=%s", token, index.max(), end)
+            continue
 
-    _print_summary(len(tokens), ok, skipped, failed, ranges)
+        ok += 1
+
+    _print_summary(len(tokens), ok, skipped, failed, empty, stale, ranges)
     return 0
 
 
@@ -150,6 +160,8 @@ def _print_summary(
     ok: int,
     skipped: int,
     failed: int,
+    empty: int,
+    stale: int,
     ranges: dict[str, tuple[pd.Timestamp, pd.Timestamp]],
 ) -> None:
     covered = "n/a"
@@ -162,6 +174,8 @@ def _print_summary(
     print(f"tokens fetched OK: {ok}")
     print(f"tokens skipped: {skipped}")
     print(f"tokens failed: {failed}")
+    print(f"tokens empty: {empty}")
+    print(f"tokens stale: {stale}")
     print(f"range covered: {covered}")
     for token, (start, end) in sorted(ranges.items()):
         print(f"{token}: {start.isoformat()} -> {end.isoformat()}")
