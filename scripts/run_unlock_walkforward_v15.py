@@ -283,6 +283,10 @@ def _write_report(
         "",
         *_portfolio_table(frame),
         "",
+        "## Verdict-Ready Summary",
+        "",
+        *_verdict_ready_summary(frame),
+        "",
         "## Best-Signal Snapshot",
         "",
         *_best_signal_snapshot(frame),
@@ -299,22 +303,25 @@ def _methodology_lines(
         f"- Walk-forward uses {config.n_splits} {config.mode} splits with "
         f"{config.min_train_days} train days and {effective_test_days} OOS test days.",
         "- Each signal is tuned independently inside the train fold by rerunning "
-        "min_unlock_pct/cohort cells and requiring n_trades >= 15.",
-        "- If no train cell reaches 15 trades, selection falls back to the best "
-        "positive-trade train cell, then max-Sharpe zero-trade only as a last resort.",
+        "min_unlock_pct/cohort cells and requiring n_trades >= 5.",
+        "- The lower train threshold is a statistical compromise for sparse "
+        "single-cohort/min_pct cells; low-trade cells remain high variance.",
+        "- If no train cell reaches 5 trades, selection falls back only to the best "
+        "positive-trade train cell. Splits with no train trades are marked no_train_signal.",
         "- OOS rows apply the train-selected config to test-window events only.",
         f"- The portfolio selects top-{config.top_k} signals by aggregate OOS Sharpe and "
         "combines component stats with equal weights.",
+        "- Aggregate rows sum n_trades, use total wins over total trades for win_rate, "
+        "use worst split max_dd, compound total_return, and keep mean per-split Sharpe.",
         f"- test_days fallback_used: {_fmt_bool(fallback_used)}.",
     ]
 
 
 def _per_signal_table(frame: pd.DataFrame, grid_df: pd.DataFrame) -> list[str]:
-    split_rows = frame.loc[frame["kind"].eq("per_signal") & frame["split_idx"].ge(0)]
     aggregate_rows = frame.loc[frame["kind"].eq("per_signal") & frame["split_idx"].eq(-1)]
     lines = [
-        "| signal | mean OOS Sharpe | total n_trades | mean win_rate | "
-        "mean max_dd | IS-vs-OOS decay |",
+        "| signal | mean OOS Sharpe | total n_trades | aggregate win_rate | "
+        "worst max_dd | IS-vs-OOS decay |",
         "| --- | ---: | ---: | ---: | ---: | ---: |",
     ]
     if aggregate_rows.empty:
@@ -323,11 +330,10 @@ def _per_signal_table(frame: pd.DataFrame, grid_df: pd.DataFrame) -> list[str]:
 
     for row in aggregate_rows.sort_values("sharpe", ascending=False).to_dict("records"):
         signal = str(row["signal"])
-        signal_splits = split_rows.loc[split_rows["signal"].eq(signal)]
         lines.append(
             f"| {signal} | {_fmt_num(row['sharpe'], 2)} | {int(row['n_trades'])} | "
-            f"{_fmt_pct(signal_splits['win_rate'].mean())} | "
-            f"{_fmt_pct(signal_splits['max_dd'].mean())} | "
+            f"{_fmt_pct(row['win_rate'])} | "
+            f"{_fmt_pct(row['max_dd'])} | "
             f"{_fmt_pct(_is_oos_decay(_best_is_sharpe(grid_df, signal), row['sharpe']))} |"
         )
     return lines
@@ -350,6 +356,36 @@ def _portfolio_table(frame: pd.DataFrame) -> list[str]:
             f"{_fmt_pct(row['total_return'])} |"
         )
     return lines
+
+
+def _verdict_ready_summary(frame: pd.DataFrame) -> list[str]:
+    rows = frame.loc[frame["kind"].eq("per_signal") & frame["split_idx"].eq(-1)]
+    if rows.empty:
+        return ["No per-signal aggregate rows were produced."]
+
+    ranked = rows.copy()
+    ranked["_sort_sharpe"] = ranked["sharpe"].map(_finite_number)
+    best = ranked.sort_values("_sort_sharpe", ascending=False).iloc[0]
+    n_trades = int(best["n_trades"])
+    sharpe = float(best["sharpe"])
+    return [
+        "Best signal by OOS Sharpe: "
+        f"{best['signal']}, sharpe={_fmt_num(sharpe, 2)}, n_trades={n_trades}",
+        "If n_trades ≥ 50 AND sharpe ≥ 1.0 → GREEN",
+        "If n_trades ≥ 30 AND sharpe ∈ [0.3, 1.0) → YELLOW",
+        "Else → RED",
+        f"Actual classification: {_classify_verdict(n_trades=n_trades, sharpe=sharpe)}",
+    ]
+
+
+def _classify_verdict(*, n_trades: int, sharpe: float) -> str:
+    if not math.isfinite(float(sharpe)):
+        return "RED"
+    if n_trades >= 50 and sharpe >= 1.0:
+        return "GREEN"
+    if n_trades >= 30 and 0.3 <= sharpe < 1.0:
+        return "YELLOW"
+    return "RED"
 
 
 def _best_signal_snapshot(frame: pd.DataFrame) -> list[str]:
@@ -404,6 +440,13 @@ def _fmt_num(value: Any, decimals: int) -> str:
     if not math.isfinite(number):
         return "n/a"
     return f"{number:.{decimals}f}"
+
+
+def _finite_number(value: Any) -> float:
+    number = float(value)
+    if math.isfinite(number):
+        return number
+    return float("-inf")
 
 
 def _log(message: str) -> None:
