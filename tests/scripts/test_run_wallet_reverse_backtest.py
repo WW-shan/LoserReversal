@@ -32,6 +32,27 @@ def _fills(rows: list[dict[str, object]]) -> pd.DataFrame:
     return frame.set_index("time")
 
 
+def _empty_fills() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "coin": pd.Series(dtype="object"),
+            "side": pd.Series(dtype="object"),
+            "dir": pd.Series(dtype="object"),
+            "px": pd.Series(dtype="float64"),
+            "sz": pd.Series(dtype="float64"),
+            "start_position": pd.Series(dtype="float64"),
+            "closed_pnl": pd.Series(dtype="float64"),
+            "fee": pd.Series(dtype="float64"),
+            "oid": pd.Series(dtype="int64"),
+            "tid": pd.Series(dtype="int64"),
+            "hash": pd.Series(dtype="object"),
+            "crossed": pd.Series(dtype="bool"),
+            "liquidation": pd.Series(dtype="bool"),
+        },
+        index=pd.DatetimeIndex([], tz="UTC", name="time"),
+    )
+
+
 def _candles(points: dict[str, float]) -> pd.DataFrame:
     index = pd.date_range("2026-01-01", "2026-01-04 08:00", freq="1h", tz="UTC")
     close = pd.Series(index=index, dtype="float64")
@@ -144,3 +165,90 @@ def test_synthetic_wallets_compute_hourly_sharpe_trade_level_ir_and_daily_sharpe
     assert "| Hourly Sharpe |" in report
     assert "| Trade-level IR |" in report
     assert "| Daily Sharpe |" in report
+
+
+def test_skip_reason_bucket_counts_match_non_backtested_wallets(mocker, tmp_path):
+    addresses = [
+        "0xvalid",
+        "0xnofills",
+        "0xnodir",
+        "0xnosize",
+        "0xnocandle",
+        "0xnopair",
+    ]
+    mocker.patch.object(runner, "HyperliquidClient", return_value=object())
+    mocker.patch.object(runner, "read_wallets", return_value=_wallets(addresses))
+    fills_by_address = {
+        "0xvalid": _fills([{"time": "2026-01-01T00:00:00Z", "coin": "BTC"}]),
+        "0xnofills": _empty_fills(),
+        "0xnodir": _fills(
+            [
+                {
+                    "time": "2026-01-01T00:00:00Z",
+                    "coin": "BTC",
+                    "dir": "Close Long",
+                }
+            ]
+        ),
+        "0xnosize": _fills(
+            [
+                {
+                    "time": "2026-01-01T00:00:00Z",
+                    "coin": "BTC",
+                    "px": 500.0,
+                    "sz": 1.0,
+                }
+            ]
+        ),
+        "0xnocandle": _fills([{"time": "2026-01-01T00:00:00Z", "coin": "NOCANDLE"}]),
+        "0xnopair": _fills([{"time": "2026-01-05T00:00:00Z", "coin": "NOPAIR"}]),
+    }
+    mocker.patch.object(runner, "read_fills", side_effect=lambda address: fills_by_address[address])
+
+    def load_candles(coin, _interval, _start, _end, _client):
+        if coin == "NOCANDLE":
+            raise FileNotFoundError("missing candles")
+        if coin == "NOPAIR":
+            return _candles({"2026-01-01T00:00:00Z": 100.0}), True
+        return _candles(
+            {
+                "2026-01-01T00:00:00Z": 100.0,
+                "2026-01-01T04:00:00Z": 104.0,
+            }
+        ), True
+
+    mocker.patch.object(runner, "_load_or_fetch_candles", side_effect=load_candles)
+
+    result = runner.run_wallet_reverse_backtest(
+        runner.WalletReverseBacktestConfig(
+            holding_hours=4,
+            top_wallet_n=len(addresses),
+            report=tmp_path / "wallet_reverse_report.md",
+        )
+    )
+
+    funnel = result["funnel"]
+    assert funnel["skip_no_fills"] == 1
+    assert funnel["skip_no_open_dir"] == 1
+    assert funnel["skip_no_retail_size"] == 1
+    assert funnel["skip_no_candle"] == 1
+    assert funnel["skip_no_valid_pair"] == 1
+    skipped_total = sum(
+        funnel[key]
+        for key in [
+            "skip_no_fills",
+            "skip_no_open_dir",
+            "skip_no_retail_size",
+            "skip_no_candle",
+            "skip_no_valid_pair",
+        ]
+    )
+    assert result["n_candidate_wallets"] - result["n_backtested_wallets"] - result["n_failed_wallets"] == skipped_total
+    assert result["n_skipped_wallets"] == skipped_total
+
+    report = (tmp_path / "wallet_reverse_report.md").read_text()
+    assert "| skip_no_fills | 1 |" in report
+    assert "| skip_no_open_dir | 1 |" in report
+    assert "| skip_no_retail_size | 1 |" in report
+    assert "| skip_no_candle | 1 |" in report
+    assert "| skip_no_valid_pair | 1 |" in report
