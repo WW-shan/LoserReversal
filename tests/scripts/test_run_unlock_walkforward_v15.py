@@ -105,10 +105,24 @@ def test_report_contains_verdict_ready_summary(tmp_path):
     text = report.read_text(encoding="utf-8")
     assert "## Verdict-Ready Summary" in text
     assert "Best signal by OOS Sharpe: v1, sharpe=1.20, n_trades=10" in text
+    assert "No-train-signal splits: 0" in text
     assert "If n_trades ≥ 50 AND sharpe ≥ 1.0 → GREEN" in text
     assert "If n_trades ≥ 30 AND sharpe ∈ [0.3, 1.0) → YELLOW" in text
     assert "Else → RED" in text
     assert "Actual classification: RED" in text
+
+
+def test_verdict_ready_summary_counts_no_train_signal_rows():
+    frame = pd.concat([_per_signal_frame(), _portfolio_frame()], ignore_index=True)
+    mask = frame["kind"].eq("per_signal") & frame["split_idx"].eq(0) & frame["signal"].eq("v2")
+    frame.loc[mask, "selected_min_pct"] = float("nan")
+    frame.loc[mask, "selected_cohort"] = "no_train_signal"
+    frame.loc[mask, "n_trades"] = 0
+    frame.loc[mask, "sharpe"] = 0.0
+
+    lines = runner._verdict_ready_summary(frame)
+
+    assert "No-train-signal splits: 1" in lines
 
 
 def test_verdict_classification_thresholds():

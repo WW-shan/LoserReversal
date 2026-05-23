@@ -373,6 +373,41 @@ def test_compose_portfolio_equal_weights_K2(monkeypatch):
     assert split_row["max_dd"] == -0.04
 
 
+def test_compose_portfolio_labels_actual_selected_components(monkeypatch):
+    splits = [_split("2026-01-01", "2026-02-01", "2026-02-01", "2026-03-01")]
+    per_signal_df = pd.DataFrame(
+        [
+            _per_signal_row("v1", 0, 0.02, "team", sharpe=1.0),
+            _per_signal_row("v2", 0, float("nan"), "no_train_signal", sharpe=0.2),
+            _per_signal_aggregate("v1", sharpe=1.0),
+            _per_signal_aggregate("v2", sharpe=0.2),
+        ]
+    )
+
+    monkeypatch.setattr(
+        "signals.unlock_walkforward.run_cell",
+        lambda events, prices, coverage, cell, **kwargs: _stats(
+            cell,
+            n_trades=4,
+            sharpe=1.5,
+        ),
+    )
+
+    result = compose_portfolio(
+        per_signal_df,
+        _events(),
+        {"ARB": _prices()},
+        _coverage(),
+        splits,
+        top_k=2,
+    )
+
+    split_row = result.loc[result["split_idx"].eq(0)].iloc[0]
+    assert split_row["signal"] == "top_1_equal_weight"
+    assert split_row["selected_cohort"] == "v1:team"
+    assert split_row["n_trades"] == 4
+
+
 def _events() -> pd.DataFrame:
     return pd.DataFrame(
         [
