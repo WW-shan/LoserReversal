@@ -71,6 +71,37 @@ def _candles(points: dict[str, float]) -> pd.DataFrame:
     )
 
 
+def test_empty_wallets_exit_cleanly_with_all_zero_stats(mocker, tmp_path):
+    mocker.patch.object(runner, "HyperliquidClient", return_value=object())
+    mocker.patch.object(runner, "read_wallets", return_value=_wallets([]))
+
+    result = runner.run_wallet_reverse_backtest(
+        runner.WalletReverseBacktestConfig(
+            top_wallet_n=50,
+            report=tmp_path / "wallet_reverse_report.md",
+        )
+    )
+
+    assert result["n_candidate_wallets"] == 0
+    assert result["n_backtested_wallets"] == 0
+    assert result["n_failed_wallets"] == 0
+    assert result["n_skipped_wallets"] == 0
+    assert result["per_wallet_stats"] == []
+    assert result["portfolio_equity"].empty
+    assert result["portfolio_stats"] == {
+        "sharpe": 0.0,
+        "daily_sharpe": 0.0,
+        "trade_level_ir": 0.0,
+        "sortino": 0.0,
+        "max_dd": 0.0,
+        "n_trades": 0,
+        "win_rate": 0.0,
+        "total_return": 0.0,
+        "equity_final": 0.0,
+        "capital_per_wallet": 10_000.0,
+    }
+
+
 def test_synthetic_wallets_compute_hourly_sharpe_trade_level_ir_and_daily_sharpe(
     mocker,
     tmp_path,
@@ -243,7 +274,10 @@ def test_skip_reason_bucket_counts_match_non_backtested_wallets(mocker, tmp_path
             "skip_no_valid_pair",
         ]
     )
-    assert result["n_candidate_wallets"] - result["n_backtested_wallets"] - result["n_failed_wallets"] == skipped_total
+    assert (
+        result["n_candidate_wallets"] - result["n_backtested_wallets"] - result["n_failed_wallets"]
+        == skipped_total
+    )
     assert result["n_skipped_wallets"] == skipped_total
 
     report = (tmp_path / "wallet_reverse_report.md").read_text()
