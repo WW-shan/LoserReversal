@@ -1,8 +1,9 @@
 # Wallet Cluster Reverse V1 - Walk-Forward Validation
 
-_Generated 2026-05-23 15:52 UTC_
+_Generated 2026-05-23 17:33 UTC_
 
 ## Verdict: RED
+> [WARN] walk-forward fallback used
 Reason: data_gap
 
 ## Data Span
@@ -14,12 +15,10 @@ Reason: data_gap
 - n_failed_wallets: 0
 
 ## Walk-Forward Config
-- n_splits: 3
+- n_splits: 3 (effective: 3)
 - mode: expanding
-- min_train_days: 30
-- test_days: 30
-- effective_splits: 3
-- effective_test_days: 15
+- min_train_days: 120 (effective: 30)
+- test_days: 30 (effective: 15)
 - top_wallet_n: 50
 - grid: 48 configs
 
@@ -27,9 +26,9 @@ Reason: data_gap
 
 | split | is_start | is_end | oos_start | oos_end | is_best_config | is_ir | is_n_trades | oos_ir | oos_daily_sharpe | oos_n_trades | oos_max_dd | eligible_in_is | is_selection_mode |
 | ---: | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | :---: | --- |
-| 1 | 2026-02-22 | 2026-03-24 | 2026-03-24 | 2026-04-08 | N=3 W=15m H=1h | 0.00 | 4 | n/a | n/a | 0 | n/a | no | positive_trades_any |
-| 2 | 2026-02-22 | 2026-04-08 | 2026-04-08 | 2026-04-23 | N=3 W=15m H=1h | 0.00 | 4 | n/a | n/a | 0 | n/a | no | positive_trades_any |
-| 3 | 2026-02-22 | 2026-04-23 | 2026-04-23 | 2026-05-08 | N=3 W=15m H=1h | 0.00 | 4 | n/a | n/a | 0 | n/a | no | positive_trades_any |
+| 1 | 2026-02-22 | 2026-03-24 | 2026-03-24 | 2026-04-08 | N=3 W=15m H=1h | 0.00 | 1 | n/a | n/a | 0 | n/a | no | positive_trades_any |
+| 2 | 2026-02-22 | 2026-04-08 | 2026-04-08 | 2026-04-23 | N=3 W=15m H=1h | 0.00 | 1 | n/a | n/a | 0 | n/a | no | positive_trades_any |
+| 3 | 2026-02-22 | 2026-04-23 | 2026-04-23 | 2026-05-08 | N=3 W=15m H=1h | 0.00 | 1 | n/a | n/a | 0 | n/a | no | positive_trades_any |
 
 ## Aggregate OOS Stats
 
