@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pytest
 
 from infra.storage import read_unlocks, write_unlocks_csv_to_parquet
 
@@ -52,3 +53,38 @@ def test_read_unlocks_handles_old_schema_without_vesting_type(tmp_path: Path):
     assert "vesting_type" in actual.columns
     assert actual["vesting_type"].isna().all()
     assert actual["vesting_type"].dtype == pd.StringDtype(storage="python")
+
+
+def test_write_unlocks_rejects_invalid_vesting_type(tmp_path: Path):
+    csv_path = tmp_path / "unlocks.csv"
+    csv_path.write_text(
+        "\n".join(
+            [
+                "token,coingecko_id,unlock_date,unlock_pct,category,has_hl_perp,vesting_type",
+                "ARB,arbitrum,2026-01-01,0.020000,insiders,true,cliffe",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="cliffe"):
+        write_unlocks_csv_to_parquet(csv_path, tmp_path / "unlocks.parquet")
+
+
+def test_write_unlocks_normalizes_vesting_type_case(tmp_path: Path):
+    csv_path = tmp_path / "unlocks.csv"
+    parquet_path = tmp_path / "unlocks.parquet"
+    csv_path.write_text(
+        "\n".join(
+            [
+                "token,coingecko_id,unlock_date,unlock_pct,category,has_hl_perp,vesting_type",
+                "ARB,arbitrum,2026-01-01,0.020000,insiders,true,Cliff",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    written = write_unlocks_csv_to_parquet(csv_path, parquet_path)
+    actual = read_unlocks(written)
+
+    assert actual["vesting_type"].tolist() == ["cliff"]
