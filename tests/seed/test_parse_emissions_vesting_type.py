@@ -77,6 +77,59 @@ def test_parse_emissions_includes_unlocks_from_2023(monkeypatch, tmp_path: Path)
     assert [row["unlock_date"] for row in rows] == ["2023-01-01"]
 
 
+def test_parse_emissions_uses_top_level_total_supply_when_meta_total_is_absent(
+    monkeypatch,
+    tmp_path: Path,
+):
+    (tmp_path / "cliff-token.ts").write_text(
+        """
+        const totalSupply = 1000;
+        const protocol: Protocol = {
+            team: manualCliff("2026-01-01", 20),
+            meta: {
+                token: "coingecko:cliff-token",
+            },
+            categories: {
+                insiders: ["team"],
+            },
+        };
+        """,
+        encoding="utf-8",
+    )
+    out_csv = _run_parser(monkeypatch, tmp_path)
+
+    rows = _read_rows(out_csv)
+
+    assert len(rows) == 1
+    assert rows[0]["unlock_pct"] == "0.020000"
+
+
+def test_parse_emissions_canonicalizes_farming_as_community_category(
+    monkeypatch,
+    tmp_path: Path,
+):
+    (tmp_path / "cliff-token.ts").write_text(
+        """
+        const protocol: Protocol = {
+            Ecosystem: manualCliff("2026-01-01", 20),
+            meta: {
+                token: "coingecko:cliff-token",
+                total: 1000,
+            },
+            categories: {
+                farming: ["Ecosystem"],
+            },
+        };
+        """,
+        encoding="utf-8",
+    )
+    out_csv = _run_parser(monkeypatch, tmp_path)
+
+    rows = _read_rows(out_csv)
+
+    assert rows[0]["category"] == "community"
+
+
 def _run_parser(monkeypatch, protocols_dir: Path) -> Path:
     out_csv = protocols_dir / "unlocks.csv"
     coins = {
