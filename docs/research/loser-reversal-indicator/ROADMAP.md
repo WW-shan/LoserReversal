@@ -27,24 +27,41 @@
 
 ## 总时间线（甘特图）
 
+> **修订（2026-05-24）**：基于学术调研发现 Phase 1 / Phase 2 都有 sub-optimal 设计而非 thesis 失败。
+> 新增 Phase 1.5（学术-tuned unlock 重做）和 Phase 2.5（学术-rebuilt wallet contrarian），并调整优先级。
+> 详见 `docs/research/literature-review.md`。
+
 ```
 Week:  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20+
-P0  [■■]                                                              基础设施
-P1        [■■■]                                                       解锁策略
-P2              [■■■]                                                 单钱包反向
-P3                    [■■]                                            Funding 套利
-P4                        [■■■■]                                      反 Sybil 集群
-P5                                  [■■]                              组合优化+纸面
-P6                                        [■■■■■■■■■■■■]              小额实盘
+P0  ✅                                                                基础设施
+P1     [INCONCLUSIVE - 进 P1.5]                                       解锁策略 v1
+P2              [FILTER MISDESIGN - 进 P2.5]                          单钱包 v1
+P1.5                  [■■]                                            Unlock 学术-tuned (高优先)
+P3                          [■■]                                      Funding 套利 (低风险底盘)
+P2.5                              [■■■]                               Wallet 学术 rebuild
+P4                                      [■■]                          Bot 反向 (独立 thesis)
+P5                                            [■■]                    组合优化+纸面
+P6                                                  [■■■■■■■■■■■■]    小额实盘
 P7                                                          [持续]    Alpha 监控
 ```
 
-**关键里程碑**：
-- M1 (Week 2): 数据 pipeline 跑通，能从 Hyperliquid 拿任意币种 + 任意钱包历史
-- M2 (Week 5): 解锁策略 Pass/Fail 决定（第一个能赚钱的信号 or 第一次砍策略）
-- M3 (Week 14): 4 个 alpha 源全部验证完毕，挑出 ≥1 个能用的
-- M4 (Week 17): 进入小额实盘
-- M5 (Week 20+): 实盘 8 周后第一次复盘 + 资金放大决定
+**修订执行优先级**（按学术证据强度排序）：
+
+| 优先级 | Phase | 学术证据 confidence | 预期 verdict |
+|---|---|---|---|
+| 1 | **Phase 1.5** Unlock v2 | 3 独立学术研究 + 我 thesis-check 87-90% converge | 大概率 GREEN/YELLOW |
+| 2 | **Phase 3** Funding arb | 92% positive bias + extreme contrarian 学术验证 | GREEN/YELLOW |
+| 3 | **Phase 2.5** Wallet v2 | HL 124k whale trades simulation 验证 account size > trade size | YELLOW |
+| 4 | **Phase 4** Bot 反向 | 独立 thesis, 未验证 | 未知 |
+| 5 | Phase 5 portfolio | 依赖至少一个 ≥ YELLOW | — |
+
+**关键里程碑**（修订）：
+- ~~M1~~ ✅ (Week 2): 数据 pipeline 跑通
+- ~~M2~~ ❌ (Week 5): Phase 1 v1 INCONCLUSIVE — 需 Phase 1.5 重做
+- **M2'**: Phase 1.5 完成 — 第一个真正 verdict
+- M3 (修订): Phase 1.5 + 3 + 2.5 全跑完 — 挑出 ≥1 个能用的
+- M4 (修订): 进入小额实盘（依赖 ≥ 1 GREEN）
+- M5: 实盘 8 周后复盘
 
 ---
 
@@ -144,13 +161,33 @@ P7                                                          [持续]    Alpha �
 ### 目标
 回测验证"解锁前 T-7→T0 做空"策略（已修订），决定是否进入组合。
 
-**Phase 1 verdict: RED — KILL**
+### ⚠️ Phase 1 verdict 修订（2026-05-24，基于学术调研）
 
-- OOS Sharpe mean: n/a
-- OOS n_trades total: 0
-- Worst OOS MaxDD: n/a
-- Reason: `data_gap` — OOS events filter down to unsupported tokens (LISTA) or event windows outside available candle coverage.
-- Implication: current 348-day data cannot support a strategy edge claim. Rerun after 6+ months of additional unlock events; that would change the evidence base rather than the current Phase 1 kill decision.
+**先前 verdict: RED — KILL** ❌（**误读**）
+
+**修订 verdict: STRONG-but-INCONCLUSIVE → 进 Phase 1.5 重做**
+
+**为什么之前的 RED 是误读**：
+- 原始 verdict reason `data_gap`（OOS n_trades=0）→ 被理解为"策略不 work"
+- **实际是数据范围 + window 选择不足**，不是 thesis 失败
+- 3 个独立学术研究**强力证实 thesis** (见 `docs/research/literature-review.md`):
+  - Keyrock 16k+ events: **90% negative**
+  - Kim SSRN 2026: 52 events, **88.5% pre-unlock short profit**
+  - SmartKarma: 1% unlock ≈ -0.3% weekly drop
+  - **My thesis-check: 87.5% negative, p=0.01, mean AR=-8.21%**
+- 3 个数据源的 87-90% 一致性 → **极高 thesis confidence**
+- Phase 1 实施时 3 trades 全 win, Sharpe=1.93 — 信号方向正确
+
+**Phase 1 的真实问题**（学术分析后）：
+1. Pre-event window T-7 偏短 — Keyrock 推荐 **T-30**，SmartKarma 强效 **T-2→T+3**，Kim SSRN **72h**
+2. Candle 历史不够长 → 9/14 events 的 T-7 entry 早于 candle 起点
+3. 没测 signal v2 (T+3→T+14 反弹做多, Keyrock 推荐) — ROADMAP §168 原设计
+4. 没按 category 分桶 (team -25% drawdown vs ecosystem -5%)
+5. 没多源 events (只 DefiLlama fork 126，可扩至 1000+)
+
+→ **Phase 1.5 应该是最高优先级 retry**，预期 GREEN/YELLOW
+
+详见 `docs/research/literature-review.md` Part A。
 
 ### 任务清单
 
@@ -214,10 +251,29 @@ P7                                                          [持续]    Alpha �
 
 ### ✅ Phase 2 完成（2026-05-23）
 
-**Verdict: RED — KILL**
-**Reason: `data_gap`**（OOS n_trades = 0 across all 3 walk-forward splits）
+**先前 verdict: RED — KILL** ❌（**filter 设计错误，非 thesis 失败**）
 
-**关键数据**：
+**修订 verdict: FILTER MISDESIGN → 进 Phase 2.5 重做**
+
+**为什么之前的 RED 不能 close case**：
+学术调研（详见 `docs/research/literature-review.md` Part B）揭示**我的 wallet filter 选错了维度**：
+
+- **HL 124k whale trades simulation 明确证实**："Trade size alone is a poor or negative predictor of success. Strategies copying larger trades underperformed. **Account size mattered far more than single-trade size**."
+- HL 散户按账户 cohort 分桶：<$1k = 85% 亏损 / $10M+ = **86% 盈利**（whales win!）
+- 我用 `vlm DESC` 选 wallet → 选到大账户低 ROI 用户混合体（其中包含 winners）
+- 反向跟踪 winners = 反向 alpha 也 win → 我得到 IR=-4.83 是**反向了真信号**
+
+**Phase 2 真实问题**：
+1. Wallet selection 维度错（vlm-based → 应该 account_value cohort + persistent loss rate）
+2. 没用 leverage（学术：>5x 高 leverage = retail dumb money）
+3. 没用 trade/account size ratio（oversized bet = panic/FOMO 信号）
+4. 没用 funding extreme context（92% positive funding bias → contrarian timing）
+5. 没用 time-of-day（Asian session + funding settle = liquidation cascade window）
+6. 没排除 bot wallets（programmatic 行为稀释 retail signal）
+
+→ **Phase 2.5 应该重做**，预期翻转 verdict 到 YELLOW
+
+**关键数据（保留作 baseline）**：
 - 数据 span: 89 days (2026-02-22 → 2026-05-23)
 - Wallet pool: 500 anti-alpha 钱包（leaderboard 36,890 → filter → top 500 by vlm）
 - Active wallet fills: 116,618 fills / 16 wallets actually cached & active
@@ -255,16 +311,101 @@ P7                                                          [持续]    Alpha �
 - [x] **Walk-forward**：3 expanding splits + IS fallback selection modes + Pass/Kill verdict
 - [x] **决策报告**：`reports/wallet_reverse_walkforward.md`
 
-### Kill 后该做什么 ✅
+### Kill 后该做什么 — **修订**
 
-- 如果 Phase 2 失败 → Phase 4 也基本无望，直接跳到 Phase 3 — **执行**
-- 节省 4 周时间
+- 先前认为 "Phase 2 失败 → Phase 4 也基本无望" — 但学术调研证明 Phase 2 是 filter 设计错，不是 thesis 失败
+- **不跳 Phase 4**，但优先 Phase 1.5 + Phase 3 + Phase 2.5（详见 Phase 1.5 + 2.5 sections below）
+- Phase 4 sybil 改为**独立 thesis**（反向 bot），不再依赖 Phase 2 成功
 
 ### 交付物
 - `data/fills/` 含 200+ 钱包成交历史
 - `notebooks/phase2_wallet_reverse.ipynb`
 - `reports/phase2_wallet.html`
 - `strategies/active/anti_wallet.json`（最优集群配置）
+
+---
+
+## Phase 1.5: 学术-tuned Unlock 重做（新增，最高优先级）
+
+> 基于 `docs/research/literature-review.md` Part A 调研，修复 Phase 1 的 sub-optimal 配置。
+> 学术证据强 confidence: 3 独立研究 + thesis-check converge **87-90% negative rate**。
+
+### 目标
+用学术参数完整重做 unlock 策略验证 — 期望 verdict 从 INCONCLUSIVE → GREEN/YELLOW。
+
+### 5 个 Slice
+
+**Slice 1 — 数据补强**
+- HL candle 拉 2023-01 → 现在（3 年历史，救回 9/14 lost events 的 entry point）
+- 多源 unlock events：DefiLlama fork + CryptoRank API + Tokenomist scrape (Playwright)
+- 解析每 event 的 vesting type (cliff/linear)、recipient category
+- 预期：126 → 1000-2000 events
+
+**Slice 2 — Signal 多样化（按学术 window 设计）**
+- v1: T-7→T0 short（原版 baseline 对照）
+- v2: T-30→T0 short（Keyrock 推荐主入场区间）
+- v3: T-2→T+3 short（SmartKarma 强效窗口）
+- v4: T-72h→T0 short（Kim SSRN 88.5% profit）
+- v5: T+3→T+14 **reversal long**（ROADMAP §168 原 signal v2，从未实施）
+
+**Slice 3 — 3 维 Grid sweep**
+- Window × Size threshold {1%, 2%, 5%, 10%} × Category {team, team+investor, all}
+- 输出 best param combo + per-cohort 数据
+- Cliff vs Linear 维度对比
+
+**Slice 4 — Walk-forward + Multi-signal portfolio**
+- 5 signal IS 选最优 → OOS 评估
+- Combined: weighted allocation across signal versions
+
+**Slice 5 — Pass/Kill + ROADMAP 更新**
+
+### Pass Criteria
+- **绿灯**：任一 signal walk-forward OOS Sharpe ≥ 1.0, n_trades ≥ 50
+- **黄灯**：OOS Sharpe 0.3-1.0 + n_trades ≥ 30
+- **红灯**：所有 signal OOS Sharpe < 0.3 OR n_trades < 30 — 这次是真 thesis 失败
+
+### 预期 outcome
+基于 87-90% 多源 converge → **大概率 GREEN**
+
+---
+
+## Phase 2.5: 学术-rebuilt Wallet Contrarian 重做（新增）
+
+> 基于 `docs/research/literature-review.md` Part B 调研，修复 Phase 2 的 filter 设计错误。
+> 学术明确：account size matters > trade size; leverage = retail signal; cascade/funding = timing alpha。
+
+### 目标
+用学术 wallet selection + 多维 reverse alpha score 重做。
+
+### 5 个 Slice
+
+**Slice 1 — Academic wallet pool builder**
+- 替换 vlm-based filter 为：
+  - `account_value ∈ [$1k, $100k]`（85% loss cohort）
+  - `realized_loss_rate_90d ≥ 50%`
+  - `leverage_avg_90d ≥ 5x`
+  - `n_trades_90d ≥ 50`
+  - `size_cv_90d ≥ 0.3`（排除 market makers）
+- Pool 扩到 ROADMAP 原设 200-500 wallets
+
+**Slice 2 — Multi-feature reverse signal**
+- Per-fill `reverse_alpha_score` = oversized × leverage × funding_extreme × time_bucket
+- Wallet-level confidence weight
+
+**Slice 3 — Bot exclusion filter**
+- 检测 wallet 行为：funding source graph + 时序同步 + size CV + round numbers
+- 从 pool 中 filter out bots（保留供 Phase 4 单独研究）
+
+**Slice 4 — Cluster signal v2 + Cascade reversal**
+- Cluster N/W grid，confidence-weighted
+- 加 cascade-reversal signal（OI 减 X% in 1h → mean revert long）
+
+**Slice 5 — Walk-forward + verdict**
+
+### Pass Criteria
+- **绿灯**：Walk-forward OOS IR ≥ 1.2 + n_trades ≥ 100
+- **黄灯**：IR 0.5-1.2 + n_trades ≥ 50 → 候选低权重
+- **红灯**：IR < 0.5 → 真 anti-alpha thesis 失败
 
 ---
 
