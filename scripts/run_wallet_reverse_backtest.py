@@ -50,6 +50,7 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
     skipped_wallets: list[str] = []
     wallet_stats: list[dict[str, Any]] = []
     wallet_equities: list[pd.Series] = []
+    portfolio_trades: list[dict[str, Any]] = []
 
     for position, row in enumerate(wallets.itertuples(index=False), start=1):
         wallet_started = time.perf_counter()
@@ -80,6 +81,7 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
         stats = wallet_result["stats"]
         wallet_stats.append(stats)
         wallet_equities.append(wallet_result["equity"].rename(address))
+        portfolio_trades.extend(wallet_result["trades"])
         funnel["with_candle"] += int(wallet_result["events_with_candles"])
         funnel["trades"] += int(stats["n_trades"])
         elapsed = time.perf_counter() - wallet_started
@@ -89,7 +91,7 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
         )
 
     portfolio_equity = _summed_equity(wallet_equities, config.init_cash)
-    portfolio_stats = _portfolio_stats(portfolio_equity, wallet_stats, config, freq)
+    portfolio_stats = _portfolio_stats(portfolio_equity, wallet_stats, portfolio_trades, config, freq)
     result = {
         "config": config,
         "backtest_freq": freq,
@@ -147,6 +149,7 @@ def _backtest_wallet(
             "events_with_candles": 0,
             "stats": _empty_wallet_stats(address),
             "equity": pd.Series(dtype="float64", name=address),
+            "trades": [],
         }
 
     per_coin_cash = config.init_cash / len(coin_inputs)
@@ -162,6 +165,7 @@ def _backtest_wallet(
         for _, prices, coin_events in coin_inputs
     ]
     coin_equities = [result["equity"] for result in coin_results]
+    trades = [trade for result in coin_results for trade in result["trades"]]
     wallet_equity = _summed_equity(coin_equities, per_coin_cash)
     stats = _wallet_stats(address, wallet_equity, coin_results, config, freq)
     stats["n_coins"] = len(coin_inputs)
@@ -170,6 +174,7 @@ def _backtest_wallet(
         "events_with_candles": events_with_candles,
         "stats": stats,
         "equity": wallet_equity,
+        "trades": trades,
     }
 
 
@@ -188,7 +193,7 @@ def _run_path_backtest(
 
     deltas = pd.Series(0.0, index=close.index)
     costs = pd.Series(0.0, index=close.index)
-    trade_returns: list[float] = []
+    trades: list[dict[str, Any]] = []
     roundtrip_cost = 2.0 * (fees + slippage)
 
     for event in events.itertuples(index=False):
@@ -204,7 +209,13 @@ def _run_path_backtest(
             continue
 
         gross_return = direction * (exit_price / entry_price - 1.0)
-        trade_returns.append(gross_return - roundtrip_cost)
+        trades.append(
+            {
+                "entry_time": pd.Timestamp(event.entry_time),
+                "exit_time": pd.Timestamp(event.exit_time),
+                "return": gross_return - roundtrip_cost,
+            }
+        )
         deltas.iloc[entry_pos] += direction
         deltas.iloc[exit_pos] -= direction
         costs.iloc[entry_pos] += fees + slippage
@@ -215,10 +226,11 @@ def _run_path_backtest(
     strategy_returns = position.shift(1).fillna(0.0) * price_returns - costs
     equity = _equity_from_returns(init_cash, strategy_returns)
     returns = equity.pct_change().dropna()
-    n_trades = len(trade_returns)
-    trades_won = sum(1 for trade_return in trade_returns if trade_return > 0)
+    n_trades = len(trades)
+    trades_won = sum(1 for trade in trades if float(trade["return"]) > 0)
     return {
         "equity": equity,
+        "trades": trades,
         "stats": {
             "sharpe": sharpe_ratio(returns, periods_per_year(freq)),
             "sortino": sortino_ratio(returns, periods_per_year(freq)),
@@ -301,11 +313,14 @@ def _wallet_stats(
 ) -> dict[str, Any]:
     n_trades = sum(int(result["stats"]["n_trades"]) for result in coin_results)
     trades_won = sum(int(result["stats"]["trades_won"]) for result in coin_results)
+    trades = [trade for result in coin_results for trade in result["trades"]]
     returns = equity.pct_change().dropna()
     equity_final = float(equity.iloc[-1]) if not equity.empty else 0.0
     return {
         "wallet": address,
         "sharpe": sharpe_ratio(returns, periods_per_year(freq)),
+        "daily_sharpe": _daily_sharpe(equity),
+        "trade_level_ir": _trade_level_ir(trades),
         "sortino": sortino_ratio(returns, periods_per_year(freq)),
         "max_dd": max_drawdown(equity),
         "n_trades": n_trades,
@@ -319,6 +334,7 @@ def _wallet_stats(
 def _portfolio_stats(
     equity: pd.Series,
     wallet_stats: list[dict[str, Any]],
+    trades: list[dict[str, Any]],
     config: WalletReverseBacktestConfig,
     freq: str,
 ) -> dict[str, Any]:
@@ -329,6 +345,8 @@ def _portfolio_stats(
     equity_first = float(equity.iloc[0]) if not equity.empty else 0.0
     return {
         "sharpe": sharpe_ratio(returns, periods_per_year(freq)),
+        "daily_sharpe": _daily_sharpe(equity),
+        "trade_level_ir": _trade_level_ir(trades),
         "sortino": sortino_ratio(returns, periods_per_year(freq)),
         "max_dd": max_drawdown(equity),
         "n_trades": n_trades,
@@ -358,11 +376,14 @@ def _summed_equity(equities: list[pd.Series], init_cash: float) -> pd.Series:
 def _empty_coin_result(init_cash: float) -> dict[str, Any]:
     equity = pd.Series(dtype="float64", name="equity")
     return {
-        "equity": equity,
-        "stats": {
-            "sharpe": 0.0,
-            "sortino": 0.0,
-            "max_dd": 0.0,
+            "equity": equity,
+            "trades": [],
+            "stats": {
+                "sharpe": 0.0,
+                "daily_sharpe": 0.0,
+                "trade_level_ir": 0.0,
+                "sortino": 0.0,
+                "max_dd": 0.0,
             "n_trades": 0,
             "win_rate": 0.0,
             "total_return": 0.0,
@@ -376,6 +397,8 @@ def _empty_wallet_stats(address: str) -> dict[str, Any]:
     return {
         "wallet": address,
         "sharpe": 0.0,
+        "daily_sharpe": 0.0,
+        "trade_level_ir": 0.0,
         "sortino": 0.0,
         "max_dd": 0.0,
         "n_trades": 0,
@@ -451,7 +474,9 @@ def _write_report(path: Path, result: dict[str, Any]) -> None:
             "",
             "| Metric | Value |",
             "| --- | --- |",
-            f"| Sharpe | {_fmt_num(stats['sharpe'], 2)} |",
+            f"| Hourly Sharpe | {_fmt_num(stats['sharpe'], 2)} |",
+            f"| Trade-level IR | {_fmt_num(stats['trade_level_ir'], 2)} |",
+            f"| Daily Sharpe | {_fmt_num(stats['daily_sharpe'], 2)} |",
             f"| Sortino | {_fmt_num(stats['sortino'], 2)} |",
             f"| Max DD | {_fmt_pct(stats['max_dd'])} |",
             f"| n_trades | {stats['n_trades']} |",
@@ -461,8 +486,8 @@ def _write_report(path: Path, result: dict[str, Any]) -> None:
             "",
             "## Per-Wallet Stats",
             "",
-            "| wallet | sharpe | sortino | max_dd | n_trades | win_rate | total_return | n_coins | equity_final |",
-            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| wallet | hourly_sharpe | trade_level_ir | daily_sharpe | sortino | max_dd | n_trades | win_rate | total_return | n_coins | equity_final |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
             *_wallet_rows(result["per_wallet_stats"]),
             "",
             "## Equity Curve",
@@ -477,12 +502,15 @@ def _write_report(path: Path, result: dict[str, Any]) -> None:
 
 def _wallet_rows(rows: list[dict[str, Any]]) -> list[str]:
     if not rows:
-        return ["| - | - | - | - | - | - | - | - | - |"]
+        return ["| - | - | - | - | - | - | - | - | - | - | - |"]
     return [
-        "| {wallet} | {sharpe} | {sortino} | {max_dd} | {n_trades} | {win_rate} | "
-        "{total_return} | {n_coins} | {equity_final} |".format(
+        "| {wallet} | {sharpe} | {trade_level_ir} | {daily_sharpe} | {sortino} | "
+        "{max_dd} | {n_trades} | {win_rate} | {total_return} | {n_coins} | "
+        "{equity_final} |".format(
             wallet=row["wallet"],
             sharpe=_fmt_num(row["sharpe"], 2),
+            trade_level_ir=_fmt_num(row["trade_level_ir"], 2),
+            daily_sharpe=_fmt_num(row["daily_sharpe"], 2),
             sortino=_fmt_num(row["sortino"], 2),
             max_dd=_fmt_pct(row["max_dd"]),
             n_trades=row["n_trades"],
@@ -508,6 +536,45 @@ def _equity_rows(equity: pd.Series) -> list[str]:
 def _coerce_utc_index(index: pd.Index) -> pd.DatetimeIndex:
     ts_index = pd.DatetimeIndex(pd.to_datetime(index, utc=True), name="timestamp")
     return ts_index
+
+
+def _coerce_utc_timestamp(value: Any) -> pd.Timestamp:
+    ts = pd.Timestamp(value)
+    if ts.tz is None:
+        return ts.tz_localize("UTC")
+    return ts.tz_convert("UTC")
+
+
+def _daily_sharpe(equity: pd.Series) -> float:
+    daily_equity = equity.resample("1D").last().dropna()
+    returns = daily_equity.pct_change().dropna()
+    return sharpe_ratio(returns, periods_per_year("1D"))
+
+
+def _trade_level_ir(trades: list[dict[str, Any]]) -> float:
+    if not trades:
+        return 0.0
+
+    returns = pd.Series([float(trade["return"]) for trade in trades], dtype="float64").dropna()
+    if returns.empty:
+        return 0.0
+
+    entry_times = [_coerce_utc_timestamp(trade["entry_time"]) for trade in trades]
+    exit_times = [_coerce_utc_timestamp(trade["exit_time"]) for trade in trades]
+    total_days = (max(exit_times) - min(entry_times)).total_seconds() / 86_400.0
+    if total_days <= 0:
+        return 0.0
+
+    annual_trade_freq = len(returns) / total_days * 365.0
+    volatility = float(returns.std(ddof=0))
+    mean_return = float(returns.mean())
+    if volatility == 0:
+        if mean_return > 0:
+            return float("inf")
+        if mean_return < 0:
+            return float("-inf")
+        return 0.0
+    return mean_return / volatility * math.sqrt(annual_trade_freq)
 
 
 def _backtest_freq(interval: str) -> str:
