@@ -150,6 +150,7 @@ def _coin_cluster_events(
     frame = pd.DataFrame(candidates, columns=EVENT_COLUMNS).sort_values(
         ["entry_time", "side"],
     )
+    frame = frame.drop_duplicates(subset=["entry_time", "side"], keep="first")
     cooldown = pd.to_timedelta(float(holding_hours), unit="h")
     kept: list[pd.DataFrame] = []
     cooldown_until: pd.Timestamp | None = None
