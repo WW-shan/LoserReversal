@@ -501,7 +501,17 @@ def hyperliquid_symbols() -> set[str]:
     return {item["name"].upper() for item in response.json().get("universe", [])}
 
 
-def add_event(rows: list[dict[str, Any]], token: str, coingecko_id: str, event_date: date, amount: float, total: float, category: str, has_hl_perp: bool) -> None:
+def add_event(
+    rows: list[dict[str, Any]],
+    token: str,
+    coingecko_id: str,
+    event_date: date,
+    amount: float,
+    total: float,
+    category: str,
+    has_hl_perp: bool,
+    vesting_type: str,
+) -> None:
     if not (WINDOW_START <= event_date <= WINDOW_END) or amount <= 0 or total <= 0:
         return
     rows.append(
@@ -512,6 +522,7 @@ def add_event(rows: list[dict[str, Any]], token: str, coingecko_id: str, event_d
             "unlock_pct": amount / total,
             "category": category,
             "has_hl_perp": has_hl_perp,
+            "vesting_type": vesting_type,
         }
     )
 
@@ -559,7 +570,17 @@ def parse_file(path: Path, by_id: dict[str, Coin], by_symbol: dict[str, list[Coi
                 if call.kind == "cliff" and len(call.args) >= 2:
                     start = to_timestamp(eval_value(call.args[0], env), date_format)
                     amount = float(eval_value(call.args[1], env))
-                    add_event(rows, token, coin.id, timestamp_to_date(start), amount, total, category, has_hl_perp)
+                    add_event(
+                        rows,
+                        token,
+                        coin.id,
+                        timestamp_to_date(start),
+                        amount,
+                        total,
+                        category,
+                        has_hl_perp,
+                        call.kind,
+                    )
                 elif call.kind == "step" and len(call.args) >= 4:
                     start = to_timestamp(eval_value(call.args[0], env), date_format)
                     step = float(eval_value(call.args[1], env))
@@ -577,6 +598,7 @@ def parse_file(path: Path, by_id: dict[str, Coin], by_symbol: dict[str, list[Coi
                             total,
                             category,
                             has_hl_perp,
+                            call.kind,
                         )
                 elif call.kind == "linear" and len(call.args) >= 3:
                     start = to_timestamp(eval_value(call.args[0], env), date_format)
@@ -596,6 +618,7 @@ def parse_file(path: Path, by_id: dict[str, Coin], by_symbol: dict[str, list[Coi
                             total,
                             category,
                             has_hl_perp,
+                            call.kind,
                         )
             except Exception:
                 continue
@@ -603,7 +626,7 @@ def parse_file(path: Path, by_id: dict[str, Coin], by_symbol: dict[str, list[Coi
 
 
 def aggregate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    grouped: dict[tuple[str, str, str, str, bool], float] = defaultdict(float)
+    grouped: dict[tuple[str, str, str, str, bool, str], float] = defaultdict(float)
     for row in rows:
         key = (
             row["token"],
@@ -611,11 +634,19 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             row["unlock_date"],
             row["category"],
             bool(row["has_hl_perp"]),
+            row["vesting_type"],
         )
         grouped[key] += float(row["unlock_pct"])
 
     out: list[dict[str, Any]] = []
-    for (token, coingecko_id, unlock_date, category, has_hl_perp), unlock_pct in grouped.items():
+    for (
+        token,
+        coingecko_id,
+        unlock_date,
+        category,
+        has_hl_perp,
+        vesting_type,
+    ), unlock_pct in grouped.items():
         if MIN_UNLOCK_PCT <= unlock_pct <= MAX_UNLOCK_PCT:
             out.append(
                 {
@@ -625,9 +656,13 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "unlock_pct": unlock_pct,
                     "category": category,
                     "has_hl_perp": has_hl_perp,
+                    "vesting_type": vesting_type,
                 }
             )
-    return sorted(out, key=lambda row: (row["unlock_date"], row["token"], row["category"]))
+    return sorted(
+        out,
+        key=lambda row: (row["unlock_date"], row["token"], row["category"], row["vesting_type"]),
+    )
 
 
 def main() -> int:
@@ -649,7 +684,15 @@ def main() -> int:
     with OUT_CSV.open("w", newline="") as fh:
         writer = csv.DictWriter(
             fh,
-            fieldnames=["token", "coingecko_id", "unlock_date", "unlock_pct", "category", "has_hl_perp"],
+            fieldnames=[
+                "token",
+                "coingecko_id",
+                "unlock_date",
+                "unlock_pct",
+                "category",
+                "has_hl_perp",
+                "vesting_type",
+            ],
         )
         writer.writeheader()
         for row in rows:
@@ -661,6 +704,7 @@ def main() -> int:
                     "unlock_pct": f"{row['unlock_pct']:.6f}",
                     "category": row["category"],
                     "has_hl_perp": str(row["has_hl_perp"]).lower(),
+                    "vesting_type": row["vesting_type"],
                 }
             )
 
