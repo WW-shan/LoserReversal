@@ -25,6 +25,7 @@ HL_INFO = "https://api.hyperliquid.xyz/info"
 WINDOW_START = date(2023, 1, 1)
 WINDOW_END = max(date(2026, 5, 22), datetime.now(timezone.utc).date())
 MIN_UNLOCK_PCT = 0.005
+MIN_LINEAR_UNLOCK_PCT = 0.002
 MAX_UNLOCK_PCT = 0.30
 
 PERIOD_SECONDS = {
@@ -674,7 +675,8 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         has_hl_perp,
         vesting_type,
     ), unlock_pct in grouped.items():
-        if MIN_UNLOCK_PCT <= unlock_pct <= MAX_UNLOCK_PCT:
+        min_unlock_pct = MIN_LINEAR_UNLOCK_PCT if vesting_type == "linear" else MIN_UNLOCK_PCT
+        if min_unlock_pct <= unlock_pct <= MAX_UNLOCK_PCT:
             out.append(
                 {
                     "token": token,
