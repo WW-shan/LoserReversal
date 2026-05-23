@@ -85,8 +85,37 @@ def test_cli_smoke(monkeypatch, tmp_path, capsys):
     assert "## Methodology" in text
     assert "## Per-Signal Walk-Forward" in text
     assert "## Portfolio Walk-Forward" in text
+    assert "## Verdict-Ready Summary" in text
     assert "## Best-Signal Snapshot" in text
     assert "wrote parquet" in capsys.readouterr().out
+
+
+def test_report_contains_verdict_ready_summary(tmp_path):
+    report = tmp_path / "phase1_5_walkforward.md"
+
+    runner._write_report(
+        report,
+        pd.concat([_per_signal_frame(), _portfolio_frame()], ignore_index=True),
+        _grid_df(),
+        runner.WalkForwardV15Config(report=report),
+        effective_test_days=180,
+        fallback_used=False,
+    )
+
+    text = report.read_text(encoding="utf-8")
+    assert "## Verdict-Ready Summary" in text
+    assert "Best signal by OOS Sharpe: v1, sharpe=1.20, n_trades=10" in text
+    assert "If n_trades ≥ 50 AND sharpe ≥ 1.0 → GREEN" in text
+    assert "If n_trades ≥ 30 AND sharpe ∈ [0.3, 1.0) → YELLOW" in text
+    assert "Else → RED" in text
+    assert "Actual classification: RED" in text
+
+
+def test_verdict_classification_thresholds():
+    assert runner._classify_verdict(n_trades=50, sharpe=1.0) == "GREEN"
+    assert runner._classify_verdict(n_trades=30, sharpe=0.3) == "YELLOW"
+    assert runner._classify_verdict(n_trades=8, sharpe=0.57) == "RED"
+    assert runner._classify_verdict(n_trades=49, sharpe=1.2) == "RED"
 
 
 def test_run_walkforward_logs_span_coverage(monkeypatch, tmp_path, capsys):
