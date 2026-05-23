@@ -3,6 +3,7 @@ from __future__ import annotations
 import pandas as pd
 
 from signals.unlock_grid import GridCell
+from signals.unlock_walkforward import compose_portfolio
 from signals.unlock_walkforward import select_best_config
 from signals.unlock_walkforward import run_per_signal_walkforward
 
@@ -165,6 +166,53 @@ def test_run_per_signal_walkforward_includes_aggregate_row(monkeypatch):
     assert aggregate["max_dd"] == -0.05
 
 
+def test_compose_portfolio_equal_weights_K2(monkeypatch):
+    splits = [_split("2026-01-01", "2026-02-01", "2026-02-01", "2026-03-01")]
+    per_signal_df = pd.DataFrame(
+        [
+            _per_signal_row("v1", 0, 0.02, "team", sharpe=0.5),
+            _per_signal_row("v2", 0, 0.01, "team+investor", sharpe=0.4),
+            _per_signal_row("v3", 0, 0.10, "all", sharpe=-0.1),
+            _per_signal_aggregate("v1", sharpe=1.4),
+            _per_signal_aggregate("v2", sharpe=1.1),
+            _per_signal_aggregate("v3", sharpe=0.2),
+        ]
+    )
+    stats = {
+        "v1": {"n_trades": 5, "win_rate": 0.40, "sharpe": 1.0, "max_dd": -0.02},
+        "v2": {"n_trades": 5, "win_rate": 0.80, "sharpe": 3.0, "max_dd": -0.06},
+    }
+
+    def fake_run_cell(events, prices, coverage, cell, *, init_cash, fees, slippage):
+        row = stats[cell.code]
+        return _stats(
+            cell,
+            n_trades=row["n_trades"],
+            win_rate=row["win_rate"],
+            sharpe=row["sharpe"],
+            max_dd=row["max_dd"],
+        )
+
+    monkeypatch.setattr("signals.unlock_walkforward.run_cell", fake_run_cell)
+
+    result = compose_portfolio(
+        per_signal_df,
+        _events(),
+        {"ARB": _prices()},
+        _coverage(),
+        splits,
+        top_k=2,
+    )
+
+    split_row = result.loc[result["split_idx"].eq(0)].iloc[0]
+    assert split_row["signal"] == "top_2_equal_weight"
+    assert split_row["selected_cohort"] == "v1:team;v2:team+investor"
+    assert split_row["n_trades"] == 10
+    assert split_row["sharpe"] == 2.0
+    assert split_row["win_rate"] == 0.6
+    assert split_row["max_dd"] == -0.04
+
+
 def _events() -> pd.DataFrame:
     return pd.DataFrame(
         [
@@ -245,3 +293,41 @@ def _stats(
         "mean_pnl": 1.0,
         "median_pnl": 1.0,
     }
+
+
+def _per_signal_row(
+    signal: str,
+    split_idx: int,
+    min_unlock_pct: float,
+    cohort: str,
+    *,
+    sharpe: float,
+) -> dict:
+    split = _split("2026-01-01", "2026-02-01", "2026-02-01", "2026-03-01")
+    return {
+        "kind": "per_signal",
+        "signal": signal,
+        "split_idx": split_idx,
+        "train_start": split[0][0],
+        "train_end": split[0][1],
+        "test_start": split[1][0],
+        "test_end": split[1][1],
+        "selected_min_pct": min_unlock_pct,
+        "selected_cohort": cohort,
+        "n_trades": 3,
+        "sharpe": sharpe,
+        "sortino": sharpe + 0.5,
+        "win_rate": 0.5,
+        "max_dd": -0.02,
+        "total_return": 0.03,
+        "fallback_used": False,
+    }
+
+
+def _per_signal_aggregate(signal: str, *, sharpe: float) -> dict:
+    row = _per_signal_row(signal, -1, float("nan"), "aggregate", sharpe=sharpe)
+    row["train_start"] = pd.NaT
+    row["train_end"] = pd.NaT
+    row["test_start"] = pd.NaT
+    row["test_end"] = pd.NaT
+    return row
