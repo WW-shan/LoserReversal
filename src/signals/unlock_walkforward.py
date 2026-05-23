@@ -93,6 +93,17 @@ def run_per_signal_walkforward(
                 fees=fees,
                 slippage=slippage,
             )
+            if selected is None:
+                selected = _fallback_config_for_signal(
+                    grid,
+                    signal_code,
+                    train_events,
+                    prices,
+                    train_coverage,
+                    init_cash=init_cash,
+                    fees=fees,
+                    slippage=slippage,
+                )
             stats = _empty_stats(signal_code) if selected is None else run_cell(
                 test_events,
                 prices,
@@ -291,6 +302,49 @@ def _combine_equal_weight_stats(
 
 def _weighted_average(rows: list[dict[str, Any]], column: str) -> float:
     return float(sum(float(row[column]) for row in rows) / len(rows))
+
+
+def _fallback_config_for_signal(
+    grid_df: pd.DataFrame,
+    signal_code: str,
+    train_events: pd.DataFrame,
+    train_prices: dict[str, pd.Series],
+    train_coverage: pd.DataFrame,
+    *,
+    init_cash: float,
+    fees: float,
+    slippage: float,
+) -> GridCell | None:
+    candidate_cells = _candidate_cells(grid_df, signal_code)
+    if not candidate_cells:
+        return None
+
+    rows: list[tuple[GridCell, dict[str, Any]]] = []
+    for cell in candidate_cells:
+        row = run_cell(
+            train_events,
+            train_prices,
+            train_coverage,
+            cell,
+            init_cash=init_cash,
+            fees=fees,
+            slippage=slippage,
+        )
+        rows.append((cell, row))
+
+    positive_rows = [(cell, row) for cell, row in rows if int(row["n_trades"]) > 0]
+    ranked_rows = positive_rows or rows
+    if not ranked_rows:
+        return None
+
+    best_cell, _ = max(ranked_rows, key=lambda item: _fallback_sort_key(item[1]))
+    return best_cell
+
+
+def _fallback_sort_key(row: dict[str, Any]) -> tuple[float, int]:
+    n_trades = int(row["n_trades"])
+    sharpe = _finite_sharpe(row["sharpe"])
+    return (sharpe, n_trades)
 
 
 def _filter_events_by_window(

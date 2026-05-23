@@ -273,6 +273,8 @@ def _methodology_lines(
         f"{config.min_train_days} train days and {effective_test_days} OOS test days.",
         "- Each signal is tuned independently inside the train fold by rerunning "
         "min_unlock_pct/cohort cells and requiring n_trades >= 15.",
+        "- If no train cell reaches 15 trades, selection falls back to the best "
+        "positive-trade train cell, then max-Sharpe zero-trade only as a last resort.",
         "- OOS rows apply the train-selected config to test-window events only.",
         f"- The portfolio selects top-{config.top_k} signals by aggregate OOS Sharpe and "
         "combines component stats with equal weights.",
