@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pandas as pd
-import pytest
 
 from signals._unlock_common import emit_pair_signals, filter_events
 
@@ -87,7 +86,6 @@ def test_filter_events_missing_schema_column_returns_empty_frame():
     assert result.empty
 
 
-@pytest.mark.xfail(reason="filter_events does not expose required_columns yet", strict=True)
 def test_filter_events_accepts_custom_required_columns():
     events = _events([{"token": "ARB"}]).drop(columns=["category", "vesting_type"])
 

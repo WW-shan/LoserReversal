@@ -19,9 +19,11 @@ def filter_events(
     min_unlock_pct: float,
     require_hl_perp: bool,
     coverage: pd.DataFrame | None,
+    required_columns: set[str] | None = None,
 ) -> pd.DataFrame:
     """Apply common filters: pct threshold, has_hl_perp, coverage_status == 'ok'."""
-    if events.empty or not REQUIRED_EVENT_COLUMNS.issubset(events.columns):
+    event_required_columns = REQUIRED_EVENT_COLUMNS if required_columns is None else required_columns
+    if events.empty or not event_required_columns.issubset(events.columns):
         return pd.DataFrame(columns=events.columns)
 
     frame = events.copy()
