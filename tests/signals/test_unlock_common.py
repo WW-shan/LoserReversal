@@ -78,6 +78,14 @@ def test_filter_events_no_op_when_coverage_none():
     assert result["token"].tolist() == ["ARB", "APT"]
 
 
+def test_filter_events_missing_schema_column_returns_empty_frame():
+    events = _events([{"token": "ARB"}]).drop(columns=["vesting_type"])
+
+    result = filter_events(events, min_unlock_pct=0.02, require_hl_perp=True, coverage=None)
+
+    assert result.empty
+
+
 def test_emit_pair_signals_aligns_to_price_index():
     prices = {"ARB": _prices()}
     events = _events([{"token": "ARB", "unlock_date": pd.Timestamp("2026-01-15T00:00:00Z")}])
