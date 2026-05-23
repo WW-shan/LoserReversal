@@ -695,15 +695,13 @@ def backtest_freq(interval: str) -> str:
     return interval
 
 
+# Public stable API for cross-module callers (cluster backtest, walkforward).
+# Internal definitions retain underscore prefix for module-private style.
 daily_sharpe = _daily_sharpe
 load_or_fetch_candles = _load_or_fetch_candles
 run_path_backtest = _run_path_backtest
 summed_equity = _summed_equity
 trade_level_ir = _trade_level_ir
-_backtest_freq = backtest_freq
-_coerce_utc_timestamp = coerce_utc_timestamp
-_filter_fills_by_end = filter_fills_by_end
-_filter_fills_by_start = filter_fills_by_start
 
 
 def _fmt_pct(value: Any) -> str:
