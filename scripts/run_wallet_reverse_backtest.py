@@ -628,8 +628,6 @@ def _trade_level_ir(trades: list[dict[str, Any]]) -> float:
     returns = pd.Series([float(trade["return"]) for trade in trades], dtype="float64").dropna()
     if returns.empty:
         return 0.0
-    if len(returns) < 2:
-        return 0.0
 
     entry_times = [_coerce_utc_timestamp(trade["entry_time"]) for trade in trades]
     exit_times = [_coerce_utc_timestamp(trade["exit_time"]) for trade in trades]
