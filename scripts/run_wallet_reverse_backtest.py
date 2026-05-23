@@ -396,14 +396,14 @@ def _summed_equity(equities: list[pd.Series], init_cash: float) -> pd.Series:
 def _empty_coin_result(init_cash: float) -> dict[str, Any]:
     equity = pd.Series(dtype="float64", name="equity")
     return {
-            "equity": equity,
-            "trades": [],
-            "stats": {
-                "sharpe": 0.0,
-                "daily_sharpe": 0.0,
-                "trade_level_ir": 0.0,
-                "sortino": 0.0,
-                "max_dd": 0.0,
+        "equity": equity,
+        "trades": [],
+        "stats": {
+            "sharpe": 0.0,
+            "daily_sharpe": 0.0,
+            "trade_level_ir": 0.0,
+            "sortino": 0.0,
+            "max_dd": 0.0,
             "n_trades": 0,
             "win_rate": 0.0,
             "total_return": 0.0,
