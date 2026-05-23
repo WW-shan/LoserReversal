@@ -119,6 +119,24 @@ def test_fetch_user_fills_warns_when_pagination_hard_cap_is_hit(mocker):
     assert len(df) == 4000
 
 
+def test_fetch_user_fills_warns_when_cap_page_has_one_timestamp():
+    base_ms = 1767225600000
+    client = FakeClient([[_fill(base_ms, index) for index in range(2000)]])
+
+    with pytest.warns(RuntimeWarning, match="single millisecond"):
+        df = fetch_user_fills("0xabc", base_ms, base_ms + 10_000, client=client)
+
+    assert len(df) == 2000
+    assert len(client.calls) == 1
+
+
+def test_fetch_user_fills_rejects_unix_seconds_ints():
+    client = FakeClient([[]])
+
+    with pytest.raises(ValueError, match="unix milliseconds"):
+        fetch_user_fills("0xabc", 1767225600, 1767229200, client=client)
+
+
 def test_fetch_user_fills_uses_utc_tz_aware_time_index():
     client = FakeClient([[_fill(1767225600000, 1)]])
 
