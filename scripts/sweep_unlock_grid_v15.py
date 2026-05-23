@@ -238,6 +238,10 @@ def _write_report(path: Path, rows: list[dict[str, Any]], config: GridSweepConfi
         "",
         f"{len(eligible_rows)} of {len(rows)} rows are eligible (n_trades >= 30).",
         "",
+        "## Vesting Sub-Sweep",
+        "",
+        *_vesting_sub_sweep_rows(rows),
+        "",
         "## Per-Cohort Breakdown",
         "",
         "| cohort | rows | eligible | best_sharpe | total_trades |",
@@ -267,6 +271,45 @@ def _top5_table(rows: list[dict[str, Any]]) -> str:
             f"{_fmt_pct(row['total_return'])} |"
         )
     return "\n".join(lines)
+
+
+def _vesting_sub_sweep_rows(rows: list[dict[str, Any]]) -> list[str]:
+    vesting_rows = [
+        row for row in rows if str(row.get("cohort", "")).startswith("vesting:")
+    ]
+    lines = [
+        "| vesting_type | n_trades | win_rate | sharpe | max_dd | total_return |",
+        "| --- | ---: | ---: | ---: | ---: | ---: |",
+    ]
+    if not vesting_rows:
+        lines.append("| - | - | - | - | - | - |")
+        return lines
+
+    order = {vesting_type: index for index, vesting_type in enumerate(VESTING_TYPES)}
+    for row in sorted(
+        vesting_rows,
+        key=lambda item: order.get(str(item["cohort"]).split("vesting:", maxsplit=1)[-1], 999),
+    ):
+        vesting_type = str(row["cohort"]).split("vesting:", maxsplit=1)[1]
+        lines.append(
+            f"| {vesting_type} | {int(row['n_trades'])} | {_fmt_pct(row['win_rate'])} | "
+            f"{_fmt_num(row['sharpe'], 2)} | {_fmt_pct(row['max_dd'])} | "
+            f"{_fmt_pct(row['total_return'])} |"
+        )
+
+    main_rows = [row for row in rows if not str(row.get("cohort", "")).startswith("vesting:")]
+    best_row = _best_main_row(main_rows)
+    if best_row is not None:
+        lines.extend(
+            [
+                "",
+                "Sub-sweep inherits config from the best main-grid cell "
+                f"({best_row['signal']} / {float(best_row['min_unlock_pct']):.2f} / "
+                f"{best_row['cohort']}). Eligibility threshold (n_trades ≥ 30) is "
+                "informational only here.",
+            ]
+        )
+    return lines
 
 
 def _cohort_breakdown_rows(rows: list[dict[str, Any]]) -> list[str]:
