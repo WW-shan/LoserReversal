@@ -29,6 +29,7 @@ def cluster_signal(
     holding_hours: float = 4.0,
     coin_filter: Iterable[str] | None = None,
 ) -> dict[str, pd.DataFrame]:
+    """Build reverse cluster events, choosing max cluster_size within each cooldown window."""
     if min_wallets < 1:
         raise ValueError("min_wallets must be at least 1")
     if window_minutes <= 0:
@@ -150,16 +151,22 @@ def _coin_cluster_events(
     frame = pd.DataFrame(candidates, columns=EVENT_COLUMNS).sort_values(
         ["entry_time", "side"],
     )
-    frame = frame.drop_duplicates(subset=["entry_time", "side"], keep="first")
+    frame = frame.drop_duplicates(subset=["entry_time", "side"], keep="first").reset_index(drop=True)
     cooldown = pd.to_timedelta(float(holding_hours), unit="h")
     kept: list[pd.DataFrame] = []
-    cooldown_until: pd.Timestamp | None = None
-    for entry_time, same_time in frame.groupby("entry_time", sort=True):
-        timestamp = pd.Timestamp(entry_time)
-        if cooldown_until is not None and timestamp < cooldown_until:
-            continue
-        kept.append(same_time)
-        cooldown_until = timestamp + cooldown
+    position = 0
+    while position < len(frame):
+        window_start = pd.Timestamp(frame.iloc[position]["entry_time"])
+        window_end = window_start + cooldown
+        cooldown_frame = frame.iloc[position:].loc[frame.iloc[position:]["entry_time"] < window_end]
+        max_cluster_size = int(cooldown_frame["cluster_size"].max())
+        max_rows = cooldown_frame.loc[cooldown_frame["cluster_size"] == max_cluster_size]
+        selected_time = pd.Timestamp(max_rows["entry_time"].min())
+        kept.append(cooldown_frame.loc[cooldown_frame["entry_time"] == selected_time])
+
+        cooldown_until = selected_time + cooldown
+        while position < len(frame) and pd.Timestamp(frame.iloc[position]["entry_time"]) < cooldown_until:
+            position += 1
 
     if not kept:
         return _empty_events()
