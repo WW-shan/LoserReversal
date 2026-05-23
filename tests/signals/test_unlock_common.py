@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from signals._unlock_common import emit_pair_signals, filter_events
 
@@ -84,6 +85,21 @@ def test_filter_events_missing_schema_column_returns_empty_frame():
     result = filter_events(events, min_unlock_pct=0.02, require_hl_perp=True, coverage=None)
 
     assert result.empty
+
+
+@pytest.mark.xfail(reason="filter_events does not expose required_columns yet", strict=True)
+def test_filter_events_accepts_custom_required_columns():
+    events = _events([{"token": "ARB"}]).drop(columns=["category", "vesting_type"])
+
+    result = filter_events(
+        events,
+        min_unlock_pct=0.02,
+        require_hl_perp=True,
+        coverage=None,
+        required_columns={"token", "unlock_date", "unlock_pct", "has_hl_perp"},
+    )
+
+    assert result["token"].tolist() == ["ARB"]
 
 
 def test_emit_pair_signals_aligns_to_price_index():
