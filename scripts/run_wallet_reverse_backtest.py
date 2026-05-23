@@ -500,6 +500,10 @@ def _write_report(path: Path, result: dict[str, Any]) -> None:
             "",
             "## Portfolio Stats",
             "",
+            "_Note: Trade-level IR aggregates each (entry, exit) pair's gross return as if trades "
+            "were independent. For overlapping/concurrent positions on the same coin, the realized "
+            "equity-curve metrics (Daily Sharpe, Hourly Sharpe, Max DD) are authoritative._",
+            "",
             "| Metric | Value |",
             "| --- | --- |",
             f"| Hourly Sharpe | {_fmt_num(stats['sharpe'], 2)} |",
