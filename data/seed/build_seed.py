@@ -19,7 +19,6 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import sys
 import time
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -230,7 +229,7 @@ def main() -> int:
         for row in all_events:
             w.writerow({**row, "has_hl_perp": str(row["has_hl_perp"]).lower(), "unlock_pct": f"{row['unlock_pct']:.4f}"})
 
-    print(f"\n✅ done. categories='unknown' — review and label manually for dual-track analysis.")
+    print("\ndone. categories='unknown' — review and label manually for dual-track analysis.")
     return 0
 
 
