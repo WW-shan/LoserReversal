@@ -44,6 +44,7 @@ def fetch_user_fills(
     cursor = _coerce_ms(start)
     end_ms = _coerce_ms(end)
     rows = []
+    previous_boundary_tids: set[Any] = set()
 
     for _ in range(MAX_PAGES):
         chunk = _post_user_fills(
@@ -64,6 +65,7 @@ def fetch_user_fills(
 
         first_time = int(chunk[0]["time"])
         last_time = int(chunk[-1]["time"])
+        last_tids = {row.get("tid") for row in chunk if int(row["time"]) == last_time}
         if first_time == last_time:
             warnings.warn(
                 "userFillsByTime returned a cap-sized page in a single millisecond; "
@@ -71,13 +73,14 @@ def fetch_user_fills(
                 RuntimeWarning,
                 stacklevel=2,
             )
+            next_cursor = last_time + 1
+        else:
+            next_cursor = last_time
+        if last_time >= end_ms or next_cursor < cursor:
             break
-        if last_time >= end_ms:
+        if next_cursor == cursor and last_tids == previous_boundary_tids:
             break
-
-        next_cursor = last_time + 1
-        if next_cursor <= cursor:
-            break
+        previous_boundary_tids = last_tids
         cursor = next_cursor
     else:
         warnings.warn("userFillsByTime pagination hard cap hit", RuntimeWarning, stacklevel=2)
