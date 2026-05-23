@@ -63,6 +63,20 @@ def test_parse_emissions_keeps_mixed_vesting_rows_separate_after_aggregation(
     assert sorted(float(row["unlock_pct"]) for row in rows) == [0.02, 0.03]
 
 
+def test_parse_emissions_includes_unlocks_from_2023(monkeypatch, tmp_path: Path):
+    _write_protocol(
+        tmp_path / "cliff-token.ts",
+        "cliff-token",
+        "CLF",
+        'team: manualCliff("2023-01-01", 20)',
+    )
+    out_csv = _run_parser(monkeypatch, tmp_path)
+
+    rows = _read_rows(out_csv)
+
+    assert [row["unlock_date"] for row in rows] == ["2023-01-01"]
+
+
 def _run_parser(monkeypatch, protocols_dir: Path) -> Path:
     out_csv = protocols_dir / "unlocks.csv"
     coins = {
