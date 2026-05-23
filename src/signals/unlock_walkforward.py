@@ -22,7 +22,7 @@ def select_best_config(
     train_events: pd.DataFrame,
     train_prices: dict[str, pd.Series],
     train_coverage: pd.DataFrame,
-    min_n_trades: int = 15,
+    min_n_trades: int = 5,
     *,
     init_cash: float = DEFAULT_INIT_CASH,
     fees: float = DEFAULT_FEES,
@@ -58,7 +58,7 @@ def run_per_signal_walkforward(
     signals_to_run: Sequence[str],
     *,
     grid_df: pd.DataFrame | None = None,
-    min_n_trades: int = 15,
+    min_n_trades: int = 5,
     init_cash: float = DEFAULT_INIT_CASH,
     fees: float = DEFAULT_FEES,
     slippage: float = DEFAULT_SLIPPAGE,
@@ -93,6 +93,7 @@ def run_per_signal_walkforward(
                 fees=fees,
                 slippage=slippage,
             )
+            selected_cohort = None
             if selected is None:
                 selected = _fallback_config_for_signal(
                     grid,
@@ -104,14 +105,20 @@ def run_per_signal_walkforward(
                     fees=fees,
                     slippage=slippage,
                 )
-            stats = _empty_stats(signal_code) if selected is None else run_cell(
-                test_events,
-                prices,
-                test_coverage,
-                selected,
-                init_cash=init_cash,
-                fees=fees,
-                slippage=slippage,
+                if selected is None:
+                    selected_cohort = "no_train_signal"
+            stats = (
+                _empty_stats(signal_code)
+                if selected is None
+                else run_cell(
+                    test_events,
+                    prices,
+                    test_coverage,
+                    selected,
+                    init_cash=init_cash,
+                    fees=fees,
+                    slippage=slippage,
+                )
             )
             rows.append(
                 _walkforward_row(
@@ -123,6 +130,7 @@ def run_per_signal_walkforward(
                     test_start=test_window_start,
                     test_end=test_window_end,
                     selected=selected,
+                    selected_cohort=selected_cohort,
                     stats=stats,
                     fallback_used=fallback_used,
                 )
@@ -333,11 +341,10 @@ def _fallback_config_for_signal(
         rows.append((cell, row))
 
     positive_rows = [(cell, row) for cell, row in rows if int(row["n_trades"]) > 0]
-    ranked_rows = positive_rows or rows
-    if not ranked_rows:
+    if not positive_rows:
         return None
 
-    best_cell, _ = max(ranked_rows, key=lambda item: _fallback_sort_key(item[1]))
+    best_cell, _ = max(positive_rows, key=lambda item: _fallback_sort_key(item[1]))
     return best_cell
 
 
@@ -389,6 +396,7 @@ def _walkforward_row(
     selected: GridCell | None,
     stats: dict[str, Any],
     fallback_used: bool,
+    selected_cohort: str | None = None,
 ) -> dict[str, Any]:
     return {
         "kind": kind,
@@ -401,7 +409,11 @@ def _walkforward_row(
         "selected_min_pct": (
             float(selected.min_unlock_pct) if selected is not None else float("nan")
         ),
-        "selected_cohort": selected.cohort_name if selected is not None else "",
+        "selected_cohort": (
+            selected.cohort_name
+            if selected is not None
+            else (selected_cohort if selected_cohort is not None else "")
+        ),
         "n_trades": int(stats["n_trades"]),
         "sharpe": float(stats["sharpe"]),
         "sortino": float(stats["sortino"]),
