@@ -162,7 +162,6 @@ def test_emit_pair_signals_positive_exit_offset_works():
     assert bool(exits.loc["2026-01-29"])
 
 
-@pytest.mark.xfail(reason="offset validation does not name both args yet", strict=True)
 def test_emit_pair_signals_requires_both_offsets():
     prices = {"ARB": _prices()}
     events = _events([{"token": "ARB", "unlock_date": pd.Timestamp("2026-01-15T00:00:00Z")}])
@@ -175,7 +174,6 @@ def test_emit_pair_signals_requires_both_offsets():
         )
 
 
-@pytest.mark.xfail(reason="emit_pair_signals does not reject non-increasing offsets yet", strict=True)
 def test_emit_pair_signals_rejects_non_increasing_offsets():
     prices = {"ARB": _prices()}
     events = _events([{"token": "ARB", "unlock_date": pd.Timestamp("2026-01-15T00:00:00Z")}])

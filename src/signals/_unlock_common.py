@@ -48,13 +48,11 @@ def filter_events(
 
 
 def emit_pair_signals(
-    *,
     events: pd.DataFrame,
     prices: dict[str, pd.Series],
+    *,
     entry_offset_days: int | None = None,
     exit_offset_days: int | None = None,
-    pre_window: pd.Timedelta | None = None,
-    post_window: pd.Timedelta | None = None,
 ) -> dict[str, tuple[pd.Series, pd.Series]]:
     """Generic entry/exit signal emitter using offsets relative to unlock_date."""
     if events.empty or not prices or not {"token", "unlock_date"}.issubset(events.columns):
@@ -63,9 +61,12 @@ def emit_pair_signals(
     entry_offset, exit_offset = _resolve_offsets(
         entry_offset_days=entry_offset_days,
         exit_offset_days=exit_offset_days,
-        pre_window=pre_window,
-        post_window=post_window,
     )
+    if exit_offset <= entry_offset:
+        raise ValueError(
+            f"exit_offset_days ({exit_offset_days}) must be > "
+            f"entry_offset_days ({entry_offset_days})"
+        )
     frame = events.copy()
     frame["token"] = frame["token"].astype("string")
     frame["unlock_date"] = pd.to_datetime(frame["unlock_date"], utc=True, errors="coerce")
@@ -153,11 +154,7 @@ def _resolve_offsets(
     *,
     entry_offset_days: int | None,
     exit_offset_days: int | None,
-    pre_window: pd.Timedelta | None,
-    post_window: pd.Timedelta | None,
 ) -> tuple[pd.Timedelta, pd.Timedelta]:
-    if entry_offset_days is not None and exit_offset_days is not None:
-        return pd.Timedelta(days=entry_offset_days), pd.Timedelta(days=exit_offset_days)
-    if pre_window is not None and post_window is not None:
-        return -pd.Timedelta(pre_window), pd.Timedelta(post_window)
-    raise ValueError("entry and exit offsets must both be provided")
+    if entry_offset_days is None or exit_offset_days is None:
+        raise ValueError("entry_offset_days and exit_offset_days must both be provided")
+    return pd.Timedelta(days=entry_offset_days), pd.Timedelta(days=exit_offset_days)
