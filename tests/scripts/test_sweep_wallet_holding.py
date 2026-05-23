@@ -51,10 +51,10 @@ def test_four_holding_hour_combos_run_without_crash(mocker, tmp_path):
 
 def test_sweep_ranking_keeps_eligible_rows_before_ineligible_high_sharpe(mocker):
     by_holding = {
-        1.0: _backtest_result(n_trades=50, sharpe=99.0, trade_level_ir=99.0),
-        4.0: _backtest_result(n_trades=100, sharpe=1.0, trade_level_ir=1.0),
-        12.0: _backtest_result(n_trades=120, sharpe=0.5, trade_level_ir=0.5),
-        24.0: _backtest_result(n_trades=80, sharpe=120.0, trade_level_ir=120.0),
+        1.0: _backtest_result(n_trades=50, sharpe=120.0, trade_level_ir=120.0),
+        4.0: _backtest_result(n_trades=100, sharpe=99.0, trade_level_ir=2.0),
+        12.0: _backtest_result(n_trades=120, sharpe=2.0, trade_level_ir=99.0),
+        24.0: _backtest_result(n_trades=80, sharpe=130.0, trade_level_ir=130.0),
     }
 
     mocker.patch.object(
@@ -65,10 +65,12 @@ def test_sweep_ranking_keeps_eligible_rows_before_ineligible_high_sharpe(mocker)
 
     result = sweep.run_sweep(WalletReverseBacktestConfig(report=None))
 
-    assert result["rows"][0]["holding"] == 4.0
+    assert result["rows"][0]["holding"] == 12.0
     assert result["rows"][0]["eligible"] is True
-    assert result["rows"][1]["holding"] == 12.0
+    assert result["rows"][1]["holding"] == 4.0
     assert result["rows"][1]["eligible"] is True
+    assert result["rows"][0]["trade_level_ir"] > result["rows"][1]["trade_level_ir"]
+    assert result["rows"][0]["sharpe"] < result["rows"][1]["sharpe"]
     assert result["rows"][2]["eligible"] is False
     assert result["rows"][3]["eligible"] is False
 
