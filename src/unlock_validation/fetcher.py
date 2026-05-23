@@ -14,7 +14,8 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 def load_events(csv_path: Path, min_pct: float = 0.0) -> pd.DataFrame:
     """Load unlock events from a curated CSV.
 
-    Expected columns: token, coingecko_id, unlock_date, unlock_pct, category, has_hl_perp, vesting_type.
+    Expected columns: token, coingecko_id, unlock_date, unlock_pct, category,
+    has_hl_perp, vesting_type.
     """
     df = pd.read_csv(csv_path)
     df["unlock_date"] = pd.to_datetime(df["unlock_date"], utc=True)
