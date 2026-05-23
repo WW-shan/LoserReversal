@@ -153,7 +153,6 @@ def compose_portfolio(
     slippage: float = DEFAULT_SLIPPAGE,
 ) -> pd.DataFrame:
     selected_signals = _top_signals_by_oos(per_signal_df, top_k)
-    portfolio_signal = f"top_{len(selected_signals)}_equal_weight"
     rows: list[dict[str, Any]] = []
 
     for split_idx, ((train_start, train_end), (test_start, test_end)) in enumerate(splits):
@@ -186,6 +185,7 @@ def compose_portfolio(
             )
             selection_labels.append(f"{cell.code}:{cell.cohort_name}")
 
+        portfolio_signal = _portfolio_signal_label(len(components))
         rows.append(
             {
                 "kind": "portfolio",
@@ -204,6 +204,12 @@ def compose_portfolio(
 
     rows.extend(_aggregate_rows(rows, kind="portfolio"))
     return pd.DataFrame(rows)
+
+
+def _portfolio_signal_label(component_count: int) -> str:
+    if component_count < 1:
+        return "top_0_skipped"
+    return f"top_{component_count}_equal_weight"
 
 
 def _candidate_cells(grid_df: pd.DataFrame, signal_code: str) -> list[GridCell]:

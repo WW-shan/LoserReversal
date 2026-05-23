@@ -368,9 +368,11 @@ def _verdict_ready_summary(frame: pd.DataFrame) -> list[str]:
     best = ranked.sort_values("_sort_sharpe", ascending=False).iloc[0]
     n_trades = int(best["n_trades"])
     sharpe = float(best["sharpe"])
+    no_train_count = _no_train_signal_count(frame)
     return [
         "Best signal by OOS Sharpe: "
         f"{best['signal']}, sharpe={_fmt_num(sharpe, 2)}, n_trades={n_trades}",
+        f"No-train-signal splits: {no_train_count}",
         "If n_trades ≥ 50 AND sharpe ≥ 1.0 → GREEN",
         "If n_trades ≥ 30 AND sharpe ∈ [0.3, 1.0) → YELLOW",
         "Else → RED",
@@ -386,6 +388,13 @@ def _classify_verdict(*, n_trades: int, sharpe: float) -> str:
     if n_trades >= 30 and 0.3 <= sharpe < 1.0:
         return "YELLOW"
     return "RED"
+
+
+def _no_train_signal_count(frame: pd.DataFrame) -> int:
+    rows = frame.loc[frame["kind"].eq("per_signal") & frame["split_idx"].ge(0)]
+    if rows.empty or "selected_cohort" not in rows.columns:
+        return 0
+    return int(rows["selected_cohort"].eq("no_train_signal").sum())
 
 
 def _best_signal_snapshot(frame: pd.DataFrame) -> list[str]:
