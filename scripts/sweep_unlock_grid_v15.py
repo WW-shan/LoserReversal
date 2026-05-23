@@ -12,7 +12,7 @@ from typing import Any, Sequence
 import pandas as pd
 
 from infra.storage import read_unlocks
-from signals.unlock_grid import iter_grid, run_cell
+from signals.unlock_grid import GridCell, iter_grid, run_cell
 
 
 DEFAULT_OUT = Path("data/parquet/unlock_grid_v15.parquet")
@@ -20,6 +20,7 @@ DEFAULT_REPORT = Path("reports/phase1_5_grid_sweep.md")
 DEFAULT_UNLOCKS_PATH = Path("data/parquet/unlocks.parquet")
 DEFAULT_COVERAGE_PATH = Path("data/parquet/event_coverage.parquet")
 DEFAULT_CANDLES_DIR = Path("data/parquet/candles")
+VESTING_TYPES = ("cliff", "step", "linear")
 
 
 @dataclass(frozen=True)
@@ -44,7 +45,7 @@ def run_sweep(config: GridSweepConfig) -> dict[str, Any]:
     )
     coverage = load_coverage(config.coverage_path)
     prices = load_prices(events, config.candles_dir)
-    rows = run_main_grid(
+    main_rows = run_main_grid(
         events,
         prices,
         coverage,
@@ -52,6 +53,18 @@ def run_sweep(config: GridSweepConfig) -> dict[str, Any]:
         fees=config.fees,
         slippage=config.slippage,
     )
+    rows = [
+        *main_rows,
+        *run_vesting_sub_sweep(
+            events,
+            prices,
+            coverage,
+            main_rows,
+            init_cash=config.init_cash,
+            fees=config.fees,
+            slippage=config.slippage,
+        ),
+    ]
 
     frame = pd.DataFrame(rows)
     config.out.parent.mkdir(parents=True, exist_ok=True)
@@ -89,6 +102,39 @@ def run_main_grid(
             fees=fees,
             slippage=slippage,
         )
+        row["eligible"] = int(row["n_trades"]) >= 30
+        rows.append(row)
+    return rows
+
+
+def run_vesting_sub_sweep(
+    events: pd.DataFrame,
+    prices: dict[str, pd.Series],
+    coverage: pd.DataFrame,
+    main_rows: list[dict[str, Any]],
+    *,
+    init_cash: float,
+    fees: float,
+    slippage: float,
+) -> list[dict[str, Any]]:
+    best_row = _best_main_row(main_rows)
+    if best_row is None:
+        return []
+
+    cell = _cell_from_row(best_row)
+    rows: list[dict[str, Any]] = []
+    for vesting_type in VESTING_TYPES:
+        vesting_events = _filter_events_by_vesting_type(events, vesting_type)
+        row = run_cell(
+            vesting_events,
+            prices,
+            coverage,
+            cell,
+            init_cash=init_cash,
+            fees=fees,
+            slippage=slippage,
+        )
+        row["cohort"] = f"vesting:{vesting_type}"
         row["eligible"] = int(row["n_trades"]) >= 30
         rows.append(row)
     return rows
@@ -136,6 +182,33 @@ def _filter_events_by_date(
     if date_end is not None:
         frame = frame.loc[frame["unlock_date"] <= date_end].copy()
     return frame.reset_index(drop=True)
+
+
+def _filter_events_by_vesting_type(events: pd.DataFrame, vesting_type: str) -> pd.DataFrame:
+    if events.empty or "vesting_type" not in events.columns:
+        return events.iloc[0:0].copy()
+    return events.loc[events["vesting_type"].astype("string").eq(vesting_type)].copy()
+
+
+def _best_main_row(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not rows:
+        return None
+
+    eligible = _eligible_rows(rows)
+    if eligible:
+        return max(eligible, key=_sort_sharpe)
+    return max(rows, key=_sort_sharpe)
+
+
+def _cell_from_row(row: dict[str, Any]) -> GridCell:
+    for cell in iter_grid():
+        if (
+            cell.code == row["signal"]
+            and abs(cell.min_unlock_pct - float(row["min_unlock_pct"])) < 1e-12
+            and cell.cohort_name == row["cohort"]
+        ):
+            return cell
+    raise RuntimeError(f"no grid cell matches row: {row!r}")
 
 
 def _write_report(path: Path, rows: list[dict[str, Any]], config: GridSweepConfig) -> None:
