@@ -32,12 +32,16 @@ CACHE_ERRORS = (FileNotFoundError, OSError, duckdb.Error)
 
 @dataclass(frozen=True)
 class WalletReverseBacktestConfig:
+    """Backtest configuration. date_start is inclusive; date_end is exclusive."""
+
     holding_hours: float = 4.0
     top_wallet_n: int = 50
     candle_interval: str = "1h"
     init_cash: float = 10_000.0
     fees: float = 0.0005
     slippage: float = 0.0002
+    date_start: datetime | None = None
+    date_end: datetime | None = None
     report: Path | None = Path("reports/wallet_reverse_v1_backtest.md")
 
 
@@ -48,6 +52,8 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
     client = HyperliquidClient()
     funnel = {
         "fills": 0,
+        "date_start_fills": 0,
+        "date_end_fills": 0,
         "in_size": 0,
         "with_candle": 0,
         "trades": 0,
@@ -74,6 +80,10 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
             continue
 
         funnel["fills"] += int(len(fills))
+        fills = _filter_fills_by_start(fills, config.date_start)
+        funnel["date_start_fills"] += int(len(fills))
+        fills = _filter_fills_by_end(fills, config.date_end)
+        funnel["date_end_fills"] += int(len(fills))
         events = reverse_signal_events(fills, config.holding_hours)
         signals = reverse_signal(fills, config.holding_hours)
         signal_count = sum(int(entries.sum()) for entries, _, _ in signals.values())
@@ -459,6 +469,8 @@ def _write_report(path: Path, result: dict[str, Any]) -> None:
         f"| candle_interval | {config.candle_interval} |",
         f"| fees | {config.fees:.6f} |",
         f"| slippage | {config.slippage:.6f} |",
+        f"| date_start | {_fmt_optional_date(config.date_start)} |",
+        f"| date_end | {_fmt_optional_date(config.date_end)} |",
         f"| n_candidate_wallets | {result['n_candidate_wallets']} |",
         f"| n_backtested_wallets | {result['n_backtested_wallets']} |",
         f"| n_failed_wallets | {result['n_failed_wallets']} |",
@@ -498,6 +510,8 @@ def _write_report(path: Path, result: dict[str, Any]) -> None:
             "| step | count | filter |",
             "| --- | ---: | --- |",
             f"| fills | {funnel['fills']} | cached wallet fills loaded |",
+            f"| date_start_fills | {funnel['date_start_fills']} | {_date_start_filter(config)} |",
+            f"| date_end_fills | {funnel['date_end_fills']} | {_date_end_filter(config)} |",
             f"| in_size | {funnel['in_size']} | open fills with $1k-$200k notional |",
             f"| with_candle | {funnel['with_candle']} | signal fills whose coin candles loaded |",
             f"| trades | {funnel['trades']} | aligned entry/exit trades executed |",
@@ -623,6 +637,28 @@ def _has_non_null_time(fills: pd.DataFrame) -> bool:
     return False
 
 
+def _filter_fills_by_start(fills: pd.DataFrame, date_start: datetime | None) -> pd.DataFrame:
+    if date_start is None or fills.empty:
+        return fills.copy()
+    fill_times = _fill_times(fills)
+    return fills.loc[fill_times >= _coerce_utc_timestamp(date_start)].copy()
+
+
+def _filter_fills_by_end(fills: pd.DataFrame, date_end: datetime | None) -> pd.DataFrame:
+    if date_end is None or fills.empty:
+        return fills.copy()
+    fill_times = _fill_times(fills)
+    return fills.loc[fill_times < _coerce_utc_timestamp(date_end)].copy()
+
+
+def _fill_times(fills: pd.DataFrame) -> pd.Series:
+    if "time" in fills.columns:
+        values = fills["time"]
+    else:
+        values = fills.index
+    return pd.Series(pd.to_datetime(values, utc=True, errors="coerce"), index=fills.index)
+
+
 def _daily_sharpe(equity: pd.Series) -> float:
     if equity.empty or not isinstance(equity.index, pd.DatetimeIndex):
         return 0.0
@@ -674,6 +710,24 @@ def _fmt_money(value: Any) -> str:
     return f"${float(value):,.2f}"
 
 
+def _fmt_optional_date(value: datetime | None) -> str:
+    if value is None:
+        return "disabled"
+    return _coerce_utc_timestamp(value).strftime("%Y-%m-%d")
+
+
+def _date_start_filter(config: WalletReverseBacktestConfig) -> str:
+    if config.date_start is None:
+        return "date_start disabled"
+    return f"fill_time >= {_coerce_utc_timestamp(config.date_start):%Y-%m-%d}"
+
+
+def _date_end_filter(config: WalletReverseBacktestConfig) -> str:
+    if config.date_end is None:
+        return "date_end disabled"
+    return f"fill_time < {_coerce_utc_timestamp(config.date_end):%Y-%m-%d}"
+
+
 def _sort_sharpe(row: dict[str, Any]) -> float:
     value = float(row["sharpe"])
     return value if math.isfinite(value) else float("-inf")
@@ -691,10 +745,19 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--init-cash", type=float, default=10_000.0)
     parser.add_argument("--fees", type=float, default=0.0005)
     parser.add_argument("--slippage", type=float, default=0.0002)
+    parser.add_argument("--date-start", type=_parse_datetime_arg, default=None)
+    parser.add_argument("--date-end", type=_parse_datetime_arg, default=None)
     parser.add_argument("--report", type=Path, default=Path("reports/wallet_reverse_v1_backtest.md"))
     args = parser.parse_args()
     _validate_args(parser, args)
     return args
+
+
+def _parse_datetime_arg(value: str) -> datetime:
+    try:
+        return _coerce_utc_timestamp(value).to_pydatetime()
+    except (TypeError, ValueError) as error:
+        raise argparse.ArgumentTypeError(f"invalid datetime {value!r}") from error
 
 
 def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
@@ -710,6 +773,8 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
         parser.error("--slippage must be non-negative")
     if not args.candle_interval:
         parser.error("--candle-interval must not be empty")
+    if args.date_start is not None and args.date_end is not None and args.date_start >= args.date_end:
+        parser.error("--date-start must be earlier than --date-end")
     try:
         interval_timedelta(args.candle_interval)
     except ValueError as error:
@@ -726,6 +791,8 @@ def main() -> int:
             init_cash=args.init_cash,
             fees=args.fees,
             slippage=args.slippage,
+            date_start=args.date_start,
+            date_end=args.date_end,
             report=args.report,
         )
     )
