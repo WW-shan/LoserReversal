@@ -4,6 +4,7 @@ import pandas as pd
 
 from scripts import run_wallet_cluster_backtest as cluster_runner
 from scripts import run_wallet_reverse_backtest as reverse_runner
+from scripts import run_wallet_walkforward as walkforward
 
 
 def _wallets(addresses: list[str]) -> pd.DataFrame:
@@ -178,3 +179,110 @@ def test_run_wallet_cluster_backtest_runs_single_config_on_synthetic_cluster(
     assert result["n_cluster_events"] == 1
     assert result["portfolio_stats"]["n_trades"] == 1
     assert result["funnel"]["cluster_events"] == 1
+
+
+def test_walkforward_filter_pool_fills_uses_inclusive_start_exclusive_end():
+    pool = {
+        "0xaaa": _fills(
+            [
+                {"time": "2026-01-05T00:00:00Z", "tid": 1},
+                {"time": "2026-01-10T00:00:00Z", "tid": 2},
+                {"time": "2026-01-20T00:00:00Z", "tid": 3},
+            ]
+        )
+    }
+
+    filtered = walkforward._filter_pool_fills_by_date(
+        pool,
+        pd.Timestamp("2026-01-10T00:00:00Z"),
+        pd.Timestamp("2026-01-20T00:00:00Z"),
+    )
+
+    assert list(filtered["0xaaa"].index) == [pd.Timestamp("2026-01-10T00:00:00Z")]
+
+
+def test_walkforward_select_best_is_row_prefers_eligible_by_trade_level_ir():
+    rows = [
+        {"min_wallets": 3, "window_minutes": 15, "holding_hours": 1, "trade_level_ir": 0.5, "n_trades": 99},
+        {"min_wallets": 5, "window_minutes": 30, "holding_hours": 4, "trade_level_ir": 1.1, "n_trades": 100},
+        {"min_wallets": 7, "window_minutes": 60, "holding_hours": 12, "trade_level_ir": 1.4, "n_trades": 120},
+    ]
+
+    best_row, eligible_in_is, selection_mode = walkforward._select_best_is_row(rows)
+
+    assert best_row["min_wallets"] == 7
+    assert eligible_in_is is True
+    assert selection_mode == "eligible"
+
+
+def test_walkforward_select_best_is_row_uses_positive_trade_fallback_modes():
+    median_rows = [
+        {"min_wallets": 3, "window_minutes": 15, "holding_hours": 1, "trade_level_ir": 4.0, "n_trades": 1},
+        {"min_wallets": 5, "window_minutes": 30, "holding_hours": 4, "trade_level_ir": 1.1, "n_trades": 4},
+        {"min_wallets": 7, "window_minutes": 60, "holding_hours": 12, "trade_level_ir": 0.9, "n_trades": 4},
+        {"min_wallets": 10, "window_minutes": 60, "holding_hours": 24, "trade_level_ir": -0.5, "n_trades": 5},
+    ]
+    any_rows = [
+        {"min_wallets": 3, "window_minutes": 15, "holding_hours": 1, "trade_level_ir": 0.5, "n_trades": 1},
+        {"min_wallets": 5, "window_minutes": 30, "holding_hours": 4, "trade_level_ir": -0.1, "n_trades": 2},
+        {"min_wallets": 7, "window_minutes": 60, "holding_hours": 12, "trade_level_ir": -0.2, "n_trades": 10},
+    ]
+    zero_rows = [
+        {"min_wallets": 3, "window_minutes": 15, "holding_hours": 1, "trade_level_ir": 0.0, "n_trades": 0},
+        {"min_wallets": 5, "window_minutes": 30, "holding_hours": 4, "trade_level_ir": 1.0, "n_trades": 0},
+    ]
+
+    median_best, median_eligible, median_mode = walkforward._select_best_is_row(median_rows)
+    any_best, any_eligible, any_mode = walkforward._select_best_is_row(any_rows)
+    zero_best, zero_eligible, zero_mode = walkforward._select_best_is_row(zero_rows)
+
+    assert median_best["min_wallets"] == 5
+    assert median_eligible is False
+    assert median_mode == "positive_trades_median"
+    assert any_best["min_wallets"] == 3
+    assert any_eligible is False
+    assert any_mode == "positive_trades_any"
+    assert zero_best["min_wallets"] == 5
+    assert zero_eligible is False
+    assert zero_mode == "zero_trade_fallback"
+
+
+def test_walkforward_verdict_logic_for_green_yellow_and_red_reasons():
+    assert walkforward._verdict(
+        {"oos_ir_mean": 0.0, "oos_n_trades_total": 0, "oos_max_dd_worst": 0.0}
+    ) == walkforward.Verdict("RED", "data_gap")
+    assert walkforward._verdict(
+        {"oos_ir_mean": 1.4, "oos_n_trades_total": 20, "oos_max_dd_worst": 0.0}
+    ) == walkforward.Verdict("RED", "insufficient_sample")
+    assert walkforward._verdict(
+        {"oos_ir_mean": 1.4, "oos_n_trades_total": 100, "oos_max_dd_worst": -0.26}
+    ) == walkforward.Verdict("RED", "max_drawdown_breach")
+    assert walkforward._verdict(
+        {"oos_ir_mean": 0.9, "oos_n_trades_total": 100, "oos_max_dd_worst": 0.0}
+    ) == walkforward.Verdict("RED", "oos_ir_below_yellow")
+    assert walkforward._verdict(
+        {"oos_ir_mean": 1.0, "oos_n_trades_total": 100, "oos_max_dd_worst": 0.0}
+    ) == walkforward.Verdict("YELLOW", "yellow_thresholds_met")
+    assert walkforward._verdict(
+        {"oos_ir_mean": 1.2, "oos_n_trades_total": 100, "oos_max_dd_worst": -0.25}
+    ) == walkforward.Verdict("GREEN", "green_thresholds_met")
+
+
+def test_walkforward_aggregate_rows_show_no_sample_status_for_zero_oos_trades():
+    rows = walkforward._aggregate_rows(
+        {
+            "oos_ir_mean": 0.0,
+            "oos_ir_min": 0.0,
+            "oos_n_trades_total": 0,
+            "oos_max_dd_worst": 0.0,
+            "is_oos_decay": 0.0,
+        }
+    )
+
+    assert rows == [
+        "| OOS Trade-level IR (mean) | n/a | >= 1.2 (GREEN) / >= 1.0 (YELLOW) | NO SAMPLE |",
+        "| OOS Trade-level IR (min/worst) | n/a | >= 0 desired | NO SAMPLE |",
+        "| OOS n_trades (total) | 0 | >= 100 | FAIL |",
+        "| OOS Max DD (worst) | n/a | >= -25% | NO SAMPLE |",
+        f"| {walkforward.IS_OOS_DECAY_LABEL} | n/a | <= 30% desired | NO SAMPLE |",
+    ]
