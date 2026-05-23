@@ -68,7 +68,25 @@ def test_fetch_user_fills_paginates_when_response_hits_cap():
 
     assert len(df) == 2500
     assert len(client.calls) == 2
-    assert client.calls[1]["startTime"] == first[-1]["time"] + 1
+    assert client.calls[1]["startTime"] == first[-1]["time"]
+
+
+def test_fetch_user_fills_handles_repeated_final_timestamp_across_pages():
+    base_ms = 1767225600000
+    t1 = base_ms + 3000
+    t2 = t1 + 1
+    first = [_fill(base_ms + index, 1000 + index) for index in range(1995)]
+    first.extend(_fill(t1, tid) for tid in range(1, 6))
+    second = [_fill(t1, tid) for tid in range(3, 9)]
+    second.append(_fill(t2, 9))
+    client = FakeClient([first, second])
+
+    df = fetch_user_fills("0xabc", base_ms, base_ms + 10_000, client=client)
+
+    assert len(df) == 2004
+    assert client.calls[1]["startTime"] == t1
+    assert df["tid"].is_unique
+    assert set(df.loc[pd.Timestamp(t1, unit="ms", tz="UTC"), "tid"]) == set(range(1, 9))
 
 
 def test_fetch_user_fills_deduplicates_by_tid_across_pages():
@@ -127,7 +145,8 @@ def test_fetch_user_fills_warns_when_cap_page_has_one_timestamp():
         df = fetch_user_fills("0xabc", base_ms, base_ms + 10_000, client=client)
 
     assert len(df) == 2000
-    assert len(client.calls) == 1
+    assert len(client.calls) == 2
+    assert client.calls[1]["startTime"] == base_ms + 1
 
 
 def test_fetch_user_fills_rejects_unix_seconds_ints():
