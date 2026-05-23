@@ -157,6 +157,47 @@ def test_invalid_z_threshold_raises():
         funding_extreme_signal({"BTC": funding}, {"BTC": _prices(funding)}, z_threshold=0)
 
 
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"lookback_days": 0}, "lookback_days"),
+        ({"hold_hours": 0}, "hold_hours"),
+        ({"mean_revert_z": -0.1}, "mean_revert_z"),
+        ({"require_min_history": -1}, "require_min_history"),
+    ],
+)
+def test_invalid_parameters_raise(kwargs: dict[str, float], message: str):
+    funding = _funding([0.0001] * 30)
+
+    with pytest.raises(ValueError, match=message):
+        funding_extreme_signal({"BTC": funding}, {"BTC": _prices(funding)}, **kwargs)
+
+
+@pytest.mark.parametrize(
+    "price_index",
+    [
+        pd.DatetimeIndex(
+            [
+                "2026-01-01T01:00:00Z",
+                "2026-01-01T00:00:00Z",
+            ]
+        ),
+        pd.DatetimeIndex(
+            [
+                "2026-01-01T00:00:00Z",
+                "2026-01-01T00:00:00Z",
+            ]
+        ),
+    ],
+)
+def test_invalid_price_index_raises(price_index: pd.DatetimeIndex):
+    funding = _funding([0.0001] * 30)
+    prices = pd.Series([1.0, 2.0], index=price_index, name="close")
+
+    with pytest.raises(ValueError, match="price index"):
+        funding_extreme_signal({"BTC": funding}, {"BTC": prices})
+
+
 def _funding(rates: list[float]) -> pd.DataFrame:
     index = pd.date_range("2026-01-01", periods=len(rates), freq="1h", tz="UTC")
     return pd.DataFrame(

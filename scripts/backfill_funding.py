@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
             logger.warning("skipping invalid symbol from universe: %s", symbol)
             continue
 
-        if args.missing_only and _existing_covers_start(target, start):
+        if args.missing_only and _existing_covers_window(target, start, end):
             skipped += 1
             continue
 
@@ -134,7 +134,7 @@ def _target_path(symbol: str) -> Path:
     return target
 
 
-def _existing_covers_start(path: Path, start: pd.Timestamp) -> bool:
+def _existing_covers_window(path: Path, start: pd.Timestamp, end: pd.Timestamp) -> bool:
     if not path.exists():
         return False
     try:
@@ -144,7 +144,7 @@ def _existing_covers_start(path: Path, start: pd.Timestamp) -> bool:
     if frame.empty or "timestamp" not in frame:
         return False
     timestamps = pd.to_datetime(frame["timestamp"], utc=True)
-    return bool(timestamps.min() <= start)
+    return bool(timestamps.min() <= start and timestamps.max() >= end)
 
 
 def _print_summary(

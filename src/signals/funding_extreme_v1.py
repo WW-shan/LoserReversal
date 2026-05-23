@@ -179,7 +179,11 @@ def _funding_frame(funding: pd.DataFrame) -> pd.DataFrame:
 
 def _price_index(prices: pd.Series) -> pd.DatetimeIndex:
     index = _coerce_utc_index(prices.index)
-    return pd.DatetimeIndex(index.drop_duplicates().sort_values(), name=prices.index.name)
+    if not index.is_monotonic_increasing:
+        raise ValueError("price index must be monotonic increasing")
+    if not index.is_unique:
+        raise ValueError("price index must be unique")
+    return index
 
 
 def _coerce_utc_index(index: pd.Index) -> pd.DatetimeIndex:

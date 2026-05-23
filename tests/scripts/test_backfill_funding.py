@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from scripts import backfill_funding
 
@@ -31,7 +32,7 @@ def test_backfill_writes_per_symbol_parquet(mocker, tmp_path: Path, capsys):
 
 def test_backfill_skips_existing_when_missing_only(mocker, tmp_path: Path, capsys):
     tmp_path.mkdir(exist_ok=True)
-    _existing_funding("2023-05-01").to_parquet(tmp_path / "BTC.parquet", index=False)
+    _existing_funding("2023-05-01", periods=25).to_parquet(tmp_path / "BTC.parquet", index=False)
     mocker.patch.object(backfill_funding, "FUNDING_DIR", tmp_path)
     mocker.patch.object(backfill_funding, "_top_volume_tokens", return_value=["BTC", "ETH"])
     fetch_funding = mocker.patch.object(backfill_funding, "fetch_funding", return_value=_funding())
@@ -47,6 +48,25 @@ def test_backfill_skips_existing_when_missing_only(mocker, tmp_path: Path, capsy
     assert [call.args[0] for call in fetch_funding.call_args_list] == ["ETH"]
     assert [call.args[1] for call in write_funding.call_args_list] == ["ETH"]
     assert "tokens skipped: 1" in capsys.readouterr().out
+
+
+def test_backfill_missing_only_reprocesses_truncated_existing_file(mocker, tmp_path: Path):
+    tmp_path.mkdir(exist_ok=True)
+    _existing_funding("2023-05-01", periods=2).to_parquet(tmp_path / "BTC.parquet", index=False)
+    mocker.patch.object(backfill_funding, "FUNDING_DIR", tmp_path)
+    mocker.patch.object(backfill_funding, "_top_volume_tokens", return_value=["BTC"])
+    fetch_funding = mocker.patch.object(backfill_funding, "fetch_funding", return_value=_funding())
+    write_funding = mocker.patch.object(backfill_funding, "write_funding")
+
+    assert (
+        backfill_funding.main(
+            ["--start", "2023-05-01", "--end", "2023-05-02", "--missing-only"]
+        )
+        == 0
+    )
+
+    assert [call.args[0] for call in fetch_funding.call_args_list] == ["BTC"]
+    assert [call.args[1] for call in write_funding.call_args_list] == ["BTC"]
 
 
 def test_backfill_handles_per_symbol_failure_without_aborting(
@@ -96,6 +116,20 @@ def test_backfill_top_n_filters_by_volume(mocker, tmp_path: Path):
     assert [call.args[0] for call in fetch_funding.call_args_list] == ["BTC", "SOL"]
 
 
+def test_backfill_rejects_invalid_token_from_cli(mocker, tmp_path: Path):
+    mocker.patch.object(backfill_funding, "FUNDING_DIR", tmp_path)
+    fetch_funding = mocker.patch.object(backfill_funding, "fetch_funding", return_value=_funding())
+    write_funding = mocker.patch.object(backfill_funding, "write_funding")
+
+    with pytest.raises(ValueError, match="invalid symbol"):
+        backfill_funding.main(
+            ["--start", "2023-05-01", "--end", "2023-05-02", "--tokens", "../evil"]
+        )
+
+    fetch_funding.assert_not_called()
+    write_funding.assert_not_called()
+
+
 def _funding() -> pd.DataFrame:
     index = pd.date_range("2023-05-01", periods=2, freq="1h", tz="UTC", name="timestamp")
     return pd.DataFrame(
@@ -107,5 +141,12 @@ def _funding() -> pd.DataFrame:
     )
 
 
-def _existing_funding(start: str) -> pd.DataFrame:
-    return _funding().loc[start:].reset_index()
+def _existing_funding(start: str, periods: int) -> pd.DataFrame:
+    index = pd.date_range(start, periods=periods, freq="1h", tz="UTC", name="timestamp")
+    return pd.DataFrame(
+        {
+            "timestamp": index,
+            "funding_rate": [0.0001] * periods,
+            "premium": [0.0003] * periods,
+        }
+    )
