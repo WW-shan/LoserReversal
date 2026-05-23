@@ -31,6 +31,10 @@ DEFAULT_UNLOCKS_PATH = Path("data/parquet/unlocks.parquet")
 DEFAULT_COVERAGE_PATH = Path("data/parquet/event_coverage.parquet")
 DEFAULT_CANDLES_DIR = Path("data/parquet/candles")
 DEFAULT_GRID_PATH = Path("data/parquet/unlock_grid_v15.parquet")
+DEFAULT_N_SPLITS = 5
+DEFAULT_MIN_TRAIN_DAYS = 270
+DEFAULT_TEST_DAYS = 180
+MIN_RECOMMENDED_COVERAGE_PCT = 80.0
 OUTPUT_COLUMNS = [
     "kind",
     "signal",
@@ -73,10 +77,10 @@ OUTPUT_SCHEMA = pa.schema(
 
 @dataclass(frozen=True)
 class WalkForwardV15Config:
-    n_splits: int = 3
+    n_splits: int = DEFAULT_N_SPLITS
     mode: str = "expanding"
-    min_train_days: int = 180
-    test_days: int = 90
+    min_train_days: int = DEFAULT_MIN_TRAIN_DAYS
+    test_days: int = DEFAULT_TEST_DAYS
     top_k: int = 2
     out: Path = DEFAULT_OUT
     report: Path = DEFAULT_REPORT
@@ -99,6 +103,7 @@ def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
     grid_df = pd.read_parquet(config.grid_path)
     start = events["unlock_date"].min().to_pydatetime()
     end = events["unlock_date"].max().to_pydatetime()
+    _log_walkforward_span(config, start, end)
     splits, effective_test_days, fallback_used = _walk_forward_splits_with_test_day_fallback(
         start=start,
         end=end,
@@ -200,6 +205,28 @@ def _test_day_candidates(test_days: int) -> list[int]:
         if fallback < test_days and fallback not in candidates:
             candidates.append(fallback)
     return candidates
+
+
+def _log_walkforward_span(
+    config: WalkForwardV15Config,
+    start: datetime,
+    end: datetime,
+) -> None:
+    requested_days = config.min_train_days + config.n_splits * config.test_days
+    span_days = max((end - start).days, 0)
+    coverage_pct = (requested_days / span_days * 100.0) if span_days else 0.0
+    _log(
+        f"walk-forward span: train_days={config.min_train_days} + "
+        f"n_splits×test_days = {requested_days} days; data span = {span_days} days; "
+        f"coverage = {coverage_pct:.1f}%"
+    )
+    if coverage_pct < MIN_RECOMMENDED_COVERAGE_PCT:
+        _log(
+            "[WARNING] walk-forward coverage below 80%; recommended params: "
+            f"--n-splits {DEFAULT_N_SPLITS} "
+            f"--min-train-days {DEFAULT_MIN_TRAIN_DAYS} "
+            f"--test-days {DEFAULT_TEST_DAYS}"
+        )
 
 
 def _write_parquet(frame: pd.DataFrame, path: Path) -> None:
@@ -385,10 +412,10 @@ def _log(message: str) -> None:
 
 def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run Phase 1.5 unlock walk-forward.")
-    parser.add_argument("--n-splits", type=int, default=3)
+    parser.add_argument("--n-splits", type=int, default=DEFAULT_N_SPLITS)
     parser.add_argument("--mode", choices=["expanding", "rolling"], default="expanding")
-    parser.add_argument("--min-train-days", type=int, default=180)
-    parser.add_argument("--test-days", type=int, default=90)
+    parser.add_argument("--min-train-days", type=int, default=DEFAULT_MIN_TRAIN_DAYS)
+    parser.add_argument("--test-days", type=int, default=DEFAULT_TEST_DAYS)
     parser.add_argument("--top-k", type=int, default=2)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
