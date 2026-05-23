@@ -178,6 +178,54 @@ def test_backfill_target_path_outside_dir_is_rejected(mocker, tmp_path: Path):
     write_candles.assert_not_called()
 
 
+def test_backfill_empty_response_counted_as_empty_not_ok(
+    mocker,
+    tmp_path: Path,
+    caplog,
+    capsys,
+):
+    mocker.patch.object(backfill_candles, "CANDLES_DIR", tmp_path)
+    mocker.patch.object(backfill_candles, "fetch_candles", return_value=_empty_candles())
+    write_candles = mocker.patch.object(backfill_candles, "write_candles")
+
+    assert (
+        backfill_candles.main(
+            ["--start", "2023-01-01", "--end", "2023-01-03", "--tokens", "CYBER"]
+        )
+        == 0
+    )
+
+    write_candles.assert_not_called()
+    assert "empty candle response for CYBER" in caplog.text
+    out = capsys.readouterr().out
+    assert "tokens fetched OK: 0" in out
+    assert "tokens empty: 1" in out
+
+
+def test_backfill_stale_response_counted_as_stale(
+    mocker,
+    tmp_path: Path,
+    caplog,
+    capsys,
+):
+    mocker.patch.object(backfill_candles, "CANDLES_DIR", tmp_path)
+    mocker.patch.object(backfill_candles, "fetch_candles", return_value=_candles())
+    write_candles = mocker.patch.object(backfill_candles, "write_candles")
+
+    assert (
+        backfill_candles.main(
+            ["--start", "2023-01-01", "--end", "2023-03-05", "--tokens", "OMNI"]
+        )
+        == 0
+    )
+
+    write_candles.assert_called_once()
+    assert "stale candle response for OMNI" in caplog.text
+    out = capsys.readouterr().out
+    assert "tokens fetched OK: 0" in out
+    assert "tokens stale: 1" in out
+
+
 def _unlocks_frame() -> pd.DataFrame:
     return pd.DataFrame(
         {
@@ -201,6 +249,20 @@ def _candles() -> pd.DataFrame:
             "low": [0.5, 1.5],
             "close": [1.2, 2.2],
             "volume": [100.0, 200.0],
+        },
+        index=index,
+    )
+
+
+def _empty_candles() -> pd.DataFrame:
+    index = pd.DatetimeIndex([], tz="UTC", name="timestamp")
+    return pd.DataFrame(
+        {
+            "open": pd.Series(dtype="float64"),
+            "high": pd.Series(dtype="float64"),
+            "low": pd.Series(dtype="float64"),
+            "close": pd.Series(dtype="float64"),
+            "volume": pd.Series(dtype="float64"),
         },
         index=index,
     )
