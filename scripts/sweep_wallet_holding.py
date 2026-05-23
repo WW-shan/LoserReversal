@@ -53,7 +53,7 @@ def run_sweep(config: WalletReverseBacktestConfig) -> dict[str, Any]:
             f"Sharpe={row['sharpe']:.2f} ({elapsed:.1f}s)"
         )
 
-    ranked = sorted(rows, key=_sort_eligible_sharpe, reverse=True)
+    ranked = sorted(rows, key=_sort_eligible_ir, reverse=True)
     output = {
         "rows": ranked,
         "total_combinations": len(HOLDING_GRID),
@@ -80,7 +80,7 @@ def _write_sweep_report(path: Path, result: dict[str, Any]) -> None:
         "## Decision Gate Summary",
         "",
         f"{len(eligible_rows)} of {result['total_combinations']} holding windows are eligible.",
-        f"Best holding by Sharpe: {_best_summary(best)}",
+        f"Best holding by Trade-level IR: {_best_summary(best)}",
         f"Runtime seconds: {result['runtime_seconds']:.1f}",
         "",
         "## Sweep Results",
@@ -108,15 +108,18 @@ def _sweep_rows(rows: list[dict[str, Any]]) -> list[str]:
 def _best_summary(row: dict[str, Any] | None) -> str:
     if row is None:
         return "n/a"
-    return f"{row['holding']:g}h (Sharpe {_fmt_num(row['sharpe'], 2)}, {row['n_trades']} trades)"
+    return (
+        f"{row['holding']:g}h (IR {_fmt_num(row['trade_level_ir'], 2)} | "
+        f"Sharpe {_fmt_num(row['sharpe'], 2)} | n_trades {row['n_trades']})"
+    )
 
 
-def _sort_eligible_sharpe(row: dict[str, Any]) -> tuple[bool, float]:
-    return bool(row["eligible"]), _sort_sharpe(row)
+def _sort_eligible_ir(row: dict[str, Any]) -> tuple[bool, float]:
+    return bool(row["eligible"]), _sort_ir(row)
 
 
-def _sort_sharpe(row: dict[str, Any]) -> float:
-    value = float(row["sharpe"])
+def _sort_ir(row: dict[str, Any]) -> float:
+    value = float(row["trade_level_ir"])
     return value if math.isfinite(value) else float("-inf")
 
 
