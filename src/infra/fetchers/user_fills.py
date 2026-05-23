@@ -14,7 +14,7 @@ from infra.hyperliquid_client import HyperliquidClient
 
 FILL_CAP = 2000
 MAX_PAGES = 50
-FILL_COLUMNS = [
+FILL_FRAME_COLUMNS = [
     "coin",
     "side",
     "dir",
@@ -62,7 +62,16 @@ def fetch_user_fills(
         if len(chunk) < FILL_CAP:
             break
 
+        first_time = int(chunk[0]["time"])
         last_time = int(chunk[-1]["time"])
+        if first_time == last_time:
+            warnings.warn(
+                "userFillsByTime returned a cap-sized page in a single millisecond; "
+                "later fills at that timestamp may be unavailable",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            break
         if last_time >= end_ms:
             break
 
@@ -82,7 +91,7 @@ def _post_user_fills(client: HyperliquidClient, payload: dict[str, Any]) -> list
 
 
 def _fills_to_frame(rows: list[dict[str, Any]]) -> pd.DataFrame:
-    frame = pd.DataFrame((_normalize_fill(row) for row in rows), columns=["time", *FILL_COLUMNS])
+    frame = pd.DataFrame((_normalize_fill(row) for row in rows), columns=["time", *FILL_FRAME_COLUMNS])
     if frame.empty:
         return _empty_frame()
 
@@ -118,6 +127,8 @@ def _normalize_fill(row: dict[str, Any]) -> dict[str, Any]:
 
 def _coerce_ms(value: datetime | int) -> int:
     if isinstance(value, int):
+        if value < 10_000_000_000:
+            raise ValueError("integer timestamps must be unix milliseconds")
         return value
     ts = pd.Timestamp(value)
     if ts.tz is None:
@@ -140,6 +151,6 @@ def _empty_frame() -> pd.DataFrame:
     columns.update({column: pd.Series(dtype="int64") for column in INTEGER_COLUMNS})
     return pd.DataFrame(
         columns,
-        columns=FILL_COLUMNS,
+        columns=FILL_FRAME_COLUMNS,
         index=pd.DatetimeIndex([], name="time", tz="UTC"),
     )

@@ -26,7 +26,11 @@ def build_wallet_pool(
         & (source["vlm_alltime"] >= min_volume)
         & ((source["account_value"] > 0) | (source["vlm_alltime"] >= 10_000_000))
     ].copy()
-    pool = filtered.sort_values("vlm_alltime", ascending=False).head(top_n).copy()
+    pool = (
+        filtered.sort_values(["vlm_alltime", "pnl_alltime"], ascending=[False, True])
+        .head(top_n)
+        .copy()
+    )
     pool["added_at"] = pd.Timestamp.now(tz="UTC")
     pool = pool[WALLET_COLUMNS]
 
@@ -37,7 +41,7 @@ def build_wallet_pool(
         "source_count": len(source),
         "filtered_count": len(filtered),
         "written_count": len(pool),
-        "sample": filtered.sort_values("pnl_alltime", ascending=True).head(5),
+        "sample": filtered.sort_values(["pnl_alltime", "vlm_alltime"], ascending=[True, False]).head(5),
     }
 
 
