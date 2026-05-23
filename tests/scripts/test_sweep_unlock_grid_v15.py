@@ -114,6 +114,96 @@ def test_vesting_sub_sweep_runs_best_eligible_cell_for_each_type(monkeypatch):
     assert {call[1].cohort_name for call in calls} == {"team"}
 
 
+def test_date_filter_includes_date_end_boundary():
+    events = _events()
+    later = events.iloc[0].to_dict()
+    later["unlock_date"] = pd.Timestamp("2026-01-06T00:00:00Z")
+    events = pd.concat([events, pd.DataFrame([later])], ignore_index=True)
+
+    result = sweep._filter_events_by_date(
+        events,
+        date_start=pd.Timestamp("2026-01-05T00:00:00Z"),
+        date_end=pd.Timestamp("2026-01-05T00:00:00Z"),
+    )
+
+    assert result["unlock_date"].tolist() == [pd.Timestamp("2026-01-05T00:00:00Z")]
+
+
+def test_load_prices_reads_only_available_1d_candles(tmp_path):
+    candles_dir = tmp_path / "candles"
+    candles_dir.mkdir()
+    timestamps = pd.date_range("2026-01-01", periods=2, freq="1D", tz="UTC")
+    pd.DataFrame({"timestamp": timestamps, "close": [100.0, 101.0]}).to_parquet(
+        candles_dir / "ARB_1d.parquet",
+        index=False,
+    )
+    events = pd.concat(
+        [
+            _events(),
+            pd.DataFrame([{**_events().iloc[0].to_dict(), "token": "MISSING"}]),
+        ],
+        ignore_index=True,
+    )
+
+    prices = sweep.load_prices(events, candles_dir)
+
+    assert set(prices) == {"ARB"}
+    assert prices["ARB"].index.tz is not None
+    assert prices["ARB"].tolist() == [100.0, 101.0]
+
+
+def test_best_main_row_ignores_ineligible_higher_sharpe():
+    rows = [
+        _row(signal="v1", sharpe=10.0, n_trades=2),
+        _row(signal="v2", sharpe=1.5, n_trades=30),
+    ]
+
+    assert sweep._best_main_row(rows)["signal"] == "v2"
+
+
+def test_vesting_sub_sweep_falls_back_to_best_sharpe_when_no_eligible_rows(monkeypatch):
+    seen_codes = []
+    rows = [
+        _row(signal="v1", sharpe=1.0, n_trades=2),
+        _row(signal="v4", sharpe=2.0, n_trades=3),
+    ]
+
+    def fake_run_cell(events, prices, coverage, cell, *, init_cash, fees, slippage):
+        seen_codes.append(cell.code)
+        return _row(signal=cell.code, n_trades=3)
+
+    monkeypatch.setattr(sweep, "run_cell", fake_run_cell)
+
+    result = sweep.run_vesting_sub_sweep(
+        _vesting_events(),
+        {"ARB": _prices()},
+        _coverage(),
+        rows,
+        init_cash=10_000.0,
+        fees=0.0,
+        slippage=0.0,
+    )
+
+    assert [row["cohort"] for row in result] == [
+        "vesting:cliff",
+        "vesting:step",
+        "vesting:linear",
+    ]
+    assert seen_codes == ["v4", "v4", "v4"]
+
+
+def test_top5_table_lists_only_eligible_rows():
+    rows = [
+        _row(signal="v1", sharpe=9.0, n_trades=2),
+        _row(signal="v2", sharpe=2.0, n_trades=30),
+    ]
+
+    table = sweep._top5_table(rows)
+
+    assert "| 1 | v2 |" in table
+    assert "v1" not in table
+
+
 def _prices() -> pd.Series:
     index = pd.date_range("2026-01-01", periods=10, freq="1D", tz="UTC")
     return pd.Series(range(10), index=index, name="close", dtype="float64")
