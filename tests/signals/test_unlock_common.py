@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from signals._unlock_common import emit_pair_signals, filter_events
 
@@ -131,7 +132,7 @@ def test_emit_pair_signals_skips_unalignable_event():
     )
 
 
-def test_emit_pair_signals_negative_pre_window_works():
+def test_emit_pair_signals_negative_entry_offset_works():
     prices = {"ARB": _prices()}
     events = _events([{"token": "ARB", "unlock_date": pd.Timestamp("2026-01-15T00:00:00Z")}])
 
@@ -146,7 +147,7 @@ def test_emit_pair_signals_negative_pre_window_works():
     assert bool(exits.loc["2026-01-15"])
 
 
-def test_emit_pair_signals_positive_post_window_works():
+def test_emit_pair_signals_positive_exit_offset_works():
     prices = {"ARB": _prices()}
     events = _events([{"token": "ARB", "unlock_date": pd.Timestamp("2026-01-15T00:00:00Z")}])
 
@@ -159,6 +160,33 @@ def test_emit_pair_signals_positive_post_window_works():
 
     assert bool(entries.loc["2026-01-18"])
     assert bool(exits.loc["2026-01-29"])
+
+
+@pytest.mark.xfail(reason="offset validation does not name both args yet", strict=True)
+def test_emit_pair_signals_requires_both_offsets():
+    prices = {"ARB": _prices()}
+    events = _events([{"token": "ARB", "unlock_date": pd.Timestamp("2026-01-15T00:00:00Z")}])
+
+    with pytest.raises(ValueError, match="entry_offset_days.*exit_offset_days"):
+        emit_pair_signals(
+            events=events,
+            prices=prices,
+            entry_offset_days=-7,
+        )
+
+
+@pytest.mark.xfail(reason="emit_pair_signals does not reject non-increasing offsets yet", strict=True)
+def test_emit_pair_signals_rejects_non_increasing_offsets():
+    prices = {"ARB": _prices()}
+    events = _events([{"token": "ARB", "unlock_date": pd.Timestamp("2026-01-15T00:00:00Z")}])
+
+    with pytest.raises(ValueError, match=r"exit_offset_days \(0\) must be > entry_offset_days \(0\)"):
+        emit_pair_signals(
+            events=events,
+            prices=prices,
+            entry_offset_days=0,
+            exit_offset_days=0,
+        )
 
 
 def test_emit_pair_signals_skips_overlap():
