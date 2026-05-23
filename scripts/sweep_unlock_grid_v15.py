@@ -109,6 +109,7 @@ def run_main_grid(
             slippage=slippage,
         )
         row["eligible"] = int(row["n_trades"]) >= 30
+        row["sweep_kind"] = "category"
         rows.append(row)
     return rows
 
@@ -142,6 +143,7 @@ def run_vesting_sub_sweep(
         )
         row["cohort"] = f"vesting:{vesting_type}"
         row["eligible"] = int(row["n_trades"]) >= 30
+        row["sweep_kind"] = "vesting"
         rows.append(row)
     return rows
 
