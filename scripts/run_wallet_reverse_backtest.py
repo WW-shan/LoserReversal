@@ -82,14 +82,12 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
             skip_reason = _skip_reason_for_empty_events(fills)
             funnel[skip_reason] += 1
             skipped_wallets.append(address)
-            _log(f"[{position}/{len(wallets)}] {address} skipped: {skip_reason}")
             continue
 
         wallet_result = _backtest_wallet(address, events, config, freq, client)
         if wallet_result["n_backtested_coins"] == 0:
             funnel["skip_no_candle"] += 1
             skipped_wallets.append(address)
-            _log(f"[{position}/{len(wallets)}] {address} skipped: skip_no_candle")
             continue
 
         funnel["with_candle"] += int(wallet_result["events_with_candles"])
@@ -97,7 +95,6 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
         if int(stats["n_trades"]) == 0:
             funnel["skip_no_qualifying_event"] += 1
             skipped_wallets.append(address)
-            _log(f"[{position}/{len(wallets)}] {address} skipped: skip_no_qualifying_event")
             continue
 
         wallet_stats.append(stats)
@@ -109,6 +106,15 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
             f"[{position}/{len(wallets)}] {address} signals={signal_count} "
             f"trades={stats['n_trades']} Sharpe={stats['sharpe']:.2f} ({elapsed:.1f}s)"
         )
+
+    _log(
+        "[skip summary] "
+        f"no_fills={funnel['skip_no_fills']} "
+        f"no_open_dir={funnel['skip_no_open_dir']} "
+        f"no_retail_size={funnel['skip_no_retail_size']} "
+        f"no_candle={funnel['skip_no_candle']} "
+        f"no_qualifying_event={funnel['skip_no_qualifying_event']}"
+    )
 
     portfolio_equity = _summed_equity(wallet_equities, config.init_cash)
     portfolio_stats = _portfolio_stats(portfolio_equity, wallet_stats, portfolio_trades, config, freq)
