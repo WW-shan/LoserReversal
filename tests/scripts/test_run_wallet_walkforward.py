@@ -225,6 +225,46 @@ def test_walkforward_split_fallback_logs_requested_and_effective_dimensions(mock
     )
 
 
+def test_walkforward_report_shows_configured_effective_pairs_and_fallback_banner():
+    report = walkforward._format_report(
+        {
+            "config": walkforward.WalkForwardConfig(
+                n_splits=3,
+                min_train_days=120,
+                test_days=30,
+                report=None,
+            ),
+            "effective_n_splits": 3,
+            "effective_min_train_days": 30,
+            "effective_test_days": 10,
+            "data_span": {
+                "start": pd.Timestamp("2026-01-01T00:00:00Z"),
+                "end": pd.Timestamp("2026-03-02T00:00:00Z"),
+                "total_days": 60,
+                "n_fills": 100,
+                "n_wallets_with_fills": 3,
+                "n_failed_wallets": 0,
+            },
+            "split_results": [],
+            "aggregate": {
+                "oos_ir_mean": 0.0,
+                "oos_ir_min": 0.0,
+                "oos_n_trades_total": 0,
+                "oos_max_dd_worst": 0.0,
+                "is_oos_decay": 0.0,
+            },
+            "verdict": walkforward.Verdict("RED", "data_gap"),
+        }
+    )
+
+    assert "## Verdict: RED\n> [WARN] walk-forward fallback used\nReason: data_gap" in report
+    assert "- n_splits: 3 (effective: 3)" in report
+    assert "- min_train_days: 120 (effective: 30)" in report
+    assert "- test_days: 30 (effective: 10)" in report
+    assert "- effective_splits:" not in report
+    assert "- effective_test_days:" not in report
+
+
 def test_walkforward_select_best_is_row_prefers_eligible_by_trade_level_ir():
     rows = [
         {"min_wallets": 3, "window_minutes": 15, "holding_hours": 1, "trade_level_ir": 0.5, "n_trades": 99},
