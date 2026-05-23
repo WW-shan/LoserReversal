@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pyarrow.parquet as pq
 
 from scripts import sweep_unlock_grid_v15 as sweep
 
@@ -219,6 +220,37 @@ def test_render_report_includes_vesting_subsection(tmp_path):
     assert "| cliff |" in text
     assert "| step |" in text
     assert "| linear |" in text
+
+
+def test_report_includes_methodology_section(tmp_path):
+    report = tmp_path / "grid_report.md"
+
+    sweep._write_report(report, _grid_rows(2), sweep.GridSweepConfig(report=report))
+
+    text = report.read_text(encoding="utf-8")
+    assert "## Methodology" in text
+    assert "active-capital" in text
+    assert "Each token's signal is backtested independently" in text
+    assert "Inactive tokens contribute zero" in text
+    assert "Total return is relative to summed initial capital" in text
+
+
+def test_parquet_has_methodology_metadata(monkeypatch, tmp_path):
+    out = tmp_path / "unlock_grid.parquet"
+    report = tmp_path / "grid_report.md"
+
+    monkeypatch.setattr(sweep, "read_unlocks", lambda path=None: _events(), raising=False)
+    monkeypatch.setattr(sweep, "load_coverage", lambda path: _coverage(), raising=False)
+    monkeypatch.setattr(sweep, "load_prices", lambda events, candles_dir: {"ARB": _prices()}, raising=False)
+    monkeypatch.setattr(sweep, "run_main_grid", lambda *args, **kwargs: _grid_rows(60))
+    monkeypatch.setattr(sweep, "run_vesting_sub_sweep", lambda *args, **kwargs: _vesting_rows())
+
+    sweep.run_sweep(sweep.GridSweepConfig(out=out, report=report, init_cash=12_345.0))
+
+    metadata = pq.read_metadata(out).metadata or {}
+    assert b"methodology" in metadata
+    assert b"active-capital" in metadata[b"methodology"]
+    assert metadata[b"cell_budget_per_token"] == b"12345.00"
 
 
 def _prices() -> pd.Series:
