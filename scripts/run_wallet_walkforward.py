@@ -431,6 +431,7 @@ def _format_report(result: dict[str, Any]) -> str:
     aggregate = result["aggregate"]
     verdict: Verdict = result["verdict"]
     generated = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    fallback_used = _walk_forward_fallback_used(config, result)
 
     lines = [
         "# Wallet Cluster Reverse V1 - Walk-Forward Validation",
@@ -438,6 +439,7 @@ def _format_report(result: dict[str, Any]) -> str:
         f"_Generated {generated}_",
         "",
         f"## Verdict: {verdict.label}",
+        *(["> [WARN] walk-forward fallback used"] if fallback_used else []),
         f"Reason: {verdict.reason}",
         "",
         "## Data Span",
@@ -449,12 +451,11 @@ def _format_report(result: dict[str, Any]) -> str:
         f"- n_failed_wallets: {data_span['n_failed_wallets']}",
         "",
         "## Walk-Forward Config",
-        f"- n_splits: {config.n_splits}",
+        f"- n_splits: {config.n_splits} (effective: {result['effective_n_splits']})",
         f"- mode: {config.mode}",
-        f"- min_train_days: {result['effective_min_train_days']}",
-        f"- test_days: {config.test_days}",
-        f"- effective_splits: {result['effective_n_splits']}",
-        f"- effective_test_days: {result['effective_test_days']}",
+        f"- min_train_days: {config.min_train_days} "
+        f"(effective: {result['effective_min_train_days']})",
+        f"- test_days: {config.test_days} (effective: {result['effective_test_days']})",
         f"- top_wallet_n: {config.top_wallet_n}",
         f"- grid: {len(MIN_WALLETS_GRID) * len(WINDOW_MINUTES_GRID) * len(HOLDING_HOURS_GRID)} configs",
         "",
@@ -478,6 +479,14 @@ def _format_report(result: dict[str, Any]) -> str:
         _decision_paragraph(verdict, aggregate),
     ]
     return "\n".join(lines) + "\n"
+
+
+def _walk_forward_fallback_used(config: WalkForwardConfig, result: dict[str, Any]) -> bool:
+    return (
+        int(result["effective_n_splits"]) < config.n_splits
+        or int(result["effective_min_train_days"]) < config.min_train_days
+        or int(result["effective_test_days"]) < config.test_days
+    )
 
 
 def _split_rows(rows: list[dict[str, Any]]) -> list[str]:
