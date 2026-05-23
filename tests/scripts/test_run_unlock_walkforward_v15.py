@@ -5,6 +5,34 @@ import pandas as pd
 from scripts import run_unlock_walkforward_v15 as runner
 
 
+def test_config_defaults_traverse_full_data_span():
+    config = runner.WalkForwardV15Config()
+
+    assert config.n_splits == 5
+    assert config.min_train_days == 270
+    assert config.test_days == 180
+    assert config.min_train_days + config.n_splits * config.test_days == 1170
+
+
+def test_cli_defaults_match_calibrated_walkforward_params(monkeypatch):
+    captured_configs: list[runner.WalkForwardV15Config] = []
+
+    def fake_run_walkforward(config):
+        captured_configs.append(config)
+        return {}
+
+    monkeypatch.setattr(runner, "run_walkforward", fake_run_walkforward)
+
+    exit_code = runner.main([])
+
+    assert exit_code == 0
+    assert len(captured_configs) == 1
+    config = captured_configs[0]
+    assert config.n_splits == 5
+    assert config.min_train_days == 270
+    assert config.test_days == 180
+
+
 def test_cli_smoke(monkeypatch, tmp_path, capsys):
     out = tmp_path / "phase1_5_walkforward.parquet"
     report = tmp_path / "phase1_5_walkforward.md"
@@ -61,6 +89,32 @@ def test_cli_smoke(monkeypatch, tmp_path, capsys):
     assert "wrote parquet" in capsys.readouterr().out
 
 
+def test_run_walkforward_logs_span_coverage(monkeypatch, tmp_path, capsys):
+    _patch_run_walkforward_dependencies(monkeypatch, tmp_path)
+    config = _config(tmp_path)
+
+    runner.run_walkforward(config)
+
+    assert (
+        "walk-forward span: train_days=270 + n_splits×test_days = 1170 days; "
+        "data span = 1232 days; coverage = 95.0%"
+    ) in capsys.readouterr().err
+
+
+def test_run_walkforward_warns_when_span_coverage_below_80(monkeypatch, tmp_path, capsys):
+    _patch_run_walkforward_dependencies(monkeypatch, tmp_path)
+    config = _config(tmp_path, n_splits=1, min_train_days=180, test_days=90)
+
+    runner.run_walkforward(config)
+
+    err = capsys.readouterr().err
+    assert "coverage = 21.9%" in err
+    assert (
+        "[WARNING] walk-forward coverage below 80%; recommended params: "
+        "--n-splits 5 --min-train-days 270 --test-days 180"
+    ) in err
+
+
 def test_cli_falls_back_to_shorter_test_days_when_range_too_short(
     monkeypatch,
     tmp_path,
@@ -111,6 +165,28 @@ def test_cli_falls_back_to_shorter_test_days_when_range_too_short(
     assert "using test_days=60" in capsys.readouterr().err
 
 
+def _patch_run_walkforward_dependencies(monkeypatch, tmp_path) -> None:
+    split = _split("2025-01-01", "2025-10-01", "2025-10-01", "2026-04-01")
+
+    monkeypatch.setattr(runner, "read_unlocks", lambda path=None: _span_events(), raising=False)
+    monkeypatch.setattr(runner, "load_coverage", lambda path: _coverage(), raising=False)
+    monkeypatch.setattr(runner, "load_prices", lambda events, candles_dir: {"ARB": _prices()})
+    monkeypatch.setattr(runner, "walk_forward_splits", lambda *args, **kwargs: [split])
+    monkeypatch.setattr(runner, "run_per_signal_walkforward", lambda *args, **kwargs: _per_signal_frame())
+    monkeypatch.setattr(runner, "compose_portfolio", lambda *args, **kwargs: _portfolio_frame())
+    _grid_df().to_parquet(tmp_path / "grid.parquet")
+
+
+def _config(tmp_path, **overrides) -> runner.WalkForwardV15Config:
+    values = {
+        "out": tmp_path / "phase1_5_walkforward.parquet",
+        "report": tmp_path / "phase1_5_walkforward.md",
+        "grid_path": tmp_path / "grid.parquet",
+    }
+    values.update(overrides)
+    return runner.WalkForwardV15Config(**values)
+
+
 def _events() -> pd.DataFrame:
     return pd.DataFrame(
         [
@@ -127,6 +203,31 @@ def _events() -> pd.DataFrame:
                 "token": "ARB",
                 "coingecko_id": "arb",
                 "unlock_date": pd.Timestamp("2026-10-01T00:00:00Z"),
+                "unlock_pct": 0.05,
+                "category": "insiders",
+                "has_hl_perp": True,
+                "vesting_type": "cliff",
+            },
+        ]
+    )
+
+
+def _span_events() -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "token": "ARB",
+                "coingecko_id": "arb",
+                "unlock_date": pd.Timestamp("2023-01-07T00:00:00Z"),
+                "unlock_pct": 0.05,
+                "category": "insiders",
+                "has_hl_perp": True,
+                "vesting_type": "cliff",
+            },
+            {
+                "token": "ARB",
+                "coingecko_id": "arb",
+                "unlock_date": pd.Timestamp("2026-05-23T00:00:00Z"),
                 "unlock_pct": 0.05,
                 "category": "insiders",
                 "has_hl_perp": True,
@@ -174,6 +275,20 @@ def _portfolio_frame(fallback_used: bool = False) -> pd.DataFrame:
         [
             _row("portfolio", "top_2_equal_weight", 0, 18, 1.0, 0.55, fallback_used),
             _row("portfolio", "top_2_equal_weight", -1, 18, 1.0, 0.55, fallback_used),
+        ]
+    )
+
+
+def _grid_df() -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "signal": "v1",
+                "min_unlock_pct": 0.02,
+                "cohort": "team",
+                "n_trades": 30,
+                "sharpe": 1.1,
+            }
         ]
     )
 
