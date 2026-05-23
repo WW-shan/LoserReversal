@@ -401,6 +401,16 @@ def _aggregate_split_results(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _verdict(aggregate: dict[str, Any]) -> Verdict:
+    """Return the walk-forward verdict.
+
+    RED reason taxonomy:
+    - data_gap: oos_n_trades_total == 0.
+    - insufficient_sample: 1 <= oos_n_trades_total < 50.
+    - insufficient_oos_trades: 50 <= oos_n_trades_total < 100.
+    - oos_ir_below_yellow: oos_n_trades_total >= 100 but oos_ir_mean < 1.0.
+    - max_drawdown_breach: drawdown is worse than -0.30.
+    - thresholds_not_met: residual catch-all for unmet RED criteria.
+    """
     oos_ir_mean = float(aggregate["oos_ir_mean"])
     oos_n_trades_total = int(aggregate["oos_n_trades_total"])
     oos_max_dd_worst = float(aggregate["oos_max_dd_worst"])
