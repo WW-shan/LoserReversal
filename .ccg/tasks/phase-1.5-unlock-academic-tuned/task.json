@@ -1,0 +1,14 @@
+{
+  "name": "phase-1.5-unlock-academic-tuned",
+  "phase": "1.5",
+  "strategy": "guided-develop",
+  "complexity": "L",
+  "status": "in-progress",
+  "currentSlice": 5,
+  "currentPhase": "5-implement",
+  "nextAction": "Slice 4 YELLOW (v2 OOS Sharpe 0.61, n_trades 36). Starting Slice 5: verdict + ROADMAP.",
+  "gate": null,
+  "createdAt": "2026-05-24",
+  "spec": ".ccg/tasks/phase-1.5-unlock-academic-tuned/plan.md",
+  "literature": "docs/research/literature-review.md#part-a"
+}

@@ -330,42 +330,78 @@ P7                                                          [持续]    Alpha �
 > 基于 `docs/research/literature-review.md` Part A 调研，修复 Phase 1 的 sub-optimal 配置。
 > 学术证据强 confidence: 3 独立研究 + thesis-check converge **87-90% negative rate**。
 
+### ✅ VERDICT YELLOW (2026-05-24)
+
+**Phase 1.5 完成 — 首个 GREEN/YELLOW phase**。详细 verdict 在 `reports/phase1_5_unlock_academic.md`。
+
+**最佳 signal: v2 (T-30 → T0 short, Keyrock long-swing window)**
+- OOS Sharpe **0.61** (YELLOW band [0.3, 1.0))
+- **36 OOS trades** (>=30 阈值)
+- 75% win rate
+- 总回报 110% 跨 2.5 年 OOS 测试窗
+- 最大回撤 -29%
+
+**关键洞察**:
+- v1 IS Sharpe 1.60 → OOS 0.46 (71% decay, 28 trades — 卡 30 阈值) — overfit
+- **v2 T-30 是更稳健的 retail-deployable window** — 与 Keyrock "T-30 anticipation" 完全契合
+- Cliff vesting > Step > Linear (符合学术预测)
+- v5 (T+3→T+14 reversal long) OOS Sharpe 0.06 — 反弹做多假设**不成立** (Keyrock 的反向预测被 PASS/KILL 否决)
+
+**Portfolio (top-2 v2 + v1, equal-weight)**:
+- OOS Sharpe 0.54, 64 trades, 73% win rate
+- 进入 Phase 5 paper trading 作为低权重候选
+
 ### 目标
-用学术参数完整重做 unlock 策略验证 — 期望 verdict 从 INCONCLUSIVE → GREEN/YELLOW。
+用学术参数完整重做 unlock 策略验证 — 期望 verdict 从 INCONCLUSIVE → GREEN/YELLOW。**已达成 YELLOW。**
 
-### 5 个 Slice
+### 5 个 Slice — 全部完成
 
-**Slice 1 — 数据补强**
-- HL candle 拉 2023-01 → 现在（3 年历史，救回 9/14 lost events 的 entry point）
-- 多源 unlock events：DefiLlama fork + CryptoRank API + Tokenomist scrape (Playwright)
-- 解析每 event 的 vesting type (cliff/linear)、recipient category
-- 预期：126 → 1000-2000 events
+**Slice 1 — 数据补强** ✅
+- HL candle 拉 2023-01 → 现在 (55 HL-perp tokens, 100% 覆盖)
+- 多源 unlock events: DefiLlama emissions-adapters fork (Omni-Chain-Protocols, 310 protocols)
+- 解析每 event 的 vesting type (cliff/step/linear), recipient category
+- 实际: **126 → 1768 events** (vs 目标 1000-2000)
+- `data/parquet/event_coverage.parquet` 记录 532 HL-perp events 的覆盖状态 (402 ok, 75 insufficient_pre_days, 55 listing_after)
 
-**Slice 2 — Signal 多样化（按学术 window 设计）**
-- v1: T-7→T0 short（原版 baseline 对照）
-- v2: T-30→T0 short（Keyrock 推荐主入场区间）
-- v3: T-2→T+3 short（SmartKarma 强效窗口）
-- v4: T-72h→T0 short（Kim SSRN 88.5% profit）
-- v5: T+3→T+14 **reversal long**（ROADMAP §168 原 signal v2，从未实施）
+**Slice 2 — Signal 多样化** ✅
+- v1: T-7→T0 short (原版 baseline 对照)
+- v2: T-30→T0 short (Keyrock 推荐主入场区间 — **最终 YELLOW winner**)
+- v3: T-2→T+3 short (SmartKarma 强效窗口)
+- v4: T-72h→T0 short (Kim SSRN 88.5% profit)
+- v5: T+3→T+14 reversal long (Keyrock 推荐 — **OOS 验证后失败**, Sharpe 0.06)
 
-**Slice 3 — 3 维 Grid sweep**
-- Window × Size threshold {1%, 2%, 5%, 10%} × Category {team, team+investor, all}
-- 输出 best param combo + per-cohort 数据
-- Cliff vs Linear 维度对比
+**Slice 3 — 3 维 Grid sweep** ✅
+- Window × Size threshold {1%, 2%, 5%, 10%} × Category {team, team+investor, all} = 60 cells
+- + 3 vesting sub-sweep rows
+- Best IS: v1 / 2% / team Sharpe 1.60
+- 全部 cell 数据持久化到 `data/parquet/unlock_grid_v15.parquet`
 
-**Slice 4 — Walk-forward + Multi-signal portfolio**
-- 5 signal IS 选最优 → OOS 评估
-- Combined: weighted allocation across signal versions
+**Slice 4 — Walk-forward + Multi-signal portfolio** ✅
+- 5 expanding splits × 270 train + 180 OOS days (覆盖全 3.4-year span)
+- Per-signal aggregate + top-K portfolio
+- Best signal: v2 OOS Sharpe 0.61, n_trades 36
 
-**Slice 5 — Pass/Kill + ROADMAP 更新**
+**Slice 5 — Pass/Kill + ROADMAP 更新** ✅
+- Report: `reports/phase1_5_unlock_academic.md`
+- ROADMAP 本节更新
 
-### Pass Criteria
-- **绿灯**：任一 signal walk-forward OOS Sharpe ≥ 1.0, n_trades ≥ 50
-- **黄灯**：OOS Sharpe 0.3-1.0 + n_trades ≥ 30
-- **红灯**：所有 signal OOS Sharpe < 0.3 OR n_trades < 30 — 这次是真 thesis 失败
+### Pass Criteria (实际达成)
+- 绿灯: 任一 signal walk-forward OOS Sharpe >= 1.0, n_trades >= 50 — ❌ 未达到
+- **黄灯**: OOS Sharpe 0.3-1.0 + n_trades >= 30 — ✅ **v2 达成 (0.61, 36)**
+- 红灯: 所有 signal OOS Sharpe < 0.3 OR n_trades < 30
 
-### 预期 outcome
-基于 87-90% 多源 converge → **大概率 GREEN**
+### Caveats (paper trading 前必读)
+1. n_trades 36 偏少, bootstrap CI 较宽
+2. OOS span 2024-04 → 2026-05 主要为 bull market
+3. 实际 slippage 在 unlock-stress 窗口可能 2-5× 当前 0.02% 假设
+4. 需要 position-sizing layer (active-capital 当前假设每 token 独立 $10k)
+
+### 交付物
+- 64 commits, 全部小颗粒度 TDD pairs
+- 304 tests passing, ruff clean
+- 5 个 phase 1.5 模块 + 4 个 CLI 脚本
+- 4 个 parquet artifacts + 3 个 report
+- 三方 review per slice (Codex × 2 + Claude semantic)
 
 ---
 
