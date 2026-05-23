@@ -140,6 +140,30 @@ def test_multiple_tokens_returns_only_qualifying_tokens():
     assert set(unlock_short_signal(events, prices)) == {"ARB"}
 
 
+def test_coverage_parameter_keeps_only_ok_events():
+    prices = {"ARB": _prices(), "APT": _prices()}
+    events = _events(
+        [
+            {"token": "ARB", "unlock_date": pd.Timestamp("2026-01-15T00:00:00Z")},
+            {"token": "APT", "unlock_date": pd.Timestamp("2026-01-16T00:00:00Z")},
+        ]
+    )
+    coverage = pd.DataFrame(
+        [
+            {"token": "ARB", "unlock_date": "2026-01-15", "coverage_status": "ok"},
+            {
+                "token": "APT",
+                "unlock_date": "2026-01-16",
+                "coverage_status": "insufficient_pre_days",
+            },
+        ]
+    )
+
+    result = unlock_short_signal(events, prices, coverage=coverage)
+
+    assert set(result) == {"ARB"}
+
+
 def test_event_outside_price_index_is_skipped_while_other_events_are_processed():
     prices = {"ARB": _prices()}
     events = _events(
