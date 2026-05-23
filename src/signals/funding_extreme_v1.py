@@ -50,7 +50,7 @@ def funding_extreme_signal(
         z_score = _rolling_zscore(frame["funding_rate"], lookback_days, require_min_history)
         funding_rate = frame["funding_rate"].reindex(price_index, method="ffill")
         aligned_z = z_score.reindex(price_index, method="ffill")
-        funding_tick = pd.Series(True, index=frame.index).reindex(price_index, fill_value=False)
+        funding_tick = _funding_tick(frame.index, price_index)
 
         _populate_signals(
             entries,
@@ -148,6 +148,18 @@ def _rolling_zscore(
     ) >= pd.Timedelta(days=require_min_history)
     has_observations = rolling.count().ge(2)
     return z_score.where(min_age & has_observations)
+
+
+def _funding_tick(
+    funding_index: pd.DatetimeIndex,
+    price_index: pd.DatetimeIndex,
+) -> pd.Series:
+    ticks = pd.Series(False, index=price_index, dtype=bool)
+    positions = price_index.searchsorted(funding_index, side="left")
+    valid_positions = sorted({int(position) for position in positions if position < len(price_index)})
+    if valid_positions:
+        ticks.iloc[valid_positions] = True
+    return ticks
 
 
 def _funding_frame(funding: pd.DataFrame) -> pd.DataFrame:

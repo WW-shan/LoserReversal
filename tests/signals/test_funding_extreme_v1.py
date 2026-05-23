@@ -127,6 +127,25 @@ def test_overlapping_entry_skipped_until_prior_exits():
     assert bool(exits.loc["2026-01-02T04:00:00Z"])
 
 
+def test_funding_timestamp_between_price_bars_enters_next_price_bar():
+    funding = _funding([0.0001] * 24 + [0.0010] + [0.0010] * 4)
+    funding.index = funding.index + pd.Timedelta(milliseconds=500)
+    price_index = pd.date_range("2026-01-01", periods=len(funding) + 1, freq="1h", tz="UTC")
+    prices = pd.Series(range(len(price_index)), index=price_index, dtype="float64", name="close")
+
+    entries, _, direction = funding_extreme_signal(
+        {"BTC": funding},
+        {"BTC": prices},
+        lookback_days=2,
+        hold_hours=4,
+        require_min_history=1,
+    )["BTC"]
+
+    assert not bool(entries.loc["2026-01-02T00:00:00Z"])
+    assert bool(entries.loc["2026-01-02T01:00:00Z"])
+    assert int(direction.loc["2026-01-02T01:00:00Z"]) == -1
+
+
 def test_empty_funding_history_returns_empty_dict():
     assert funding_extreme_signal({}, {}) == {}
 
