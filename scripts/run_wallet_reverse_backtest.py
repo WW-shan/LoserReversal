@@ -129,6 +129,8 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
         "skipped_wallets": skipped_wallets,
         "funnel": funnel,
         "portfolio_stats": portfolio_stats,
+        # Per-wallet rows continue to display by Sharpe descending; sweep ranking is by IR
+        # (see scripts/sweep_wallet_holding.py). Mixed sort keys are intentional.
         "per_wallet_stats": sorted(wallet_stats, key=_sort_sharpe, reverse=True),
         "portfolio_equity": portfolio_equity,
         "runtime_seconds": time.perf_counter() - started,
@@ -611,6 +613,8 @@ def _skip_reason_for_empty_events(fills: pd.DataFrame) -> str:
 
 
 def _has_non_null_time(fills: pd.DataFrame) -> bool:
+    """Return True iff frame has a `time` column with non-null entries OR a DatetimeIndex
+    with non-null entries. Frames missing both timeline shapes return False (no qualifying event)."""
     if "time" in fills.columns:
         time_values = pd.to_datetime(fills["time"], utc=True, errors="coerce")
         return not bool(time_values.isna().all())
