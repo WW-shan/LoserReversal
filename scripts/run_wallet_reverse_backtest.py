@@ -107,14 +107,15 @@ def run_wallet_reverse_backtest(config: WalletReverseBacktestConfig) -> dict[str
             f"trades={stats['n_trades']} Sharpe={stats['sharpe']:.2f} ({elapsed:.1f}s)"
         )
 
-    _log(
-        "[skip summary] "
-        f"no_fills={funnel['skip_no_fills']} "
-        f"no_open_dir={funnel['skip_no_open_dir']} "
-        f"no_retail_size={funnel['skip_no_retail_size']} "
-        f"no_candle={funnel['skip_no_candle']} "
-        f"no_qualifying_event={funnel['skip_no_qualifying_event']}"
-    )
+    if not wallets.empty:
+        _log(
+            "[skip summary] "
+            f"no_fills={funnel['skip_no_fills']} "
+            f"no_open_dir={funnel['skip_no_open_dir']} "
+            f"no_retail_size={funnel['skip_no_retail_size']} "
+            f"no_candle={funnel['skip_no_candle']} "
+            f"no_qualifying_event={funnel['skip_no_qualifying_event']}"
+        )
 
     portfolio_equity = _summed_equity(wallet_equities, config.init_cash)
     portfolio_stats = _portfolio_stats(portfolio_equity, wallet_stats, portfolio_trades, config, freq)
@@ -504,8 +505,7 @@ def _write_report(path: Path, result: dict[str, Any]) -> None:
             f"| skip_no_open_dir | {funnel['skip_no_open_dir']} | wallets with no open long/short fills |",
             f"| skip_no_retail_size | {funnel['skip_no_retail_size']} | wallets with no $1k-$200k open fills |",
             f"| skip_no_candle | {funnel['skip_no_candle']} | wallets whose signal coins had no candles |",
-            f"| skip_no_qualifying_event | {funnel['skip_no_qualifying_event']} | "
-            "wallets with no qualifying signal event |",
+            f"| skip_no_qualifying_event | {funnel['skip_no_qualifying_event']} | wallets with no qualifying signal event |",
             "",
             "## Portfolio Stats",
             "",
