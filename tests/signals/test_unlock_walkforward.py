@@ -166,6 +166,50 @@ def test_run_per_signal_walkforward_includes_aggregate_row(monkeypatch):
     assert aggregate["max_dd"] == -0.05
 
 
+def test_run_per_signal_walkforward_falls_back_to_best_positive_trade(monkeypatch):
+    splits = [_split("2026-01-01", "2026-02-01", "2026-02-01", "2026-03-01")]
+    grid_df = pd.DataFrame(
+        [
+            {"signal": "v1", "min_unlock_pct": 0.01, "cohort": "team"},
+            {"signal": "v1", "min_unlock_pct": 0.02, "cohort": "team"},
+        ]
+    )
+    events = pd.concat(
+        [
+            _events(),
+            _events().assign(unlock_date=pd.Timestamp("2026-02-05T00:00:00Z")),
+        ],
+        ignore_index=True,
+    )
+
+    monkeypatch.setattr(
+        "signals.unlock_walkforward.select_best_config",
+        lambda *args, **kwargs: None,
+    )
+
+    def fake_run_cell(events_arg, prices, coverage, cell, *, init_cash, fees, slippage):
+        if events_arg["unlock_date"].max() < pd.Timestamp("2026-02-01T00:00:00Z"):
+            sharpe = 1.5 if cell.min_unlock_pct == 0.02 else 0.5
+            return _stats(cell, n_trades=1, sharpe=sharpe)
+        assert cell.min_unlock_pct == 0.02
+        return _stats(cell, n_trades=2, sharpe=0.8)
+
+    monkeypatch.setattr("signals.unlock_walkforward.run_cell", fake_run_cell)
+
+    result = run_per_signal_walkforward(
+        events,
+        {"ARB": _prices()},
+        _coverage(),
+        splits,
+        ["v1"],
+        grid_df=grid_df,
+    )
+
+    split_row = result.loc[result["split_idx"].eq(0)].iloc[0]
+    assert split_row["selected_min_pct"] == 0.02
+    assert split_row["n_trades"] == 2
+
+
 def test_compose_portfolio_equal_weights_K2(monkeypatch):
     splits = [_split("2026-01-01", "2026-02-01", "2026-02-01", "2026-03-01")]
     per_signal_df = pd.DataFrame(
