@@ -42,12 +42,29 @@ PERIOD_SECONDS = {
 
 CATEGORY_CANON = {
     "airdrop": "airdrop",
+    "ecosystem": "community",
+    "farming": "community",
     "insiders": "insiders",
+    "liquidity": "community",
     "privatesale": "privateSale",
     "noncirculating": "noncirculating",
     "community": "community",
     "publicsale": "publicSale",
+    "staking": "community",
+    "team": "insiders",
 }
+TOTAL_SUPPLY_ENV_KEYS = (
+    "total",
+    "totalSupply",
+    "TOTAL_SUPPLY",
+    "total_supply",
+    "qty",
+    "totalQty",
+    "maximumSupply",
+    "initialSupply",
+    "initialTotalSupply",
+    "maxSupply",
+)
 
 
 @dataclass(frozen=True)
@@ -399,7 +416,7 @@ def parse_meta(protocol_block: str, env: dict[str, Any]) -> tuple[float | None, 
     props = dict(object_properties(protocol_block))
     meta_expr = props.get("meta")
     if not meta_expr or not meta_expr.strip().startswith("{"):
-        return None, None
+        return infer_total_supply(env), None
     total: float | None = None
     token: str | None = None
     for key, value_expr in object_properties(meta_expr):
@@ -416,7 +433,17 @@ def parse_meta(protocol_block: str, env: dict[str, Any]) -> tuple[float | None, 
                 token_value = None
             if isinstance(token_value, str) and token_value.startswith("coingecko:"):
                 token = token_value.split(":", 1)[1]
+    if total is None:
+        total = infer_total_supply(env)
     return total, token
+
+
+def infer_total_supply(env: dict[str, Any]) -> float | None:
+    for key in TOTAL_SUPPLY_ENV_KEYS:
+        value = env.get(key)
+        if isinstance(value, (int, float)) and value > 0:
+            return float(value)
+    return None
 
 
 def parse_categories(protocol_block: str) -> dict[str, str]:
