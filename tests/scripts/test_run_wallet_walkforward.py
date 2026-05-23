@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pandas as pd
 
 from scripts import run_wallet_cluster_backtest as cluster_runner
@@ -199,6 +201,28 @@ def test_walkforward_filter_pool_fills_uses_inclusive_start_exclusive_end():
     )
 
     assert list(filtered["0xaaa"].index) == [pd.Timestamp("2026-01-10T00:00:00Z")]
+
+
+def test_walkforward_split_fallback_logs_requested_and_effective_dimensions(mocker):
+    logged = mocker.patch.object(walkforward, "_log")
+
+    _, effective_n_splits, effective_min_train_days, effective_test_days = (
+        walkforward._walk_forward_splits_with_fallback(
+            start=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            end=datetime(2026, 3, 2, tzinfo=timezone.utc),
+            n_splits=3,
+            mode="expanding",
+            min_train_days=120,
+            test_days=30,
+        )
+    )
+
+    assert (effective_n_splits, effective_min_train_days, effective_test_days) == (3, 30, 10)
+    logged.assert_called_once_with(
+        "[WARN] walk-forward fallback: requested "
+        "(n_splits=3, min_train_days=120, test_days=30); using "
+        "(n_splits=3, min_train_days=30, test_days=10)"
+    )
 
 
 def test_walkforward_select_best_is_row_prefers_eligible_by_trade_level_ir():
