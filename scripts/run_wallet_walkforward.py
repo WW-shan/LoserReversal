@@ -78,7 +78,12 @@ def run_walkforward(config: WalkForwardConfig) -> dict[str, Any]:
         raise RuntimeError("no cached wallet fills available")
 
     start, end, n_fills = _pool_span(pool_fills)
-    splits, effective_min_train_days = _walk_forward_splits_with_fallback(
+    (
+        splits,
+        effective_n_splits,
+        effective_min_train_days,
+        effective_test_days,
+    ) = _walk_forward_splits_with_fallback(
         start=start.to_pydatetime(),
         end=end.to_pydatetime(),
         n_splits=config.n_splits,
@@ -100,7 +105,9 @@ def run_walkforward(config: WalkForwardConfig) -> dict[str, Any]:
     verdict = _verdict(aggregate)
     result = {
         "config": config,
+        "effective_n_splits": effective_n_splits,
         "effective_min_train_days": effective_min_train_days,
+        "effective_test_days": effective_test_days,
         "data_span": {
             "start": start,
             "end": end,
@@ -183,34 +190,33 @@ def _walk_forward_splits_with_fallback(
     mode: str,
     min_train_days: int,
     test_days: int,
-) -> tuple[list[tuple[tuple[datetime, datetime], tuple[datetime, datetime]]], int]:
-    current_min_train_days = min_train_days
-    min_floor = min(min_train_days, 30)
+) -> tuple[list[tuple[tuple[datetime, datetime], tuple[datetime, datetime]]], int, int, int]:
+    min_train_candidates = list(range(min_train_days, 29, -15))
+    test_day_candidates = list(range(test_days, 4, -5))
+    split_candidates = list(range(n_splits, 0, -1))
     last_error: ValueError | None = None
 
-    while current_min_train_days >= min_floor:
-        try:
-            splits = walk_forward_splits(
-                start,
-                end,
-                n_splits=n_splits,
-                mode=mode,
-                min_train_days=current_min_train_days,
-                test_days=test_days,
-            )
-        except ValueError as error:
-            last_error = error
-            next_min_train_days = max(min_floor, current_min_train_days - 15)
-            if next_min_train_days == current_min_train_days:
-                break
-            _log(
-                "[WARN] walk-forward split infeasible with "
-                f"min_train_days={current_min_train_days}: {error}; "
-                f"retrying with min_train_days={next_min_train_days}"
-            )
-            current_min_train_days = next_min_train_days
-            continue
-        return splits, current_min_train_days
+    for candidate_splits in split_candidates:
+        for candidate_test_days in test_day_candidates:
+            for candidate_min_train_days in min_train_candidates:
+                try:
+                    splits = walk_forward_splits(
+                        start,
+                        end,
+                        n_splits=candidate_splits,
+                        mode=mode,
+                        min_train_days=candidate_min_train_days,
+                        test_days=candidate_test_days,
+                    )
+                except ValueError as error:
+                    last_error = error
+                    continue
+                return (
+                    splits,
+                    candidate_splits,
+                    candidate_min_train_days,
+                    candidate_test_days,
+                )
 
     detail = f": {last_error}" if last_error is not None else ""
     raise RuntimeError(f"walk-forward split infeasible for available data span{detail}")
@@ -434,6 +440,8 @@ def _format_report(result: dict[str, Any]) -> str:
         f"- mode: {config.mode}",
         f"- min_train_days: {result['effective_min_train_days']}",
         f"- test_days: {config.test_days}",
+        f"- effective_splits: {result['effective_n_splits']}",
+        f"- effective_test_days: {result['effective_test_days']}",
         f"- top_wallet_n: {config.top_wallet_n}",
         f"- grid: {len(MIN_WALLETS_GRID) * len(WINDOW_MINUTES_GRID) * len(HOLDING_HOURS_GRID)} configs",
         "",
