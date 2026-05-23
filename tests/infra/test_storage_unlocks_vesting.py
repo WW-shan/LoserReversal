@@ -30,3 +30,25 @@ def test_unlocks_parquet_roundtrip_preserves_vesting_type(tmp_path: Path):
     assert actual["vesting_type"].tolist() == ["cliff", "linear"]
     assert actual["vesting_type"].dtype == pd.StringDtype(storage="python")
     assert schema.field("vesting_type").type == pa.string()
+
+
+def test_read_unlocks_handles_old_schema_without_vesting_type(tmp_path: Path):
+    parquet_path = tmp_path / "old_unlocks.parquet"
+    frame = pd.DataFrame(
+        {
+            "token": ["ARB"],
+            "coingecko_id": ["arbitrum"],
+            "unlock_date": pd.to_datetime(["2026-01-01"]).date,
+            "unlock_pct": [0.02],
+            "category": ["insiders"],
+            "has_hl_perp": [True],
+        }
+    )
+    table = pa.Table.from_pandas(frame, preserve_index=False)
+    pq.write_table(table, parquet_path)
+
+    actual = read_unlocks(parquet_path)
+
+    assert "vesting_type" in actual.columns
+    assert actual["vesting_type"].isna().all()
+    assert actual["vesting_type"].dtype == pd.StringDtype(storage="python")
