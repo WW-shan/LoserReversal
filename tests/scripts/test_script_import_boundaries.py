@@ -4,23 +4,22 @@ import ast
 from pathlib import Path
 
 
-def test_wallet_scripts_do_not_import_private_helpers_across_modules():
+def test_no_underscore_prefix_cross_script_imports():
     scripts_dir = Path(__file__).resolve().parents[2] / "scripts"
-    checked_scripts = [
-        scripts_dir / "run_wallet_cluster_backtest.py",
-        scripts_dir / "run_wallet_walkforward.py",
-    ]
+    script_stems = {script.stem for script in scripts_dir.glob("*.py")}
     violations: list[str] = []
 
-    for script in checked_scripts:
+    for script in sorted(scripts_dir.glob("*.py")):
         tree = ast.parse(script.read_text(encoding="utf-8"), filename=str(script))
         for node in ast.walk(tree):
             if not isinstance(node, ast.ImportFrom) or node.module is None:
                 continue
-            if not node.module.endswith(
-                ("run_wallet_reverse_backtest", "run_wallet_cluster_backtest")
-            ):
+
+            module_parts = node.module.split(".")
+            imported_script = module_parts[1] if module_parts[0] == "scripts" else module_parts[0]
+            if imported_script not in script_stems or imported_script == script.stem:
                 continue
+
             for alias in node.names:
                 if alias.name.startswith("_"):
                     violations.append(f"{script.name}: {node.module}.{alias.name}")
