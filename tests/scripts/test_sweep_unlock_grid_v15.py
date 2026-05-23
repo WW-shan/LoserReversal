@@ -253,6 +253,42 @@ def test_parquet_has_methodology_metadata(monkeypatch, tmp_path):
     assert metadata[b"cell_budget_per_token"] == b"12345.00"
 
 
+def test_date_range_clips_price_window_not_just_events(monkeypatch, tmp_path):
+    out = tmp_path / "unlock_grid.parquet"
+    report = tmp_path / "grid_report.md"
+    captured_prices: dict[str, pd.Series] = {}
+
+    events = _events()
+    events.loc[0, "unlock_date"] = pd.Timestamp("2025-01-02T00:00:00Z")
+    price_index = pd.date_range("2024-12-30", periods=7, freq="1D", tz="UTC")
+    prices = pd.Series(range(7), index=price_index, name="close", dtype="float64")
+
+    def fake_run_main_grid(events_arg, prices_arg, *args, **kwargs):
+        captured_prices["ARB"] = prices_arg["ARB"]
+        return _grid_rows(1)
+
+    monkeypatch.setattr(sweep, "read_unlocks", lambda path=None: events, raising=False)
+    monkeypatch.setattr(sweep, "load_coverage", lambda path: _coverage(), raising=False)
+    monkeypatch.setattr(sweep, "load_prices", lambda events_arg, candles_dir: {"ARB": prices})
+    monkeypatch.setattr(sweep, "run_main_grid", fake_run_main_grid)
+    monkeypatch.setattr(sweep, "run_vesting_sub_sweep", lambda *args, **kwargs: [])
+
+    sweep.run_sweep(
+        sweep.GridSweepConfig(
+            out=out,
+            report=report,
+            date_start=pd.Timestamp("2025-01-01T00:00:00Z"),
+            date_end=pd.Timestamp("2025-01-03T00:00:00Z"),
+        )
+    )
+
+    assert captured_prices["ARB"].index.tolist() == [
+        pd.Timestamp("2025-01-01T00:00:00Z"),
+        pd.Timestamp("2025-01-02T00:00:00Z"),
+        pd.Timestamp("2025-01-03T00:00:00Z"),
+    ]
+
+
 def _prices() -> pd.Series:
     index = pd.date_range("2026-01-01", periods=10, freq="1D", tz="UTC")
     return pd.Series(range(10), index=index, name="close", dtype="float64")
