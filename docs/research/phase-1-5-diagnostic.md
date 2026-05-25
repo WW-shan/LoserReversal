@@ -126,7 +126,7 @@ split | period          | n  | Sharpe | win% | MaxDD  | ret    | IS-selected coh
 - Sharpe shouldn't drop more than 0.1 (stop cuts long-tail winners + losers symmetrically)
 
 **Cost**: 0.5 day
-**Status**: not started
+**Status**: complete — see `reports/phase-1-5-ablation-d.md`. v2 aggregate MaxDD -29.30% → -20.05% (fails ≤-20% by 5 bps), Sharpe 0.6073 → 0.2660 (drops 0.34, past 0.1 tolerance), win_rate 75% → 47%. **Decision: REJECT** static -10% stop. Recommended next: pair Ablation B + C and, if needed, retry with an ATR-scaled or event-conditional stop.
 
 ### E. Cross-thesis portfolio (deferred)
 
