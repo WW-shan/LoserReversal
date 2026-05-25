@@ -45,6 +45,7 @@ class PortfolioStats:
     total_return: float
     mean_pnl: float
     median_pnl: float
+    trades: list[dict[str, Any]]
 
 
 SIGNAL_REGISTRY: dict[str, SignalSpec] = {
@@ -93,6 +94,7 @@ def run_cell(
     init_cash: float,
     fees: float,
     slippage: float,
+    record_trades: bool = False,
 ) -> dict[str, Any]:
     filtered = apply_category_filter(events, cell.category_filter)
     signal_result = cell.signal_fn(
@@ -108,8 +110,9 @@ def run_cell(
         init_cash=init_cash,
         fees=fees,
         slippage=slippage,
+        record_trades=record_trades,
     )
-    return {
+    row: dict[str, Any] = {
         "signal": cell.code,
         "min_unlock_pct": cell.min_unlock_pct,
         "cohort": cell.cohort_name,
@@ -122,6 +125,9 @@ def run_cell(
         "mean_pnl": portfolio_stats.mean_pnl,
         "median_pnl": portfolio_stats.median_pnl,
     }
+    if record_trades:
+        row["_trades"] = portfolio_stats.trades
+    return row
 
 
 def backtest_signals(
@@ -132,6 +138,7 @@ def backtest_signals(
     init_cash: float,
     fees: float,
     slippage: float,
+    record_trades: bool = False,
 ) -> PortfolioStats:
     config = BacktestConfig(
         init_cash=init_cash,
@@ -142,6 +149,7 @@ def backtest_signals(
     )
     equities: list[pd.Series] = []
     pnl_values: list[float] = []
+    trade_rows: list[dict[str, Any]] = []
     n_trades = 0
     trades_won = 0.0
 
@@ -157,6 +165,8 @@ def backtest_signals(
         trades_won += token_win_rate * token_trades
         equities.append(result.equity.rename(token))
         pnl_values.extend(_trade_pnls(result.portfolio))
+        if record_trades:
+            trade_rows.extend(_trade_records(result.portfolio, token, close.index, direction))
 
     equity = _summed_equity(equities, init_cash)
     pnl = pd.Series(pnl_values, dtype="float64")
@@ -172,6 +182,7 @@ def backtest_signals(
         total_return=equity_final / equity_first - 1.0 if equity_first else 0.0,
         mean_pnl=float(pnl.mean()) if not pnl.empty else 0.0,
         median_pnl=float(pnl.median()) if not pnl.empty else 0.0,
+        trades=trade_rows,
     )
 
 
@@ -205,3 +216,138 @@ def _trade_pnls(portfolio: object) -> list[float]:
     if not isinstance(records, pd.DataFrame) or "PnL" not in records.columns:
         return []
     return pd.to_numeric(records["PnL"], errors="coerce").dropna().astype("float64").tolist()
+
+
+def _trade_records(
+    portfolio: object,
+    token: str,
+    price_index: pd.Index,
+    direction: str,
+) -> list[dict[str, Any]]:
+    trades = getattr(portfolio, "trades", None)
+    readable = getattr(trades, "records_readable", pd.DataFrame())
+    if isinstance(readable, pd.DataFrame) and _has_readable_trade_columns(readable):
+        return _readable_trade_records(readable, token, direction)
+
+    raw_records = getattr(trades, "records", pd.DataFrame())
+    if isinstance(raw_records, pd.DataFrame) and _has_raw_trade_columns(raw_records):
+        return _raw_trade_records(raw_records, token, price_index, direction)
+
+    return []
+
+
+def _has_readable_trade_columns(records: pd.DataFrame) -> bool:
+    return {
+        "Entry Timestamp",
+        "Exit Timestamp",
+        "Return",
+        "Status",
+    }.issubset(records.columns)
+
+
+def _has_raw_trade_columns(records: pd.DataFrame) -> bool:
+    return {"entry_idx", "exit_idx", "return", "status"}.issubset(records.columns)
+
+
+def _readable_trade_records(
+    records: pd.DataFrame,
+    token: str,
+    direction: str,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    closed = records.loc[records["Status"].astype("string").eq("Closed")]
+    for row in closed.to_dict("records"):
+        entry_ts = _utc_timestamp(row["Entry Timestamp"])
+        exit_ts = _utc_timestamp(row["Exit Timestamp"])
+        trade_return = _coerce_float(row["Return"])
+        if entry_ts is pd.NaT or exit_ts is pd.NaT or trade_return is None:
+            continue
+        rows.append(
+            _trade_record(
+                token=token,
+                entry_ts=entry_ts,
+                exit_ts=exit_ts,
+                direction=_trade_direction(row.get("Direction"), direction),
+                trade_return=trade_return,
+            )
+        )
+    return rows
+
+
+def _raw_trade_records(
+    records: pd.DataFrame,
+    token: str,
+    price_index: pd.Index,
+    direction: str,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    index = pd.DatetimeIndex(price_index)
+    for row in records.to_dict("records"):
+        if int(row["status"]) != 1:
+            continue
+        entry_idx = int(row["entry_idx"])
+        exit_idx = int(row["exit_idx"])
+        if entry_idx >= len(index) or exit_idx >= len(index):
+            continue
+        trade_return = _coerce_float(row["return"])
+        if trade_return is None:
+            continue
+        rows.append(
+            _trade_record(
+                token=token,
+                entry_ts=_utc_timestamp(index[entry_idx]),
+                exit_ts=_utc_timestamp(index[exit_idx]),
+                direction=_trade_direction(None, direction),
+                trade_return=trade_return,
+            )
+        )
+    return rows
+
+
+def _trade_record(
+    *,
+    token: str,
+    entry_ts: pd.Timestamp,
+    exit_ts: pd.Timestamp,
+    direction: int,
+    trade_return: float,
+) -> dict[str, Any]:
+    hold_days = (exit_ts - entry_ts).total_seconds() / 86400.0
+    return {
+        "token": str(token),
+        "entry_ts": entry_ts,
+        "exit_ts": exit_ts,
+        "direction": int(direction),
+        "return": float(trade_return),
+        "hold_days": float(hold_days),
+        "win": bool(trade_return > 0),
+    }
+
+
+def _utc_timestamp(value: Any) -> pd.Timestamp:
+    timestamp = pd.Timestamp(value)
+    if pd.isna(timestamp):
+        return pd.NaT
+    if timestamp.tz is None:
+        return timestamp.tz_localize("UTC")
+    return timestamp.tz_convert("UTC")
+
+
+def _coerce_float(value: Any) -> float | None:
+    if pd.isna(value):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _trade_direction(value: Any, strategy_direction: str) -> int:
+    label = str(value).lower()
+    if label.startswith("long"):
+        return 1
+    if label.startswith("short"):
+        return -1
+    if strategy_direction == "long":
+        return 1
+    return -1

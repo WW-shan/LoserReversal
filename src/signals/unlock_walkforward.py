@@ -14,6 +14,17 @@ DEFAULT_INIT_CASH = 10_000.0
 DEFAULT_FEES = 0.0005
 DEFAULT_SLIPPAGE = 0.0002
 DEFAULT_GRID_PATH = Path("data/parquet/unlock_grid_v15.parquet")
+TRADE_COLUMNS = [
+    "signal",
+    "split_idx",
+    "token",
+    "entry_ts",
+    "exit_ts",
+    "direction",
+    "return",
+    "hold_days",
+    "win",
+]
 
 
 def select_best_config(
@@ -63,9 +74,11 @@ def run_per_signal_walkforward(
     fees: float = DEFAULT_FEES,
     slippage: float = DEFAULT_SLIPPAGE,
     fallback_used: bool = False,
-) -> pd.DataFrame:
+    record_trades: bool = False,
+) -> pd.DataFrame | tuple[pd.DataFrame, pd.DataFrame]:
     grid = _grid_frame(grid_df)
     rows: list[dict[str, Any]] = []
+    trade_rows: list[dict[str, Any]] = []
 
     for split_idx, ((train_start, train_end), (test_start, test_end)) in enumerate(splits):
         train_window_start = _utc_timestamp(train_start)
@@ -107,19 +120,25 @@ def run_per_signal_walkforward(
                 )
                 if selected is None:
                     selected_cohort = "no_train_signal"
-            stats = (
-                _empty_stats(signal_code)
-                if selected is None
-                else run_cell(
-                    test_events,
-                    prices,
-                    test_coverage,
-                    selected,
-                    init_cash=init_cash,
-                    fees=fees,
-                    slippage=slippage,
-                )
-            )
+            if selected is None:
+                stats = _empty_stats(signal_code)
+            else:
+                run_kwargs: dict[str, Any] = {
+                    "init_cash": init_cash,
+                    "fees": fees,
+                    "slippage": slippage,
+                }
+                if record_trades:
+                    run_kwargs["record_trades"] = True
+                stats = run_cell(test_events, prices, test_coverage, selected, **run_kwargs)
+                if record_trades:
+                    trade_rows.extend(
+                        _walkforward_trade_rows(
+                            signal_code,
+                            split_idx,
+                            stats.get("_trades", []),
+                        )
+                    )
             rows.append(
                 _walkforward_row(
                     kind="per_signal",
@@ -137,7 +156,10 @@ def run_per_signal_walkforward(
             )
 
     rows.extend(_aggregate_rows(rows, kind="per_signal"))
-    return pd.DataFrame(rows)
+    summary = pd.DataFrame(rows)
+    if record_trades:
+        return summary, _trade_frame(trade_rows)
+    return summary
 
 
 def compose_portfolio(
@@ -444,6 +466,63 @@ def _empty_stats(signal_code: str) -> dict[str, Any]:
         "mean_pnl": 0.0,
         "median_pnl": 0.0,
     }
+
+
+def _walkforward_trade_rows(
+    signal: str,
+    split_idx: int,
+    trades: object,
+) -> list[dict[str, Any]]:
+    if not isinstance(trades, list):
+        return []
+
+    rows: list[dict[str, Any]] = []
+    for trade in trades:
+        if not isinstance(trade, dict):
+            continue
+        rows.append(
+            {
+                "signal": signal,
+                "split_idx": split_idx,
+                "token": str(trade.get("token", "")),
+                "entry_ts": _utc_timestamp(trade.get("entry_ts")),
+                "exit_ts": _utc_timestamp(trade.get("exit_ts")),
+                "direction": int(trade.get("direction", 0)),
+                "return": float(trade.get("return", 0.0)),
+                "hold_days": float(trade.get("hold_days", 0.0)),
+                "win": bool(trade.get("win", False)),
+            }
+        )
+    return rows
+
+
+def _trade_frame(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    if not rows:
+        return pd.DataFrame(
+            {
+                "signal": pd.Series(dtype="string"),
+                "split_idx": pd.Series(dtype="int64"),
+                "token": pd.Series(dtype="string"),
+                "entry_ts": pd.Series(dtype="datetime64[ns, UTC]"),
+                "exit_ts": pd.Series(dtype="datetime64[ns, UTC]"),
+                "direction": pd.Series(dtype="int64"),
+                "return": pd.Series(dtype="float64"),
+                "hold_days": pd.Series(dtype="float64"),
+                "win": pd.Series(dtype="bool"),
+            }
+        )
+
+    frame = pd.DataFrame(rows, columns=TRADE_COLUMNS)
+    frame["signal"] = frame["signal"].astype("string")
+    frame["split_idx"] = pd.to_numeric(frame["split_idx"], errors="coerce").astype("int64")
+    frame["token"] = frame["token"].astype("string")
+    frame["entry_ts"] = pd.to_datetime(frame["entry_ts"], utc=True, errors="coerce")
+    frame["exit_ts"] = pd.to_datetime(frame["exit_ts"], utc=True, errors="coerce")
+    frame["direction"] = pd.to_numeric(frame["direction"], errors="coerce").astype("int64")
+    frame["return"] = pd.to_numeric(frame["return"], errors="coerce").astype("float64")
+    frame["hold_days"] = pd.to_numeric(frame["hold_days"], errors="coerce").astype("float64")
+    frame["win"] = frame["win"].fillna(False).astype("bool")
+    return frame[TRADE_COLUMNS]
 
 
 def _aggregate_rows(rows: list[dict[str, Any]], *, kind: str) -> list[dict[str, Any]]:
