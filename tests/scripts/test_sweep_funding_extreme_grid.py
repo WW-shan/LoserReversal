@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -90,6 +92,41 @@ def test_sweep_cli_smoke(monkeypatch, tmp_path: Path, capsys):
     assert "wrote parquet" in capsys.readouterr().out
 
 
+def test_sweep_cli_file_execution_smoke(tmp_path: Path):
+    funding_dir = tmp_path / "funding"
+    candles_dir = tmp_path / "candles"
+    out = tmp_path / "funding_extreme_grid.parquet"
+    report = tmp_path / "funding_extreme_grid.md"
+    _write_cli_fixture(funding_dir, candles_dir)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/sweep_funding_extreme_grid.py",
+            "--funding-dir",
+            str(funding_dir),
+            "--candles-dir",
+            str(candles_dir),
+            "--out",
+            str(out),
+            "--report",
+            str(report),
+            "--taker-fee",
+            "0",
+            "--slippage",
+            "0",
+        ],
+        cwd=Path(__file__).resolve().parents[2],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert out.exists()
+    assert len(pd.read_parquet(out).loc[lambda frame: frame["token"].eq("AGGREGATE")]) == 48
+
+
 def _fake_single_config(config) -> pd.DataFrame:
     sharpe = _score(config.z_threshold, config.hold_hours, config.lookback_days)
     return pd.DataFrame(
@@ -124,3 +161,34 @@ def _row(config, *, token: str, sharpe: float, n_trades: int) -> dict[str, float
         "avg_hold_hours": float(config.hold_hours),
         "total_funding_paid": -0.001,
     }
+
+
+def _write_cli_fixture(funding_dir: Path, candles_dir: Path) -> None:
+    funding_dir.mkdir(parents=True)
+    candles_dir.mkdir(parents=True)
+    hours = 24 * 102
+    timestamps = pd.date_range("2025-01-01T00:00:00Z", periods=hours, freq="1h", tz="UTC")
+    rates = [0.0001] * hours
+    for position in range(24 * 92, 24 * 92 + 5):
+        rates[position] = 0.0010
+
+    for token in ("BTC", "ETH"):
+        pd.DataFrame(
+            {
+                "timestamp": timestamps,
+                "funding_rate": rates,
+                "premium": [0.0] * hours,
+            }
+        ).to_parquet(funding_dir / f"{token}.parquet", index=False)
+
+        close = pd.Series(100.0, index=timestamps) + pd.Series(range(hours), index=timestamps) * 0.01
+        pd.DataFrame(
+            {
+                "timestamp": timestamps,
+                "open": close,
+                "high": close,
+                "low": close,
+                "close": close,
+                "volume": 1.0,
+            }
+        ).to_parquet(candles_dir / f"{token}_1h.parquet", index=False)
