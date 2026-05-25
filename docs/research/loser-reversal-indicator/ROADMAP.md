@@ -348,30 +348,53 @@ P7                                                          [持续]    Alpha �
 
 详细 verdict: `reports/phase1_5_unlock_academic.md`
 
-### ⚠️ Phase 1.6: YELLOW → GREEN 救援 ablations（待执行）
+### ⚠️ Phase 1.6: YELLOW → GREEN 救援 ablations（A+B+D 已完成 2026-05-26，C 数据受限推迟）
 
-基于 `docs/research/phase-1-5-diagnostic.md` 5 个根因 + `literature-review.md` Part C 调研：
+基于 `docs/research/phase-1-5-diagnostic.md` 5 个根因 + `literature-review.md` Part C 调研，最终综合报告 `docs/research/phase-1-5-ablation-results.md`。
 
-| 根因 | 学术依据 | Ablation | 预期 lift |
+| 根因 | Ablation | 状态 | 结果 |
 |---|---|---|---|
-| Split 3 lucky-fold（Sharpe 1.70 单 split 拉高） | Q6 dr-6 walk-forward bootstrap | **A: Bootstrap CI** | 不变 Sharpe，揭示真 95% CI |
-| Cohort drift（5 splits 选 3 种 cohort） | Q1 dr-1 search space overfit | **B: 固定 cohort=team** | 更稳定 |
-| Bear-period failure（Split 4 Sharpe 0.23, MaxDD -29%） | Q2/Q5 regime detection | **C: BTC<200d MA filter (bear-only short)** | +0.2-0.4 Sharpe |
-| MaxDD -29% 超 GREEN 阈值 -20% | Q3 event-specific buffer | **D: -10% per-trade stop loss** | MaxDD 救到 -15%, Sharpe +0.1 |
-| Portfolio Sharpe drag (v1+v2 < v2 alone) | Q4 uncorrelated alpha required | **E: 推迟到 cross-thesis** (P3 + P2.5) | 真 portfolio lift |
+| Split 3 lucky-fold | **A: Bootstrap CI** | ✅ done | full-sample CI **[0.84, 4.09]** → robust；leave-split-3-out CI [-0.47, 2.32] |
+| Cohort drift | **B: 固定 cohort=team** | ✅ done | Sharpe 0.59 vs baseline 0.61 → cohort 搜索不是 overfit 来源 |
+| Bear-period failure | **C: BTC<200d MA filter** | ⏸ deferred | regime_filter 模块 + 12 tests 已落地（commit `8d2d80b`），但 BTC 1d candle 仅 91 天，200d SMA 算不出 — 等 BTC backfill 扩到 2023-05 后再跑 |
+| MaxDD -29% | **D: -10% per-trade stop loss** | ✅ done (mixed) | **v1+stop 升 Sharpe 0.46→0.59 / MaxDD -10%→-8% (新最佳)**；**v2+stop 崩 Sharpe 0.61→0.27 / MaxDD -29%→-20%** — 10% 太狠，T-30 winner 被 mid-hold 砍掉 |
+| Portfolio Sharpe drag | **E: cross-thesis** | ⏸ blocked | 需 Phase 3 + Phase 2.5 完成 |
 
-**执行顺序** (3 天工作量):
-- Day 1: A (bootstrap CI, 1h) → B (fix cohort, 0.5d)
-- Day 2: C (regime filter, 1d) → D (stop loss, 0.5d)
-- Day 3: 组合 A+B+C+D rerun，写 `phase-1-5-ablation-results.md`，决定最终 verdict
+### Phase 1.5 最终裁决（2026-05-26 修订）
 
-**决策树**:
-- A 显示 95% CI lower > 0 → 信号 robust，B/C/D 试图升 GREEN
-- A 显示 CI lower < 0 → 接受 YELLOW 上限或承认 RED
-- A+B+C+D 组合后 Sharpe ≥ 1.0 AND MaxDD ≤ 20% → 升 GREEN
-- 否则 → 锁定 v2 当前配置作为 YELLOW 信号进 Phase 5
+**Classification: 🟡 YELLOW (unchanged), 但最佳变体切换 v2 → v1+D**
 
-详见 `docs/research/phase-1-5-diagnostic.md`。
+| axis | baseline (v2) | v1+D (recommended) | GREEN 阈值 |
+|---|---:|---:|---|
+| OOS Sharpe | 0.61 | 0.59 | ≥ 1.0 |
+| n_trades | 36 | 29 | ≥ 50 |
+| MaxDD | -29.3% | **-7.8%** | ≤ -20% |
+| win_rate | 75.0% | 72.4% | n/a |
+| bootstrap CI lower | n/a | 待算 | > 0 |
+
+**推荐部署变体**：v1 + stop=10% + cohort=team — 牺牲 0.02 Sharpe 换 21pp MaxDD 改善，适合 Phase 5 portfolio 低权重纳入。
+
+Configuration to lock if Phase 5 picks this up:
+
+```json
+{
+  "signal": "v1",
+  "entry_offset_days": -7,
+  "exit_offset_days": 0,
+  "cohort": "team",
+  "min_unlock_pct": 0.02,
+  "stop_loss": 0.10,
+  "max_position_pct": 0.05,
+  "regime_filter": "pending_btc_backfill"
+}
+```
+
+### 后续 follow-ups（不阻断 Phase 5）
+
+1. 扩展 BTC 1d candle backfill 到 2023-05（同时解 Phase 3 candle gap）
+2. 跑 Ablation C 真实数据（regime_filter CLI 已就绪）
+3. Bootstrap CI on v1+D 新组合（n_trades=29，需 CI 决定 Phase 5 权重）
+4. ATR-adaptive stop（替代固定 10%，可能让 v2 同时保 Sharpe 和 MaxDD）
 
 ---
 
