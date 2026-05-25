@@ -84,6 +84,15 @@ def run_single_config(config: BacktestConfig) -> pd.DataFrame:
 def run_single_config_with_coverage(config: BacktestConfig) -> SingleConfigResult:
     funding_history = load_funding_history(config.funding_dir)
     prices = load_prices(config.candles_dir)
+    return execute_backtest(funding_history, prices, config)
+
+
+def execute_backtest(
+    funding_history: dict[str, pd.DataFrame],
+    prices: dict[str, pd.Series],
+    config: BacktestConfig,
+) -> SingleConfigResult:
+    """Run a single config over pre-loaded data. Used by walk-forward."""
     token_results: list[TokenBacktest] = []
     rows: list[dict[str, object]] = []
     skipped: list[str] = []
