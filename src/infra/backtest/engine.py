@@ -32,6 +32,7 @@ class BacktestConfig:
     slippage: float = 0.0002
     freq: str = "1D"
     direction: str = "longonly"
+    stop_loss: float | None = None
 
 
 @dataclass
@@ -53,16 +54,20 @@ def run_backtest(
     entry_signals = _align_bool_signals(entries, close.index)
     exit_signals = _align_bool_signals(exits, close.index)
 
-    portfolio = vbt.Portfolio.from_signals(
-        close=close,
-        entries=entry_signals,
-        exits=exit_signals,
-        init_cash=config.init_cash,
-        fees=config.fees,
-        slippage=config.slippage,
-        freq=config.freq,
-        direction=config.direction,
-    )
+    portfolio_kwargs: dict[str, object] = {
+        "close": close,
+        "entries": entry_signals,
+        "exits": exit_signals,
+        "init_cash": config.init_cash,
+        "fees": config.fees,
+        "slippage": config.slippage,
+        "freq": config.freq,
+        "direction": config.direction,
+    }
+    if config.stop_loss is not None:
+        portfolio_kwargs["sl_stop"] = float(config.stop_loss)
+
+    portfolio = vbt.Portfolio.from_signals(**portfolio_kwargs)
     equity = portfolio.value().astype("float64")
     returns = equity.pct_change().dropna()
     n_trades = int(portfolio.trades.count())
