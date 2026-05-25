@@ -38,11 +38,12 @@ def select_best_config(
     init_cash: float = DEFAULT_INIT_CASH,
     fees: float = DEFAULT_FEES,
     slippage: float = DEFAULT_SLIPPAGE,
+    fix_cohort: str | None = None,
 ) -> GridCell | None:
     best_cell: GridCell | None = None
     best_sharpe = float("-inf")
 
-    for cell in _candidate_cells(grid_df, signal_code):
+    for cell in _candidate_cells(grid_df, signal_code, fix_cohort=fix_cohort):
         row = run_cell(
             train_events,
             train_prices,
@@ -75,6 +76,7 @@ def run_per_signal_walkforward(
     slippage: float = DEFAULT_SLIPPAGE,
     fallback_used: bool = False,
     record_trades: bool = False,
+    fix_cohort: str | None = None,
 ) -> pd.DataFrame | tuple[pd.DataFrame, pd.DataFrame]:
     grid = _grid_frame(grid_df)
     rows: list[dict[str, Any]] = []
@@ -105,6 +107,7 @@ def run_per_signal_walkforward(
                 init_cash=init_cash,
                 fees=fees,
                 slippage=slippage,
+                fix_cohort=fix_cohort,
             )
             selected_cohort = None
             if selected is None:
@@ -117,6 +120,7 @@ def run_per_signal_walkforward(
                     init_cash=init_cash,
                     fees=fees,
                     slippage=slippage,
+                    fix_cohort=fix_cohort,
                 )
                 if selected is None:
                     selected_cohort = "no_train_signal"
@@ -234,12 +238,20 @@ def _portfolio_signal_label(component_count: int) -> str:
     return f"top_{component_count}_equal_weight"
 
 
-def _candidate_cells(grid_df: pd.DataFrame, signal_code: str) -> list[GridCell]:
+def _candidate_cells(
+    grid_df: pd.DataFrame,
+    signal_code: str,
+    *,
+    fix_cohort: str | None = None,
+) -> list[GridCell]:
     lookup = {
         (cell.code, float(cell.min_unlock_pct), cell.cohort_name): cell for cell in iter_grid()
     }
     if grid_df.empty:
-        return [cell for cell in lookup.values() if cell.code == signal_code]
+        cells_iter = (cell for cell in lookup.values() if cell.code == signal_code)
+        if fix_cohort is None:
+            return list(cells_iter)
+        return [cell for cell in cells_iter if cell.cohort_name == fix_cohort]
 
     cells: list[GridCell] = []
     seen: set[tuple[str, float, str]] = set()
@@ -249,9 +261,12 @@ def _candidate_cells(grid_df: pd.DataFrame, signal_code: str) -> list[GridCell]:
         cohort = str(row.get("cohort", ""))
         key = (code, min_unlock_pct, cohort)
         cell = lookup.get(key)
-        if code == signal_code and cell is not None and key not in seen:
-            cells.append(cell)
-            seen.add(key)
+        if code != signal_code or cell is None or key in seen:
+            continue
+        if fix_cohort is not None and cohort != fix_cohort:
+            continue
+        cells.append(cell)
+        seen.add(key)
     return cells
 
 
@@ -350,8 +365,9 @@ def _fallback_config_for_signal(
     init_cash: float,
     fees: float,
     slippage: float,
+    fix_cohort: str | None = None,
 ) -> GridCell | None:
-    candidate_cells = _candidate_cells(grid_df, signal_code)
+    candidate_cells = _candidate_cells(grid_df, signal_code, fix_cohort=fix_cohort)
     if not candidate_cells:
         return None
 
