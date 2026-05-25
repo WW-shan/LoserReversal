@@ -106,9 +106,10 @@ def run_single_config_with_coverage(config: BacktestConfig) -> SingleConfigResul
 
     aggregate_equity = _aggregate_equity([result.equity for result in token_results])
     aggregate_trades = [trade for result in token_results for trade in result.trades]
-    aggregate_sharpe = _aggregate_sharpe(
-        [result.equity for result in token_results], len(aggregate_trades)
-    )
+    portfolio_equity = _portfolio_equity_curve([result.equity for result in token_results])
+    aggregate_sharpe = _portfolio_sharpe_from_equity(portfolio_equity, len(aggregate_trades))
+    aggregate_annualized = _annualized_return(portfolio_equity, len(aggregate_trades))
+    aggregate_max_dd = max_drawdown(portfolio_equity) if not portfolio_equity.empty else 0.0
     rows.append(
         _metrics_row(
             "AGGREGATE",
@@ -116,6 +117,8 @@ def run_single_config_with_coverage(config: BacktestConfig) -> SingleConfigResul
             aggregate_trades,
             config,
             override_sharpe=aggregate_sharpe,
+            override_annualized=aggregate_annualized,
+            override_max_dd=aggregate_max_dd,
         )
     )
     frame = pd.DataFrame(rows, columns=OUTPUT_COLUMNS)
@@ -382,6 +385,8 @@ def _metrics_row(
     config: BacktestConfig,
     *,
     override_sharpe: float | None = None,
+    override_annualized: float | None = None,
+    override_max_dd: float | None = None,
 ) -> dict[str, object]:
     n_trades = len(trades)
     trade_returns = pd.Series([trade.trade_return for trade in trades], dtype="float64")
@@ -391,6 +396,16 @@ def _metrics_row(
     wins = int((trade_returns > 0).sum()) if n_trades else 0
 
     sharpe_value = override_sharpe if override_sharpe is not None else _sharpe(equity, n_trades)
+    annualized_value = (
+        override_annualized
+        if override_annualized is not None
+        else _annualized_return(equity, n_trades)
+    )
+    max_dd_value = (
+        override_max_dd
+        if override_max_dd is not None
+        else (max_drawdown(equity) if not equity.empty else 0.0)
+    )
     return {
         "token": token,
         "z_threshold": float(config.z_threshold),
@@ -400,8 +415,8 @@ def _metrics_row(
         "n_long": int(n_long),
         "n_short": int(n_short),
         "sharpe": sharpe_value,
-        "annualized_return": _annualized_return(equity, n_trades),
-        "max_dd": max_drawdown(equity) if not equity.empty else 0.0,
+        "annualized_return": annualized_value,
+        "max_dd": max_dd_value,
         "win_rate": float(wins / n_trades) if n_trades else 0.0,
         "avg_trade_return": float(trade_returns.mean()) if n_trades else 0.0,
         "avg_hold_hours": float(hold_hours.mean()) if n_trades else 0.0,
@@ -436,8 +451,19 @@ def _aggregate_sharpe(equities: list[pd.Series], n_trades: int) -> float:
     onboarding-spike artifact a token getting first $10k allocation would create
     when summing raw equities across heterogeneous listing dates.
     """
-    if n_trades < 5 or not equities:
-        return math.nan
+    portfolio = _portfolio_equity_curve(equities)
+    return _portfolio_sharpe_from_equity(portfolio, n_trades)
+
+
+def _portfolio_equity_curve(equities: list[pd.Series]) -> pd.Series:
+    """Equal-weight portfolio cumulative equity rebased to BASE_CAPITAL.
+
+    Daily portfolio return = mean of per-token daily returns across tokens
+    active that day. Cumulative product starts at BASE_CAPITAL one day before
+    the first return so `pct_change` reproduces the portfolio return series.
+    """
+    if not equities:
+        return pd.Series(dtype="float64")
     per_token: list[pd.Series] = []
     for equity in equities:
         clean = equity.astype("float64").dropna()
@@ -450,12 +476,24 @@ def _aggregate_sharpe(equities: list[pd.Series], n_trades: int) -> float:
         if not returns.empty:
             per_token.append(returns)
     if not per_token:
-        return math.nan
+        return pd.Series(dtype="float64")
     joined = pd.concat(per_token, axis=1)
-    portfolio = joined.mean(axis=1, skipna=True).dropna()
-    if portfolio.empty:
+    portfolio_returns = joined.mean(axis=1, skipna=True).dropna()
+    if portfolio_returns.empty:
+        return pd.Series(dtype="float64")
+    cumulative = (1.0 + portfolio_returns).cumprod() * BASE_CAPITAL
+    seed_index = portfolio_returns.index[0] - pd.Timedelta(days=1)
+    seed = pd.Series([BASE_CAPITAL], index=pd.DatetimeIndex([seed_index], tz=cumulative.index.tz))
+    return pd.concat([seed, cumulative]).sort_index()
+
+
+def _portfolio_sharpe_from_equity(portfolio_equity: pd.Series, n_trades: int) -> float:
+    if n_trades < 5 or portfolio_equity.empty or len(portfolio_equity) < 2:
         return math.nan
-    return sharpe_ratio(portfolio, periods_per_year("1D"))
+    returns = portfolio_equity.pct_change().dropna()
+    if returns.empty:
+        return math.nan
+    return sharpe_ratio(returns, periods_per_year("1D"))
 
 
 def _annualized_return(equity: pd.Series, n_trades: int) -> float:
