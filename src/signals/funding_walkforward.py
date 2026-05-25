@@ -297,9 +297,18 @@ def run_walkforward(
 
 
 def verdict_from_aggregate(aggregate_row: pd.Series | dict) -> str:
-    """Phase 3 reframed verdict per `blocker.md`."""
+    """Phase 3 reframed verdict per `blocker.md`.
+
+    Returns INCONCLUSIVE when OOS trade count is below the minimum needed
+    for the Sharpe estimate to mean anything (matches Phase 1.5's n_trades
+    >= 30 threshold). This prevents misreading a data-gap RED as a strategy
+    failure (which was what happened to Phase 1 v1).
+    """
+    n_trades = _finite(aggregate_row.get("oos_n_trades", 0))
     sharpe = _finite(aggregate_row.get("oos_sharpe", float("nan")))
     annualized = _finite(aggregate_row.get("oos_annualized", float("nan")))
+    if n_trades < 30:
+        return "INCONCLUSIVE"
     if not math.isfinite(sharpe) or not math.isfinite(annualized):
         return "RED"
     if sharpe >= 1.2 and annualized >= 0.20:

@@ -53,7 +53,7 @@ def run(
     if not funding_history:
         raise RuntimeError(f"no funding history found in {funding_dir}")
 
-    history_start, history_end = _history_span(funding_history)
+    history_start, history_end = _history_span(funding_history, prices)
     splits = build_expanding_splits(
         history_start,
         history_end,
@@ -62,7 +62,11 @@ def run(
         test_days=test_days,
     )
     if not splits:
-        raise RuntimeError("history too short for requested splits")
+        raise RuntimeError(
+            f"history too short for requested splits "
+            f"(effective span {(history_end - history_start).days}d, "
+            f"need >= {train_days + test_days}d)"
+        )
 
     frame = run_walkforward(
         funding_history,
@@ -102,19 +106,38 @@ def run(
 
 
 def _history_span(
-    funding_history: dict[str, pd.DataFrame]
+    funding_history: dict[str, pd.DataFrame],
+    prices: dict[str, pd.Series] | None = None,
 ) -> tuple[pd.Timestamp, pd.Timestamp]:
-    starts: list[pd.Timestamp] = []
-    ends: list[pd.Timestamp] = []
-    for frame in funding_history.values():
+    """Effective walk-forward span requires BOTH funding AND price data.
+
+    If `prices` is supplied, the span is restricted to where at least one
+    token has overlapping coverage. Phase 3 1h candle backfill currently
+    only covers ~90 days while funding extends 3 years; honouring the
+    intersection prevents the walkforward from picking train/test windows
+    with no price data.
+    """
+    candidates_start: list[pd.Timestamp] = []
+    candidates_end: list[pd.Timestamp] = []
+    for token, frame in funding_history.items():
         if frame.empty:
             continue
-        index = frame.index
-        starts.append(pd.Timestamp(index.min()).tz_convert("UTC"))
-        ends.append(pd.Timestamp(index.max()).tz_convert("UTC"))
-    if not starts or not ends:
-        raise RuntimeError("funding history is empty")
-    return min(starts), max(ends)
+        funding_start = pd.Timestamp(frame.index.min()).tz_convert("UTC")
+        funding_end = pd.Timestamp(frame.index.max()).tz_convert("UTC")
+        if prices is not None and token in prices:
+            price = prices[token]
+            if price.empty:
+                continue
+            price_start = pd.Timestamp(price.index.min()).tz_convert("UTC")
+            price_end = pd.Timestamp(price.index.max()).tz_convert("UTC")
+            candidates_start.append(max(funding_start, price_start))
+            candidates_end.append(min(funding_end, price_end))
+        elif prices is None:
+            candidates_start.append(funding_start)
+            candidates_end.append(funding_end)
+    if not candidates_start or not candidates_end:
+        raise RuntimeError("no funding/price overlap available")
+    return min(candidates_start), max(candidates_end)
 
 
 def _format_report(

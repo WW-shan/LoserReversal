@@ -40,17 +40,46 @@ def test_build_expanding_splits_truncates_when_history_too_short():
 
 
 def test_verdict_from_aggregate_green_yellow_red():
-    assert wf.verdict_from_aggregate({"oos_sharpe": 1.5, "oos_annualized": 0.25}) == "GREEN"
-    assert wf.verdict_from_aggregate({"oos_sharpe": 0.8, "oos_annualized": 0.15}) == "YELLOW"
-    assert wf.verdict_from_aggregate({"oos_sharpe": 0.3, "oos_annualized": 0.20}) == "RED"
-    assert wf.verdict_from_aggregate({"oos_sharpe": 1.5, "oos_annualized": -0.05}) == "RED"
+    base = {"oos_n_trades": 50}
+    assert (
+        wf.verdict_from_aggregate({**base, "oos_sharpe": 1.5, "oos_annualized": 0.25})
+        == "GREEN"
+    )
+    assert (
+        wf.verdict_from_aggregate({**base, "oos_sharpe": 0.8, "oos_annualized": 0.15})
+        == "YELLOW"
+    )
+    assert (
+        wf.verdict_from_aggregate({**base, "oos_sharpe": 0.3, "oos_annualized": 0.20})
+        == "RED"
+    )
+    assert (
+        wf.verdict_from_aggregate({**base, "oos_sharpe": 1.5, "oos_annualized": -0.05})
+        == "RED"
+    )
     # Borderline below GREEN annualized
-    assert wf.verdict_from_aggregate({"oos_sharpe": 1.5, "oos_annualized": 0.18}) == "YELLOW"
+    assert (
+        wf.verdict_from_aggregate({**base, "oos_sharpe": 1.5, "oos_annualized": 0.18})
+        == "YELLOW"
+    )
+
+
+def test_verdict_inconclusive_when_n_trades_below_threshold():
+    """Phase 1 v1 was misread as RED when it was data_gap. INCONCLUSIVE prevents that."""
+    row = {"oos_n_trades": 15, "oos_sharpe": 2.0, "oos_annualized": 0.30}
+    assert wf.verdict_from_aggregate(row) == "INCONCLUSIVE"
 
 
 def test_verdict_from_aggregate_handles_nan_as_red():
-    assert wf.verdict_from_aggregate({"oos_sharpe": float("nan"), "oos_annualized": 0.2}) == "RED"
-    assert wf.verdict_from_aggregate({"oos_sharpe": 1.5, "oos_annualized": float("nan")}) == "RED"
+    base = {"oos_n_trades": 50}
+    assert (
+        wf.verdict_from_aggregate({**base, "oos_sharpe": float("nan"), "oos_annualized": 0.2})
+        == "RED"
+    )
+    assert (
+        wf.verdict_from_aggregate({**base, "oos_sharpe": 1.5, "oos_annualized": float("nan")})
+        == "RED"
+    )
 
 
 def test_select_best_cell_picks_top_sharpe(synthetic_history):
