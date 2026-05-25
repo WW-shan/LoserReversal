@@ -473,41 +473,54 @@ P7                                                          [持续]    Alpha �
 
 ---
 
-## Phase 3: 跨平台 Funding 套利（Week 9-10）— **已 reframe**
+## Phase 3: 跨平台 Funding 套利（Week 9-10）— **已 reframe，verdict RED-data_gap**
 
 > **原 plan**：跨 HL + Binance + Bybit + Bitget funding arb (delta-neutral)
-> **当前 status**：🚧 60% complete，已 reframe 为 **HL-only funding extreme contrarian**
+> **reframed**：HL-only funding extreme contrarian
+> **当前 verdict (2026-05-26)**：🔴 **RED** on aggregate OOS Sharpe 0.42 / 年化 5.23%，但有 data_gap caveat（1h candle 仅 90 天，funding 是 3 年）
 
-### 🚧 Reframe 原因（2026-05-23 blocker）
+### 🔴 Verdict (2026-05-26) — 详见 `reports/phase_3_verdict.md`
 
-从当前网络环境无法访问 cross-exchange APIs:
-- `fapi.binance.com` — connection timeout
-- `api.bybit.com` — timeout
-- `api.bitget.com` — timeout
-- `www.okx.com` — timeout
-- 仅 `api.hyperliquid.xyz` ✅ 可用 (26k+ samples 回溯 2023-05)
-- `api.gateio.ws` 可达但 funding 历史只 ~1 个月
+3 splits 走完，aggregate OOS Sharpe 0.42 / 年化 5.23% / MaxDD -1.37% / 45 trades / 51.11% win rate。
 
-**学术 backed reframe**: Literature review Part B.5 + 新 Q5 dr-5 证实**单 venue funding extreme contrarian** 是有效 thesis (92% time positive funding bias → 极端值是 contrarian signal)。
+| split | IS Sharpe | IS n | OOS Sharpe | OOS ann | OOS n |
+|---|---:|---:|---:|---:|---:|
+| 0 | -1.17 | 37 | **6.58** | **36.27%** | 22 |
+| 1 | 0.47 | 90 | -4.69 | -18.42% | 6 |
+| 2 | 0.52 | 118 | -0.62 | -2.18% | 17 |
 
-详见 `.ccg/tasks/phase-3-funding-arbitrage/blocker.md`。
+Split 0 OOS Sharpe 6.58 是典型 lucky-fold（与 P1.5 split 3 同构），剩余两 splits 加权强负。
 
-### Phase 3 修订 Pass Criteria
+**关键 caveat（不能直接定 RED 结案）**：
+- 1h candle backfill 只覆盖 2026-02-23 → 2026-05-23（~90 天），funding 是 2023-05 → 2026-05（3 年）
+- 学术 alpha-decay horizon ~1 年，90 天回测远低于统计 floor
+- 等同 Phase 1 v1 当年被误读为 RED 但实际是 data_gap 的情况
+- 12/30 token 缺 1h candles 进一步压缩有效样本
 
-单 venue directional 不同于 cross-exchange neutral：
-- **绿灯**：walk-forward OOS Sharpe ≥ 1.2 AND 年化 ≥ 20%
-- **黄灯**：Sharpe ∈ [0.5, 1.2) AND 年化 ≥ 10%
-- **红灯**：Sharpe < 0.5 OR 负年化
-
-### 当前进度
+### 当前进度（全部 Slice 完成）
 
 - ✅ Slice 1 — funding backfill + `funding_extreme_v1` signal (commits `f983554` → `9521c15`)
-  - `src/signals/funding_extreme_v1.py` — z-score contrarian (entry |z|≥thresh, exit hold_hours 或 z 回 0.5)
-  - `scripts/backfill_funding.py` — 30 HL tokens funding history seeded
-- 🚧 Slice 2 — backtest + grid sweep (48 cells: z × hold × lookback)
-- 🚧 Slice 3 — walk-forward + verdict
+- ✅ Slice 2 — backtest + grid sweep + Fix R1 (commits `b029320` → `c039f1c`)
+  - 三方 review 揪出 2 个 Critical：Sharpe 年化数学 + aggregate equity 幻象
+  - 修复后 top-1 cell (z=3.0/hold=8/lookback=14) IS Sharpe 2.12, 年化 20.01% (90-day 窗口)
+- ✅ Slice 3 — walk-forward + verdict (commits `8181193` → `6d70038`)
 
-待 builder 接力完成 Slice 2/3。
+### Phase 3 Pass Criteria（reframed，已应用）
+
+单 venue directional 不同于 cross-exchange neutral：
+- 🟢 绿灯：walk-forward OOS Sharpe ≥ 1.2 AND 年化 ≥ 20%
+- 🟡 黄灯：Sharpe ∈ [0.5, 1.2) AND 年化 ≥ 10%
+- 🔴 红灯：Sharpe < 0.5 OR 负年化 — **当前触发**
+- ⚪️ INCONCLUSIVE：n_trades < 30（n_trades=45 没触发，但与 INCONCLUSIVE 精神一致因 90-day window）
+
+### Phase 3 后续动作（按优先级）
+
+| 优先级 | Action |
+|---|---|
+| 1 | 扩展 1h candle backfill 到 2023-05（与 funding 匹配）。无此则 Phase 3 无法重判。 |
+| 2 | 数据齐后重跑 5-split walk-forward (train 270 / test 180)。Sharpe ≥ 0.5 升 YELLOW，否则定 RED。 |
+| 3 | Phase 5 portfolio 暂不纳入 funding，等数据齐 + 重判后再决定。当前 Phase 1.5 v2 YELLOW 是唯一可部署信号。 |
+| 4 | 试 funding + BTC<200d MA regime filter（对应 Phase 1.5 Ablation C 的反向用法），可能显著降低 OOS 方差。 |
 
 ### 原 Plan（保留作 reference，待网络条件允许时执行）
 

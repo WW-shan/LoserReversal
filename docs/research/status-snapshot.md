@@ -1,7 +1,7 @@
 # Project Status Snapshot — crypto-alpha-portfolio
 
-> Last updated: 2026-05-24
-> Current branch: main, 326 tests passing, ruff clean
+> Last updated: 2026-05-26
+> Current branch: main, 370 tests passing, ruff clean
 
 ## Where we are right now
 
@@ -13,44 +13,44 @@
 | Phase 1 (v1) | ✅ archived | RED (misread) → re-classified **INCONCLUSIVE** | 3 trades / 100% win / Sharpe 1.93 but window/data sub-optimal |
 | Phase 2 (v1) | ✅ archived | RED (misread) → re-classified **FILTER MISDESIGN** | IR=-4.83 because vlm-based filter selected 86%-profitable whale cohort |
 | **Phase 1.5** | ✅ archived | 🟡 **YELLOW** | Best: v2 (T-30→T0) OOS Sharpe 0.61, 36 trades, 75% win, +110% return / 2.5yr OOS |
-| Phase 3 (reframed) | 🚧 60% complete | TBD | data + signal done; backtest + walk-forward not started; blocker: cross-exchange APIs geo-blocked → HL-only contrarian |
+| Phase 1.5 Ablation A | ✅ done | bootstrap CI **[0.84, 4.09]** | v2 trade-level Sharpe is statistically distinguishable from zero at 95%; split-3 dependent |
+| **Phase 3 (reframed)** | ✅ done | 🔴 **RED** (data_gap caveat) | Aggregate OOS Sharpe 0.42, ann 5.23%, 45 trades — but 1h candle backfill only 90 days vs 3-year funding history; needs candle re-backfill before final |
+| Phase 1.5 B/C/D | 🚧 pending | — | bootstrap robust → continue with B (fix cohort=team), C (BTC<200d MA), D (-10% stop) |
 | Phase 2.5 | not started | — | academic-rebuilt wallet contrarian (5 slices spec) |
 | Phase 4 | not started | — | bot reverse (independent thesis after Phase 2.5 bot exclusion) |
 | Phase 5 | not started | — | portfolio composer + paper trading |
 
 ### Two open questions blocking progress
 
-1. **Phase 1.5 YELLOW: can we move it to GREEN?** Yes via 4 ablation paths (see `phase-1-5-diagnostic.md`). Need to know whether 0.61 Sharpe is lucky-fold or robust. Decision: run A/B/C/D ablations.
-2. **Phase 3 reframed thesis viability**: HL-only contrarian (revised because of geo-block) is academically validated (92% positive funding bias, extreme contrarian alpha) but untested in our pipeline. Need to finish Slice 2 + 3.
+1. **Phase 1.5 YELLOW: can we move it to GREEN?** Ablation A done (robust, CI [0.84, 4.09]). B/C/D pending. Combined target: Sharpe ≥ 1.0 AND MaxDD ≤ 20%.
+2. **Phase 3 RED revisit**: needs 1h candle backfill extension to 2023-05 (currently only 2026-02 → 2026-05). With 3-year candle data, walkforward can use proper 270/180 splits.
 
 ## What still needs to be done (priority order)
 
-### Track 1 — Phase 1.5 救援 (parallel-safe, no infrastructure changes)
+### Track 1 — Phase 1.5 救援 B/C/D (parallel-safe, no infrastructure changes)
 
-These 4 ablations don't break the existing v2 baseline (LGTM in archive); they each produce a comparison number.
-
-| # | Ablation | Method | Expected output | Difficulty |
+| # | Ablation | Method | Expected output | Status |
 |---|---|---|---|---|
-| **A** | Bootstrap CI on v2 OOS Sharpe | 1000× resample 36 trade returns, 95% CI | tells us if `0.61 ± X` is significant or lucky | 1h |
-| **B** | Fix cohort = `team` (delete IS selection) | rerun walk-forward with cohort fixed | tells if IS-cohort-search is overfitting | 0.5d |
-| **C** | BTC < 200d MA filter (bear-only short entries) | gate signal on BTC trend | tests Q2/Q5 regime hypothesis | 1d |
-| **D** | Per-trade -10% stop loss | wrap `run_backtest` with stop_loss | should cut MaxDD from -29% to ~-12% | 0.5d |
-| **E** | (defer) Cross-thesis portfolio | requires Phase 3 + Phase 2.5 | true uncorrelated alpha | weeks |
+| A | Bootstrap CI on v2 OOS Sharpe | 1000× resample 36 trade returns | CI [0.84, 4.09] — robust | ✅ done |
+| **B** | Fix cohort = `team` (delete IS selection) | rerun walk-forward with `--fix-cohort team` | tells if IS-cohort-search is overfitting | 🚧 next |
+| **C** | BTC < 200d MA filter (bear-only short entries) | gate signal on BTC trend | tests Q2/Q5 regime hypothesis | pending |
+| **D** | Per-trade -10% stop loss | wrap `run_backtest` with stop_loss | should cut MaxDD from -29% to ~-12% | pending |
+| E | (defer) Cross-thesis portfolio | requires Phase 3 + Phase 2.5 | true uncorrelated alpha | blocked |
 
-After A/B/C/D run: write `docs/research/phase-1-5-ablation-results.md` with comparison.
+After B/C/D run: write `docs/research/phase-1-5-ablation-results.md` with comparison.
 If v2 with B+C+D reaches Sharpe ≥ 1.0 → upgrade to GREEN.
 
-### Track 2 — Phase 3 完成 (CCXT geo-block reframed)
-
-Builder agent started but hit token limit before slice 2. Resume from existing `.ccg/tasks/phase-3-funding-arbitrage/blocker.md`:
+### Track 2 — Phase 3 candle backfill + re-validation
 
 | Slice | Status |
 |---|---|
 | 1 — funding backfill + `funding_extreme_v1` signal | ✅ done (commits `f983554` → `9521c15`) |
-| 2 — backtest + grid sweep (48 cells: z×hold×lookback) | not started |
-| 3 — walk-forward + Pass/Kill verdict | not started |
+| 2 — backtest + grid sweep + Fix R1 | ✅ done (commits `b029320` → `c039f1c`) |
+| 3 — walk-forward + verdict | ✅ done (commits `8181193` → `6d70038`) — RED with data_gap caveat |
+| **Follow-up — extend 1h candle backfill to 2023-05** | 🚧 blocked on `scripts/backfill_candles.py` rerun |
+| **Follow-up — re-run walk-forward on full 3-year data** | pending #1 |
 
-Pass criteria revised (single-venue directional, not cross-exchange neutral):
+Verdict thresholds (single-venue directional, not cross-exchange neutral):
 - GREEN: walk-forward OOS Sharpe ≥ 1.2 AND annualized ≥ 20%
 - YELLOW: Sharpe ∈ [0.5, 1.2) AND annualized ≥ 10%
 - RED: Sharpe < 0.5 OR negative annualized
