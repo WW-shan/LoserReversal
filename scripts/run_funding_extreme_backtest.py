@@ -6,7 +6,7 @@ import argparse
 import logging
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pandas as pd
@@ -71,20 +71,33 @@ class TokenBacktest:
     trades: list[TradeRecord]
 
 
+@dataclass(frozen=True)
+class SingleConfigResult:
+    frame: pd.DataFrame
+    skipped_tokens: list[str] = field(default_factory=list)
+
+
 def run_single_config(config: BacktestConfig) -> pd.DataFrame:
+    return run_single_config_with_coverage(config).frame
+
+
+def run_single_config_with_coverage(config: BacktestConfig) -> SingleConfigResult:
     funding_history = load_funding_history(config.funding_dir)
     prices = load_prices(config.candles_dir)
     token_results: list[TokenBacktest] = []
     rows: list[dict[str, object]] = []
+    skipped: list[str] = []
 
     for token in sorted(funding_history):
         funding = funding_history[token]
         price = prices.get(token)
         if price is None:
             logger.warning("skipping %s: missing 1h candles", token)
+            skipped.append(token)
             continue
         if not _has_sufficient_history(funding, config.lookback_days):
             logger.warning("skipping %s: insufficient funding history", token)
+            skipped.append(token)
             continue
 
         result = _run_token_backtest(token, funding, price, config)
@@ -93,8 +106,20 @@ def run_single_config(config: BacktestConfig) -> pd.DataFrame:
 
     aggregate_equity = _aggregate_equity([result.equity for result in token_results])
     aggregate_trades = [trade for result in token_results for trade in result.trades]
-    rows.append(_metrics_row("AGGREGATE", aggregate_equity, aggregate_trades, config))
-    return pd.DataFrame(rows, columns=OUTPUT_COLUMNS)
+    aggregate_sharpe = _aggregate_sharpe(
+        [result.equity for result in token_results], len(aggregate_trades)
+    )
+    rows.append(
+        _metrics_row(
+            "AGGREGATE",
+            aggregate_equity,
+            aggregate_trades,
+            config,
+            override_sharpe=aggregate_sharpe,
+        )
+    )
+    frame = pd.DataFrame(rows, columns=OUTPUT_COLUMNS)
+    return SingleConfigResult(frame=frame, skipped_tokens=skipped)
 
 
 def load_funding_history(funding_dir: Path) -> dict[str, pd.DataFrame]:
@@ -164,7 +189,7 @@ def _run_token_backtest(
         taker_fee=config.taker_fee,
         slippage=config.slippage,
     )
-    equity = _equity_curve(price.index, trades)
+    equity = _equity_curve(price, trades)
     return TokenBacktest(token=token, equity=equity, trades=trades)
 
 
@@ -272,19 +297,64 @@ def _funding_paid(
     return float(rates.loc[mask].sum()) * direction
 
 
-def _equity_curve(index: pd.Index, trades: list[TradeRecord]) -> pd.Series:
-    equity_index = _coerce_utc_index(index)
-    equity = pd.Series(BASE_CAPITAL, index=equity_index, dtype="float64")
+def _equity_curve(price: pd.Series, trades: list[TradeRecord]) -> pd.Series:
+    """Mark-to-market equity curve.
+
+    Outside an open position the equity is flat at last realized capital.
+    Inside an open position the equity floats with `direction * (price_t / entry_price - 1)`
+    on top of the capital at entry; at exit the realized `trade_return` (which already
+    includes fees, slippage, and funding) snaps the curve.
+    """
+    index = _coerce_utc_index(price.index)
+    close = pd.Series(
+        pd.to_numeric(price.values, errors="coerce"), index=index, dtype="float64"
+    )
+    equity = pd.Series(BASE_CAPITAL, index=index, dtype="float64")
     capital = BASE_CAPITAL
-    for trade in sorted(trades, key=lambda item: item.exit_time):
+    last_filled = -1
+
+    for trade in sorted(trades, key=lambda item: item.entry_time):
         if not math.isfinite(trade.trade_return):
             continue
+        try:
+            entry_pos = index.get_indexer([trade.entry_time])[0]
+            exit_pos = index.get_indexer([trade.exit_time])[0]
+        except KeyError:
+            continue
+        if entry_pos < 0 or exit_pos < 0 or exit_pos <= entry_pos:
+            continue
+        # Flat between last filled and entry
+        if last_filled + 1 <= entry_pos:
+            equity.iloc[last_filled + 1 : entry_pos + 1] = capital
+        entry_price = float(close.iloc[entry_pos])
+        if not math.isfinite(entry_price) or entry_price <= 0:
+            equity.iloc[entry_pos : exit_pos + 1] = capital
+            last_filled = exit_pos
+            continue
+        # Mark-to-market intra-trade (gross PnL only; fees realize at exit)
+        for i in range(entry_pos + 1, exit_pos):
+            price_t = float(close.iloc[i])
+            if not math.isfinite(price_t) or price_t <= 0:
+                equity.iloc[i] = equity.iloc[i - 1]
+                continue
+            mtm = trade.direction * (price_t / entry_price - 1.0)
+            equity.iloc[i] = capital * (1.0 + mtm)
         capital *= 1.0 + trade.trade_return
-        equity.loc[equity.index >= trade.exit_time] = capital
+        equity.iloc[exit_pos] = capital
+        last_filled = exit_pos
+
+    if last_filled + 1 < len(index):
+        equity.iloc[last_filled + 1 :] = capital
     return equity
 
 
 def _aggregate_equity(equities: list[pd.Series]) -> pd.Series:
+    """Sum per-token mark-to-market equities.
+
+    Each token contributes 0 before its first observation (not BASE_CAPITAL — would
+    inflate denominator for late-listed tokens) and forward-fill from the first valid
+    bar onward. Aggregate NAV grows as tokens come online.
+    """
     if not equities:
         return pd.Series(dtype="float64", name="equity")
 
@@ -292,10 +362,16 @@ def _aggregate_equity(equities: list[pd.Series]) -> pd.Series:
     for equity in equities[1:]:
         union_index = union_index.union(_coerce_utc_index(equity.index))
 
-    aligned = [
-        equity.reindex(union_index).ffill().fillna(BASE_CAPITAL).astype("float64")
-        for equity in equities
-    ]
+    aligned: list[pd.Series] = []
+    for equity in equities:
+        reindexed = equity.astype("float64").reindex(union_index)
+        first_valid = reindexed.first_valid_index()
+        if first_valid is None:
+            aligned.append(pd.Series(0.0, index=union_index, dtype="float64"))
+            continue
+        filled = reindexed.ffill()
+        filled.loc[filled.index < first_valid] = 0.0
+        aligned.append(filled)
     return pd.concat(aligned, axis=1).sum(axis=1).rename("equity")
 
 
@@ -304,6 +380,8 @@ def _metrics_row(
     equity: pd.Series,
     trades: list[TradeRecord],
     config: BacktestConfig,
+    *,
+    override_sharpe: float | None = None,
 ) -> dict[str, object]:
     n_trades = len(trades)
     trade_returns = pd.Series([trade.trade_return for trade in trades], dtype="float64")
@@ -312,6 +390,7 @@ def _metrics_row(
     n_short = sum(1 for trade in trades if trade.direction == -1)
     wins = int((trade_returns > 0).sum()) if n_trades else 0
 
+    sharpe_value = override_sharpe if override_sharpe is not None else _sharpe(equity, n_trades)
     return {
         "token": token,
         "z_threshold": float(config.z_threshold),
@@ -320,7 +399,7 @@ def _metrics_row(
         "n_trades": int(n_trades),
         "n_long": int(n_long),
         "n_short": int(n_short),
-        "sharpe": _sharpe(equity, n_trades),
+        "sharpe": sharpe_value,
         "annualized_return": _annualized_return(equity, n_trades),
         "max_dd": max_drawdown(equity) if not equity.empty else 0.0,
         "win_rate": float(wins / n_trades) if n_trades else 0.0,
@@ -331,22 +410,67 @@ def _metrics_row(
 
 
 def _sharpe(equity: pd.Series, n_trades: int) -> float:
+    """Sharpe annualized off daily-resampled equity returns.
+
+    Previous implementation annualized hourly pct_change by sqrt(8760) on a step-function
+    equity (constant between trade exits) — that inflates the ratio because std is
+    dominated by zeros. Daily resampling smooths the step jumps and matches the
+    granularity used by the unlock walk-forward report.
+    """
     if n_trades < 5 or equity.empty:
         return math.nan
-    returns = equity.pct_change().dropna()
-    return sharpe_ratio(returns, periods_per_year("1h"))
+    daily = equity.resample("1D").last().dropna()
+    if len(daily) < 2:
+        return math.nan
+    returns = daily.pct_change().dropna()
+    if returns.empty:
+        return math.nan
+    return sharpe_ratio(returns, periods_per_year("1D"))
+
+
+def _aggregate_sharpe(equities: list[pd.Series], n_trades: int) -> float:
+    """Aggregate Sharpe from equal-weight portfolio of per-token daily returns.
+
+    Each token contributes daily returns starting from its first valid bar; the
+    portfolio return at day t is the mean across active tokens. This avoids the
+    onboarding-spike artifact a token getting first $10k allocation would create
+    when summing raw equities across heterogeneous listing dates.
+    """
+    if n_trades < 5 or not equities:
+        return math.nan
+    per_token: list[pd.Series] = []
+    for equity in equities:
+        clean = equity.astype("float64").dropna()
+        if clean.empty:
+            continue
+        daily = clean.resample("1D").last().dropna()
+        if len(daily) < 2:
+            continue
+        returns = daily.pct_change().dropna()
+        if not returns.empty:
+            per_token.append(returns)
+    if not per_token:
+        return math.nan
+    joined = pd.concat(per_token, axis=1)
+    portfolio = joined.mean(axis=1, skipna=True).dropna()
+    if portfolio.empty:
+        return math.nan
+    return sharpe_ratio(portfolio, periods_per_year("1D"))
 
 
 def _annualized_return(equity: pd.Series, n_trades: int) -> float:
     if n_trades < 5 or len(equity) < 2:
         return math.nan
 
-    start = float(equity.iloc[0])
-    end = float(equity.iloc[-1])
+    nonzero = equity[equity > 0]
+    if nonzero.empty:
+        return math.nan
+    start = float(nonzero.iloc[0])
+    end = float(nonzero.iloc[-1])
     if start <= 0 or end <= 0:
         return math.nan
 
-    elapsed = equity.index[-1] - equity.index[0]
+    elapsed = nonzero.index[-1] - nonzero.index[0]
     years = elapsed / pd.Timedelta(days=365)
     if years <= 0:
         return math.nan
