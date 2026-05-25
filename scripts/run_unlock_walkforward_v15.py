@@ -36,6 +36,7 @@ DEFAULT_N_SPLITS = 5
 DEFAULT_MIN_TRAIN_DAYS = 270
 DEFAULT_TEST_DAYS = 180
 MIN_RECOMMENDED_COVERAGE_PCT = 80.0
+FIX_COHORT_CHOICES = ("team", "team+investor", "all", "none")
 OUTPUT_COLUMNS = [
     "kind",
     "signal",
@@ -118,6 +119,7 @@ class WalkForwardV15Config:
     coverage_path: Path = DEFAULT_COVERAGE_PATH
     candles_dir: Path = DEFAULT_CANDLES_DIR
     grid_path: Path = DEFAULT_GRID_PATH
+    fix_cohort: str | None = None
 
 
 def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
@@ -152,6 +154,7 @@ def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
         slippage=config.slippage,
         fallback_used=fallback_used,
         record_trades=config.record_trades,
+        fix_cohort=config.fix_cohort,
     )
     trades = pd.DataFrame(columns=TRADE_COLUMNS)
     if config.record_trades:
@@ -389,6 +392,7 @@ def _methodology_lines(
         "- Aggregate rows sum n_trades, use total wins over total trades for win_rate, "
         "use worst split max_dd, compound total_return, and keep mean per-split Sharpe.",
         f"- test_days fallback_used: {_fmt_bool(fallback_used)}.",
+        f"- fix_cohort: {config.fix_cohort if config.fix_cohort else 'none'}.",
     ]
 
 
@@ -551,6 +555,16 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--init-cash", type=float, default=10_000.0)
     parser.add_argument("--fees", type=float, default=0.0005)
     parser.add_argument("--slippage", type=float, default=0.0002)
+    parser.add_argument(
+        "--fix-cohort",
+        choices=list(FIX_COHORT_CHOICES),
+        default="none",
+        help=(
+            "Fix the IS-selected cohort (team / team+investor / all) so the "
+            "walk-forward search only iterates min_unlock_pct. Default 'none' "
+            "preserves the original cohort search behavior."
+        ),
+    )
     args = parser.parse_args(argv)
     _validate_args(parser, args)
     return args
@@ -575,6 +589,7 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv)
+    fix_cohort = None if args.fix_cohort == "none" else args.fix_cohort
     config = WalkForwardV15Config(
         n_splits=args.n_splits,
         mode=args.mode,
@@ -588,6 +603,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         fees=args.fees,
         slippage=args.slippage,
         record_trades=args.record_trades,
+        fix_cohort=fix_cohort,
     )
     try:
         run_walkforward(config)
