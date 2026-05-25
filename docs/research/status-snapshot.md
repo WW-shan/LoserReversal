@@ -12,13 +12,13 @@
 | Phase 0 | ✅ archived | LGTM 97/100 | HL client + fetcher + storage + vbt engine + walkforward util + pipeline |
 | Phase 1 (v1) | ✅ archived | RED (misread) → re-classified **INCONCLUSIVE** | 3 trades / 100% win / Sharpe 1.93 but window/data sub-optimal |
 | Phase 2 (v1) | ✅ archived | RED (misread) → re-classified **FILTER MISDESIGN** | IR=-4.83 because vlm-based filter selected 86%-profitable whale cohort |
-| **Phase 1.5** | ✅ archived | 🟡 **YELLOW** | Best: v2 (T-30→T0) OOS Sharpe 0.61, 36 trades, 75% win, +110% return / 2.5yr OOS |
-| Phase 1.5 Ablation A | ✅ done | bootstrap CI **[0.84, 4.09]** | v2 trade-level Sharpe is statistically distinguishable from zero at 95%; split-3 dependent |
-| **Phase 3 (reframed)** | ✅ done | 🔴 **RED** (data_gap caveat) | Aggregate OOS Sharpe 0.42, ann 5.23%, 45 trades — but 1h candle backfill only 90 days vs 3-year funding history; needs candle re-backfill before final |
-| Phase 1.5 B/C/D | 🚧 pending | — | bootstrap robust → continue with B (fix cohort=team), C (BTC<200d MA), D (-10% stop) |
+| **Phase 1.5** | ✅ done | 🟡 **YELLOW (v1+D recommended)** | Switched: v1 (T-7) + stop=10% + cohort=team: Sharpe 0.59 / MaxDD -7.8% / 29 trades. Was v2 (T-30): Sharpe 0.61 / MaxDD -29% / 36 trades. |
+| Phase 1.5 Ablations A/B/D | ✅ done | mixed | A robust [0.84,4.09] / B team-is-driver (Δ-0.02) / D mixed (v1 up, v2 collapse) |
+| Phase 1.5 Ablation C | ⏸ deferred | data_gap | regime_filter module ready (`8d2d80b`); needs BTC 1d backfill to 2023-05 |
+| **Phase 3 (reframed)** | ✅ done | 🔴 **RED (data_gap)** | Aggregate OOS Sharpe 0.42 / ann 5.23% / 45 trades — but 1h candle backfill only 90 days; re-run needed after backfill |
 | Phase 2.5 | not started | — | academic-rebuilt wallet contrarian (5 slices spec) |
 | Phase 4 | not started | — | bot reverse (independent thesis after Phase 2.5 bot exclusion) |
-| Phase 5 | not started | — | portfolio composer + paper trading |
+| Phase 5 | not started | — | portfolio composer + paper trading (1 YELLOW signal in inventory: v1+D unlock) |
 
 ### Two open questions blocking progress
 
