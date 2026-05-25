@@ -78,7 +78,7 @@ split | period          | n  | Sharpe | win% | MaxDD  | ret    | IS-selected coh
 - 2.5% percentile < 0 → signal might be **lucky-fold artifact** (consider accept YELLOW or downgrade)
 
 **Cost**: 1 hour, no strategy change
-**Status**: not started
+**Status**: complete — see `reports/phase-1-5-bootstrap-ci.md`. Full-sample CI [0.84, 4.09] (robust); leave-split-3-out CI [-0.47, 2.32] (inconclusive). Headline verdict is robust but regime dependence on split 3 is real.
 
 ### B. Fix cohort = team (delete IS lookahead)
 
