@@ -95,6 +95,7 @@ def run_cell(
     fees: float,
     slippage: float,
     record_trades: bool = False,
+    stop_loss: float | None = None,
 ) -> dict[str, Any]:
     filtered = apply_category_filter(events, cell.category_filter)
     signal_result = cell.signal_fn(
@@ -111,6 +112,7 @@ def run_cell(
         fees=fees,
         slippage=slippage,
         record_trades=record_trades,
+        stop_loss=stop_loss,
     )
     row: dict[str, Any] = {
         "signal": cell.code,
@@ -139,6 +141,7 @@ def backtest_signals(
     fees: float,
     slippage: float,
     record_trades: bool = False,
+    stop_loss: float | None = None,
 ) -> PortfolioStats:
     config = BacktestConfig(
         init_cash=init_cash,
@@ -146,6 +149,7 @@ def backtest_signals(
         slippage=slippage,
         freq="1D",
         direction=_vectorbt_direction(direction),
+        stop_loss=stop_loss,
     )
     equities: list[pd.Series] = []
     pnl_values: list[float] = []

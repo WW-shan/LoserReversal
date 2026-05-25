@@ -39,6 +39,7 @@ def select_best_config(
     fees: float = DEFAULT_FEES,
     slippage: float = DEFAULT_SLIPPAGE,
     fix_cohort: str | None = None,
+    stop_loss: float | None = None,
 ) -> GridCell | None:
     best_cell: GridCell | None = None
     best_sharpe = float("-inf")
@@ -52,6 +53,7 @@ def select_best_config(
             init_cash=init_cash,
             fees=fees,
             slippage=slippage,
+            **_stop_loss_kwargs(stop_loss),
         )
         n_trades = int(row["n_trades"])
         sharpe = _finite_sharpe(row["sharpe"])
@@ -77,6 +79,7 @@ def run_per_signal_walkforward(
     fallback_used: bool = False,
     record_trades: bool = False,
     fix_cohort: str | None = None,
+    stop_loss: float | None = None,
 ) -> pd.DataFrame | tuple[pd.DataFrame, pd.DataFrame]:
     grid = _grid_frame(grid_df)
     rows: list[dict[str, Any]] = []
@@ -108,6 +111,7 @@ def run_per_signal_walkforward(
                 fees=fees,
                 slippage=slippage,
                 fix_cohort=fix_cohort,
+                **_stop_loss_kwargs(stop_loss),
             )
             selected_cohort = None
             if selected is None:
@@ -121,6 +125,7 @@ def run_per_signal_walkforward(
                     fees=fees,
                     slippage=slippage,
                     fix_cohort=fix_cohort,
+                    **_stop_loss_kwargs(stop_loss),
                 )
                 if selected is None:
                     selected_cohort = "no_train_signal"
@@ -134,6 +139,7 @@ def run_per_signal_walkforward(
                 }
                 if record_trades:
                     run_kwargs["record_trades"] = True
+                run_kwargs.update(_stop_loss_kwargs(stop_loss))
                 stats = run_cell(test_events, prices, test_coverage, selected, **run_kwargs)
                 if record_trades:
                     trade_rows.extend(
@@ -177,6 +183,7 @@ def compose_portfolio(
     init_cash: float = DEFAULT_INIT_CASH,
     fees: float = DEFAULT_FEES,
     slippage: float = DEFAULT_SLIPPAGE,
+    stop_loss: float | None = None,
 ) -> pd.DataFrame:
     selected_signals = _top_signals_by_oos(per_signal_df, top_k)
     rows: list[dict[str, Any]] = []
@@ -207,6 +214,7 @@ def compose_portfolio(
                     init_cash=init_cash,
                     fees=fees,
                     slippage=slippage,
+                    **_stop_loss_kwargs(stop_loss),
                 )
             )
             selection_labels.append(f"{cell.code}:{cell.cohort_name}")
@@ -366,6 +374,7 @@ def _fallback_config_for_signal(
     fees: float,
     slippage: float,
     fix_cohort: str | None = None,
+    stop_loss: float | None = None,
 ) -> GridCell | None:
     candidate_cells = _candidate_cells(grid_df, signal_code, fix_cohort=fix_cohort)
     if not candidate_cells:
@@ -381,6 +390,7 @@ def _fallback_config_for_signal(
             init_cash=init_cash,
             fees=fees,
             slippage=slippage,
+            **_stop_loss_kwargs(stop_loss),
         )
         rows.append((cell, row))
 
@@ -592,3 +602,15 @@ def _finite_sharpe(value: Any) -> float:
     if math.isfinite(sharpe):
         return sharpe
     return float("-inf")
+
+
+def _stop_loss_kwargs(stop_loss: float | None) -> dict[str, Any]:
+    """Return a one-shot kwargs dict that forwards stop_loss only when set.
+
+    Existing callers (tests, sweeps) call ``run_cell`` with a fixed kwarg list
+    (init_cash, fees, slippage). We keep that signature stable by adding the
+    new ``stop_loss`` kwarg only when the caller actually requested a stop.
+    """
+    if stop_loss is None:
+        return {}
+    return {"stop_loss": float(stop_loss)}
