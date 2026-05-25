@@ -120,6 +120,7 @@ class WalkForwardV15Config:
     candles_dir: Path = DEFAULT_CANDLES_DIR
     grid_path: Path = DEFAULT_GRID_PATH
     fix_cohort: str | None = None
+    stop_loss: float | None = None
 
 
 def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
@@ -155,6 +156,7 @@ def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
         fallback_used=fallback_used,
         record_trades=config.record_trades,
         fix_cohort=config.fix_cohort,
+        stop_loss=config.stop_loss,
     )
     trades = pd.DataFrame(columns=TRADE_COLUMNS)
     if config.record_trades:
@@ -171,6 +173,7 @@ def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
         init_cash=config.init_cash,
         fees=config.fees,
         slippage=config.slippage,
+        stop_loss=config.stop_loss,
     )
     frame = pd.concat([per_signal, portfolio], ignore_index=True)
 
@@ -393,6 +396,7 @@ def _methodology_lines(
         "use worst split max_dd, compound total_return, and keep mean per-split Sharpe.",
         f"- test_days fallback_used: {_fmt_bool(fallback_used)}.",
         f"- fix_cohort: {config.fix_cohort if config.fix_cohort else 'none'}.",
+        f"- stop_loss: {_fmt_stop_loss(config.stop_loss)}.",
     ]
 
 
@@ -516,6 +520,12 @@ def _fmt_bool(value: bool) -> str:
     return "yes" if value else "no"
 
 
+def _fmt_stop_loss(value: float | None) -> str:
+    if value is None:
+        return "none"
+    return f"{float(value) * 100:.2f}%"
+
+
 def _fmt_pct(value: Any) -> str:
     number = float(value)
     if not math.isfinite(number):
@@ -565,6 +575,16 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
             "preserves the original cohort search behavior."
         ),
     )
+    parser.add_argument(
+        "--stop-loss",
+        type=float,
+        default=None,
+        help=(
+            "Per-trade stop loss as a fraction in [0, 1]. e.g. --stop-loss 0.10 "
+            "exits a trade once price moves 10% against entry. Default None "
+            "disables the stop and keeps prior behavior."
+        ),
+    )
     args = parser.parse_args(argv)
     _validate_args(parser, args)
     return args
@@ -585,6 +605,8 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
         parser.error("--fees must be non-negative")
     if args.slippage < 0:
         parser.error("--slippage must be non-negative")
+    if args.stop_loss is not None and (args.stop_loss <= 0.0 or args.stop_loss >= 1.0):
+        parser.error("--stop-loss must be in the open interval (0, 1)")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -604,6 +626,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         slippage=args.slippage,
         record_trades=args.record_trades,
         fix_cohort=fix_cohort,
+        stop_loss=args.stop_loss,
     )
     try:
         run_walkforward(config)
