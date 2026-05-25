@@ -15,9 +15,15 @@ import pandas as pd
 from infra.storage import PARQUET_DIR
 
 try:
-    from scripts.run_funding_extreme_backtest import BacktestConfig, run_single_config
+    from scripts.run_funding_extreme_backtest import (
+        BacktestConfig,
+        run_single_config_with_coverage,
+    )
 except ModuleNotFoundError:
-    from run_funding_extreme_backtest import BacktestConfig, run_single_config
+    from run_funding_extreme_backtest import (
+        BacktestConfig,
+        run_single_config_with_coverage,
+    )
 
 
 DEFAULT_OUT = PARQUET_DIR / "funding_extreme_grid.parquet"
@@ -59,28 +65,46 @@ def iter_grid() -> Iterator[GridCell]:
 
 def run_grid_sweep(config: GridSweepConfig) -> dict[str, Any]:
     frames = []
+    skipped_union: set[str] = set()
+    covered_union: set[str] = set()
     for cell in iter_grid():
-        frames.append(
-            run_single_config(
-                BacktestConfig(
-                    funding_dir=config.funding_dir,
-                    candles_dir=config.candles_dir,
-                    z_threshold=cell.z_threshold,
-                    hold_hours=cell.hold_hours,
-                    lookback_days=cell.lookback_days,
-                    taker_fee=config.taker_fee,
-                    slippage=config.slippage,
-                )
+        result = run_single_config_with_coverage(
+            BacktestConfig(
+                funding_dir=config.funding_dir,
+                candles_dir=config.candles_dir,
+                z_threshold=cell.z_threshold,
+                hold_hours=cell.hold_hours,
+                lookback_days=cell.lookback_days,
+                taker_fee=config.taker_fee,
+                slippage=config.slippage,
             )
+        )
+        frames.append(result.frame)
+        skipped_union.update(result.skipped_tokens)
+        covered_union.update(
+            t for t in result.frame["token"].tolist()
+            if t != "AGGREGATE"
         )
 
     frame = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
     write_results(frame, config.out)
-    write_report(config.report, frame, config)
+    write_report(
+        config.report,
+        frame,
+        config,
+        skipped_tokens=sorted(skipped_union),
+        covered_tokens=sorted(covered_union),
+    )
     print(_top10_table(rank_aggregate_cells(frame)))
     print(f"wrote parquet: {config.out}")
     print(f"wrote report: {config.report}")
-    return {"frame": frame, "ranking": rank_aggregate_cells(frame), "out": config.out}
+    return {
+        "frame": frame,
+        "ranking": rank_aggregate_cells(frame),
+        "out": config.out,
+        "skipped_tokens": sorted(skipped_union),
+        "covered_tokens": sorted(covered_union),
+    }
 
 
 def rank_aggregate_cells(frame: pd.DataFrame) -> pd.DataFrame:
@@ -110,14 +134,36 @@ def write_results(frame: pd.DataFrame, out: Path) -> None:
     frame.to_parquet(out, index=False)
 
 
-def write_report(path: Path, frame: pd.DataFrame, config: GridSweepConfig) -> None:
+def write_report(
+    path: Path,
+    frame: pd.DataFrame,
+    config: GridSweepConfig,
+    *,
+    skipped_tokens: list[str] | None = None,
+    covered_tokens: list[str] | None = None,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(_format_report(frame, config), encoding="utf-8")
+    path.write_text(
+        _format_report(
+            frame,
+            config,
+            skipped_tokens=skipped_tokens or [],
+            covered_tokens=covered_tokens or [],
+        ),
+        encoding="utf-8",
+    )
 
 
-def _format_report(frame: pd.DataFrame, config: GridSweepConfig) -> str:
+def _format_report(
+    frame: pd.DataFrame,
+    config: GridSweepConfig,
+    *,
+    skipped_tokens: list[str],
+    covered_tokens: list[str],
+) -> str:
     generated = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     ranking = rank_aggregate_cells(frame)
+    coverage_lines = _coverage_section(skipped_tokens, covered_tokens)
     lines = [
         "# Funding Extreme Contrarian Grid Sweep",
         "",
@@ -127,7 +173,12 @@ def _format_report(frame: pd.DataFrame, config: GridSweepConfig) -> str:
         "",
         "- Each cell runs funding_extreme_signal for every token with matching 1h candles.",
         "- Funding payment is charged as sum(funding_rate x signed position) while held.",
-        "- Aggregate equity sums per-token equity curves with equal per-token capital.",
+        "- Per-token equity is mark-to-market hourly during open positions; flat between trades.",
+        "- Sharpe is annualized off daily-resampled equity returns (periods_per_year=365).",
+        "- Aggregate Sharpe uses equal-weight portfolio of per-token daily returns "
+        "so late-listed tokens do not inflate the denominator with idle BASE_CAPITAL.",
+        "- Aggregate equity sums per-token mark-to-market equities; tokens contribute 0 before "
+        "their first observation.",
         "",
         "## Config",
         "",
@@ -138,6 +189,10 @@ def _format_report(frame: pd.DataFrame, config: GridSweepConfig) -> str:
         f"| taker_fee | {config.taker_fee:.6f} |",
         f"| slippage | {config.slippage:.6f} |",
         "",
+        "## Coverage",
+        "",
+        *coverage_lines,
+        "",
         "## Top-10 by Aggregate Sharpe",
         "",
         _top10_table(ranking),
@@ -147,6 +202,20 @@ def _format_report(frame: pd.DataFrame, config: GridSweepConfig) -> str:
         *_best_per_token_rows(frame),
     ]
     return "\n".join(lines) + "\n"
+
+
+def _coverage_section(skipped_tokens: list[str], covered_tokens: list[str]) -> list[str]:
+    total = len(skipped_tokens) + len(covered_tokens)
+    lines = [
+        f"Aggregate covers **{len(covered_tokens)}** of **{total}** funding tokens.",
+        "",
+    ]
+    if skipped_tokens:
+        joined = ", ".join(skipped_tokens)
+        lines.append(f"Skipped (no matching 1h candles or insufficient funding history): {joined}.")
+    else:
+        lines.append("All funding tokens covered.")
+    return lines
 
 
 def _top10_table(ranking: pd.DataFrame) -> str:

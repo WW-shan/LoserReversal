@@ -6,11 +6,12 @@ from pathlib import Path
 
 import pandas as pd
 
+from scripts import run_funding_extreme_backtest as backtest
 from scripts import sweep_funding_extreme_grid as sweep
 
 
 def test_sweep_produces_48_aggregate_rows(monkeypatch, tmp_path: Path):
-    monkeypatch.setattr(sweep, "run_single_config", _fake_single_config)
+    monkeypatch.setattr(sweep, "run_single_config_with_coverage", _fake_with_coverage)
 
     result = sweep.run_grid_sweep(
         sweep.GridSweepConfig(
@@ -36,7 +37,7 @@ def test_sweep_grid_param_dimensions():
 def test_sweep_writes_parquet_with_token_and_aggregate_rows(monkeypatch, tmp_path: Path):
     out = tmp_path / "funding_extreme_grid.parquet"
     report = tmp_path / "funding_extreme_grid.md"
-    monkeypatch.setattr(sweep, "run_single_config", _fake_single_config)
+    monkeypatch.setattr(sweep, "run_single_config_with_coverage", _fake_with_coverage)
 
     sweep.run_grid_sweep(sweep.GridSweepConfig(out=out, report=report))
 
@@ -47,7 +48,7 @@ def test_sweep_writes_parquet_with_token_and_aggregate_rows(monkeypatch, tmp_pat
 
 
 def test_sweep_ranks_top_cell_by_aggregate_sharpe(monkeypatch, tmp_path: Path):
-    monkeypatch.setattr(sweep, "run_single_config", _fake_single_config)
+    monkeypatch.setattr(sweep, "run_single_config_with_coverage", _fake_with_coverage)
 
     result = sweep.run_grid_sweep(
         sweep.GridSweepConfig(
@@ -67,7 +68,7 @@ def test_sweep_ranks_top_cell_by_aggregate_sharpe(monkeypatch, tmp_path: Path):
 def test_sweep_cli_smoke(monkeypatch, tmp_path: Path, capsys):
     out = tmp_path / "funding_extreme_grid.parquet"
     report = tmp_path / "funding_extreme_grid.md"
-    monkeypatch.setattr(sweep, "run_single_config", _fake_single_config)
+    monkeypatch.setattr(sweep, "run_single_config_with_coverage", _fake_with_coverage)
 
     exit_code = sweep.main(
         [
@@ -90,6 +91,28 @@ def test_sweep_cli_smoke(monkeypatch, tmp_path: Path, capsys):
     assert out.exists()
     assert "Top-10 by Aggregate Sharpe" in report.read_text(encoding="utf-8")
     assert "wrote parquet" in capsys.readouterr().out
+
+
+def test_sweep_report_includes_coverage_section_with_skipped_tokens(
+    monkeypatch, tmp_path: Path
+):
+    """Report Coverage section must list skipped tokens (data transparency)."""
+    out = tmp_path / "funding_extreme_grid.parquet"
+    report = tmp_path / "funding_extreme_grid.md"
+
+    def fake_with_skips(config) -> backtest.SingleConfigResult:
+        frame = _fake_single_config(config)
+        return backtest.SingleConfigResult(frame=frame, skipped_tokens=["DOGE", "ADA"])
+
+    monkeypatch.setattr(sweep, "run_single_config_with_coverage", fake_with_skips)
+
+    sweep.run_grid_sweep(sweep.GridSweepConfig(out=out, report=report))
+
+    text = report.read_text(encoding="utf-8")
+    assert "## Coverage" in text
+    assert "DOGE" in text
+    assert "ADA" in text
+    assert "Aggregate covers" in text
 
 
 def test_sweep_cli_file_execution_smoke(tmp_path: Path):
@@ -125,6 +148,13 @@ def test_sweep_cli_file_execution_smoke(tmp_path: Path):
     assert result.returncode == 0, result.stderr
     assert out.exists()
     assert len(pd.read_parquet(out).loc[lambda frame: frame["token"].eq("AGGREGATE")]) == 48
+
+
+def _fake_with_coverage(config) -> backtest.SingleConfigResult:
+    return backtest.SingleConfigResult(
+        frame=_fake_single_config(config),
+        skipped_tokens=[],
+    )
 
 
 def _fake_single_config(config) -> pd.DataFrame:
