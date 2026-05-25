@@ -161,6 +161,7 @@ def test_run_per_signal_walkforward_threads_fix_cohort_to_selector(monkeypatch):
         fees=None,
         slippage=None,
         fix_cohort=None,
+        **_extra,
     ):
         captured_fix_cohort.append(fix_cohort)
         return _cell(signal_code, 0.02, "team")
