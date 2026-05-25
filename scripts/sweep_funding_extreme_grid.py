@@ -13,7 +13,11 @@ from typing import Any
 import pandas as pd
 
 from infra.storage import PARQUET_DIR
-from scripts.run_funding_extreme_backtest import BacktestConfig, run_single_config
+
+try:
+    from scripts.run_funding_extreme_backtest import BacktestConfig, run_single_config
+except ModuleNotFoundError:
+    from run_funding_extreme_backtest import BacktestConfig, run_single_config
 
 
 DEFAULT_OUT = PARQUET_DIR / "funding_extreme_grid.parquet"
