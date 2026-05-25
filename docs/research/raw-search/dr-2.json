@@ -1,0 +1,285 @@
+{
+  "ok": true,
+  "error_type": "",
+  "error": "",
+  "session_id": "9e69a65c3c86",
+  "query": "BTC trend filter regime detection 200 day moving average improve Sharpe crypto strategy backtest",
+  "platform": "",
+  "model": "grok-4.20-fast",
+  "primary_api_mode": "xai-responses",
+  "content": "**The 200-day Simple Moving Average (SMA) is a popular long-term trend filter for Bitcoin (BTC) strategies.** It smooths price data over the past 200 trading days to identify the prevailing macro trend: price above the 200-day SMA generally signals a bull regime (favor long exposure), while below signals a bear regime (favor cash or reduced exposure). [[1]](https://www.bitcoinmagazinepro.com/charts/bitcoin-200-day-moving-average/) [[2]](https://www.luxalgo.com/blog/position-trading-with-200-day-moving-average/)\n\n**Regime detection** extends this by classifying market states (e.g., bull, bear, sideways/high-vol, low-vol) using methods like Hidden Markov Models (HMM), slope-based classifiers, volatility clustering, or machine learning (e.g., UMAP or Random Forests). Combining the 200-day MA filter with regime detection helps avoid whipsaws in choppy markets and improves risk-adjusted returns (Sharpe ratio) by limiting trades or sizing positions to favorable conditions. [[3]](https://www.researchgate.net/publication/395401021_Adaptive_Regime-Based_Trading_on_Bitcoin_Backtesting_and_Walk-Forward_Evaluation) [[4]](https://pyquantlab.medium.com/building-a-regime-filtered-risk-adjusted-momentum-strategy-for-cryptocurrencies-926f4bfa1240)\n\n### Why This Improves Sharpe Ratio in Crypto Strategies\nThe **Sharpe ratio** measures excess return per unit of volatility (higher is better; risk-free rate often assumed ~0 for crypto). BTC buy-and-hold is volatile (frequent 50-80%+ drawdowns), leading to moderate Sharpe (~0.8-1.3 historically in many periods). [[5]](https://research.grayscale.com/reports/the-trend-is-your-friend-managing-bitcoins-volatility-with-momentum-signals)\n\n- **Trend filter (200-day MA)**: Reduces time in market during bear regimes, cutting large drawdowns while capturing most upside. This lowers volatility more than it hurts returns → higher Sharpe. [[6]](https://www.quantifiedstrategies.com/200-day-moving-average-trading-strategy/) [[7]](https://www.quantifiedstrategies.com/200-day-moving-average/)\n- **Regime detection**: Dynamically switches logic (e.g., trend-follow in bull, mean-reversion or avoidance in sideways/bear). Studies show this boosts Sharpe by adapting to BTC's shifting behaviors (e.g., frequent regime switches, asymmetry with more bear days). [[8]](https://medium.com/@jsgastoniriartecabrera/from-academic-research-to-profitable-trading-building-a-market-regime-detection-algorithm-46a4791ee014) [[9]](https://link.springer.com/article/10.1007/s10614-026-11338-3)\n\n**Typical benefits** (from backtests across sources):\n- Lower max drawdown (e.g., 20-40% reduction vs. buy-and-hold).\n- Smoother equity curves.\n- Sharpe often improves from ~0.8-1.3 (buy-hold) to 1.4-2.5+ with filters, depending on period and rules. [[10]](https://journal.uii.ac.id/ENTHUSIASTIC/article/view/39963) [[11]](https://stoic.ai/blog/backtesting-trading-strategies/)\n\n### Example Strategies & Backtest Insights\n1. **Simple 200-day MA Trend Filter**:\n   - Long-only: Enter/hold when price > 200-day SMA; exit/go to cash when below.\n   - Often used as an overlay on other signals (e.g., only take long setups above the MA). [[2]](https://www.luxalgo.com/blog/position-trading-with-200-day-moving-average/) [[12]](https://graniteshares.com/research/the-200-moving-average-strategy-explained/)\n   - BTC examples show it mitigates major bears (e.g., 2018, 2022) while riding bulls. [[13]](https://seekingalpha.com/article/4678880-bitcoin-strategy-using-200-day-simple-moving-average)\n\n2. **MA Crossover + Regime Filter**:\n   - Golden Cross (50-day > 200-day) for bullish entry confirmation.\n   - Add regime layer (e.g., HMM on returns/volatility) to adjust position size or disable trading in adverse regimes. [[14]](https://www.hyrotrader.com/blog/moving-averages-in-crypto/) [[15]](https://blog.quantinsti.com/regime-adaptive-trading-python/)\n\n3. **Advanced Regime-Aware**:\n   - Detect regimes via HMM, slope of SMA, or ML.\n   - In bull/uptrend regime + above 200 MA: full/long bias.\n   - In bear/sideways: cash, short, or tighter stops.\n   - One backtest framework showed improved returns, lower drawdowns, and Sharpe ~1.0+ vs. benchmarks. [[3]](https://www.researchgate.net/publication/395401021_Adaptive_Regime-Based_Trading_on_Bitcoin_Backtesting_and_Walk-Forward_Evaluation) [[9]](https://link.springer.com/article/10.1007/s10614-026-11338-3)\n\n**Sample performance** (illustrative from various BTC backtests ~2012-2025; results vary by exact rules/period):\n- 50/200 SMA crossover: ~1.43 Sharpe, -28% max DD (2018-2023 example). [[11]](https://stoic.ai/blog/backtesting-trading-strategies/)\n- MA + dynamic allocation: Up to 2.51 Sharpe with shorter filters in strong periods. [[10]](https://journal.uii.ac.id/ENTHUSIASTIC/article/view/39963)\n- Momentum/MA with regime: Sharpe 1.7-1.9 vs. 1.3 buy-hold. [[5]](https://research.grayscale.com/reports/the-trend-is-your-friend-managing-bitcoins-volatility-with-momentum-signals)\n- Adding 200 MA filter often improves win rate, reduces trades, and cuts DD (e.g., from -33% to -27% in channel examples). [[16]](https://www.instagram.com/reel/DYmk9ZttBir/)\n\n**Caveats**: Past performance ≠ future. BTC has strong trending phases but also prolonged regimes where simple MA lags (e.g., missing early recoveries). Over-optimization risks curve-fitting. Transaction costs, slippage, and taxes matter in live trading. [[17]](https://medium.com/h7w/backtesting-optimizing-combining-multiple-algorithmic-trading-strategies-effectively-bitcoin-0344e1d5ca54)\n\n### How to Implement & Backtest Yourself\n- **Tools**: Python (pandas, TA-Lib or pandas_ta for MAs; hmmlearn for regimes), TradingView, Backtrader/QuantConnect, or platforms like Pine Script.\n- **Basic pseudocode** (daily timeframe):\n  ```python\n  import pandas as pd\n  import pandas_ta as ta\n\ndf['ma200'] = ta.sma(df['close'], length=200)\n  # Regime example (simple): bull if close > ma200 and slope positive\n  df['regime'] = np.where((df['close'] > df['ma200']) & (df['ma200'].diff() > 0), 'bull', 'other')\n\n# Strategy: long only in bull regime + other signal (e.g., RSI > 50)\n  ```\n- Test on BTC-USD data (e.g., from Binance or Yahoo). Use walk-forward optimization to avoid overfitting. Evaluate Sharpe, Sortino, Calmar, max DD, and regime-specific performance. [[18]](https://changelly.com/blog/how-to-backtest-a-crypto-trading-strategy/)\n\n**Recommendations**: Start with the 200-day MA as a baseline trend filter—it's robust and widely watched. Layer simple regime detection (e.g., volatility or HMM) for further Sharpe gains. Always forward-test and size positions conservatively given crypto volatility. For production, incorporate risk management like dynamic stops or position sizing based on regime confidence.",
+  "sources": [
+    {
+      "url": "https://www.bitcoinmagazinepro.com/charts/bitcoin-200-day-moving-average/",
+      "title": "Bitcoin: 200 Day Moving Average | BM Pro"
+    },
+    {
+      "url": "https://www.luxalgo.com/blog/position-trading-with-200-day-moving-average/",
+      "title": "Position Trading with 200-Day Moving Average"
+    },
+    {
+      "url": "https://www.researchgate.net/publication/395401021_Adaptive_Regime-Based_Trading_on_Bitcoin_Backtesting_and_Walk-Forward_Evaluation",
+      "title": "(PDF) Adaptive Regime-Based Trading on Bitcoin"
+    },
+    {
+      "url": "https://pyquantlab.medium.com/building-a-regime-filtered-risk-adjusted-momentum-strategy-for-cryptocurrencies-926f4bfa1240",
+      "title": "Building a Regime-Filtered, Risk-Adjusted Momentum ..."
+    },
+    {
+      "url": "https://research.grayscale.com/reports/the-trend-is-your-friend-managing-bitcoins-volatility-with-momentum-signals",
+      "title": "The Trend is Your Friend: Managing Bitcoin's Volatility with ..."
+    },
+    {
+      "url": "https://www.quantifiedstrategies.com/200-day-moving-average-trading-strategy/",
+      "title": "200 Day Moving Average Trading Strategy – (Backtest And ..."
+    },
+    {
+      "url": "https://www.quantifiedstrategies.com/200-day-moving-average/",
+      "title": "200 Day Moving Average Trading Strategy – (With Backtest)"
+    },
+    {
+      "url": "https://medium.com/@jsgastoniriartecabrera/from-academic-research-to-profitable-trading-building-a-market-regime-detection-algorithm-46a4791ee014",
+      "title": "Building a Market Regime Detection Algorithm"
+    },
+    {
+      "url": "https://link.springer.com/article/10.1007/s10614-026-11338-3",
+      "title": "Regime-Aware Adaptive Forecasting Framework for Bitcoin ..."
+    },
+    {
+      "url": "https://journal.uii.ac.id/ENTHUSIASTIC/article/view/39963",
+      "title": "Sharpe Ratio-Based Dynamic Crypto Asset Allocation with ..."
+    },
+    {
+      "url": "https://stoic.ai/blog/backtesting-trading-strategies/",
+      "title": "How to Backtest Crypto Trading Strategies: Complete Guide"
+    },
+    {
+      "url": "https://graniteshares.com/research/the-200-moving-average-strategy-explained/",
+      "title": "The 200 Moving Average Strategy Explained"
+    },
+    {
+      "url": "https://seekingalpha.com/article/4678880-bitcoin-strategy-using-200-day-simple-moving-average",
+      "title": "A Bitcoin Strategy Using The 200-Day Simple Moving ..."
+    },
+    {
+      "url": "https://www.hyrotrader.com/blog/moving-averages-in-crypto/",
+      "title": "Moving Averages in Crypto: Complete Guide for Profit"
+    },
+    {
+      "url": "https://blog.quantinsti.com/regime-adaptive-trading-python/",
+      "title": "Market Regime using Hidden Markov Model"
+    },
+    {
+      "url": "https://www.instagram.com/reel/DYmk9ZttBir/",
+      "title": "A strategy is not just about returns. In this Donchian ..."
+    },
+    {
+      "url": "https://medium.com/h7w/backtesting-optimizing-combining-multiple-algorithmic-trading-strategies-effectively-bitcoin-0344e1d5ca54",
+      "title": "Backtesting, Optimizing & Combining Multiple Algorithmic ..."
+    },
+    {
+      "url": "https://changelly.com/blog/how-to-backtest-a-crypto-trading-strategy/",
+      "title": "How to Backtest a Crypto Trading Strategy"
+    },
+    {
+      "url": "https://in.tradingview.com/scripts/btcusd/page-4",
+      "provider": "tavily",
+      "title": "Page 4 | BTC USD — Bitcoin Price and Chart — Indicators and ...",
+      "description": "Simple Moving Average with Regime Detection by iGrey.TradingThis indicator helps traders identify market regimes using the powerful combination of 50 and 200 SMAs. It provides clear visual signals and detailed metrics for trend-following strategies. Key Features: - Dual SMA System (50/200) for regime identification - Colour-coded candles for easy trend visualisation - Metrics dashboard Core Signals: - Bullish Regime: Price < 200 SMA - Bearish Regime: Price > 200 SMA - Additional confirmation: 50 SMA Cross-over or Cross-under (golden cross or death cross) Metrics Dashboard: - Current Regime Status (Bull/Bear) - SMA Distance (% from price to 50 SMA) - Regime Distance (% from price to 200 SMA) - Regime Duration (bars in current regime) Usage Instructions: 1. Apply the indicator to your chart [...] Usage Instructions: 1. Apply the indicator to your chart 2. Configure the SMA lengths if desired (default: 50/200) 3. Monitor the color-coded candles: - Green: Bullish regime - Red: Bearish regime 4. Use the metrics dashboard for detailed analysis Settings Guide: - Length: Short-term SMA period (default: 50) - Source: Price calculation source (default: close) - Regime Filter Length: Long-term SMA period (default: 200) - Regime Filter Source: Price source for regime calculation (default: close) Trading Tips: - Use bullish regimes for long positions - Use bearish regimes for capital preservation or short positions - Consider regime duration for trend strength - Monitor distance metrics for potential reversals - Combine with other systems for confluence #trend-following #moving average [...] 200-day moving average to gauge the momentum of the trend itself. The result is a single, smooth line that oscillates around a zero value. How to Use It The signals are simple and based on the indicator's relationship to the zero line: Green Line (Gauge below 0): This indicates that the price has been compressed relative to its long-term trend and is now showing signs of building upward momentum. A cross into the green zone can be interpreted as a potential entry signal for a new bull run. Red Line (Gauge above 0): This suggests that the price has become over-extended or \"stretched\" and the upward momentum is beginning to weaken. A cross into the red zone can be used as a potential exit signal, indicating it may be time to take profits and wait for the next cycle. This indicator is"
+    },
+    {
+      "url": "https://www.bitcoinmagazinepro.com/charts/bitcoin-200-day-moving-average",
+      "provider": "tavily",
+      "title": "Bitcoin: 200 Day Moving Average | BM Pro",
+      "description": "Reset: Double click.\n\nThe Bitcoin 200 day moving average is a widely watched indicator used to assess trend direction and market momentum. By smoothing recent price action, it helps filter short-term volatility and highlight whether Bitcoin is trading in a strengthening or weakening trend.\n\n###### What Is the Bitcoin 200 Day Moving Average?\n\nThe 200 day moving average is calculated by averaging Bitcoin’s closing price over the previous 200-day periods. As new data is added, the moving average updates continuously, creating a dynamic reference line that adapts to changing market conditions.\n\n###### Why the Bitcoin 200 Day Moving Average Matters [...] ###### Why the Bitcoin 200 Day Moving Average Matters\n\nHistorically, Bitcoin’s interaction with the 200 day moving average has provided useful insight into market structure. Price trading above the average often reflects positive momentum, while sustained moves below it can signal trend deterioration or consolidation.\n\n###### How to Use This Indicator in Context\n\nThe Bitcoin 200 day moving average is most effective when viewed alongside other timeframes and indicators. Comparing short-, medium-, and long-term moving averages can help place current price action within a broader market context rather than relying on a single signal.\n\nFor a broader perspective, explore how Bitcoin behaves across multiple timeframes on the Bitcoin Key Moving Averages chart."
+    },
+    {
+      "url": "https://www.hyrotrader.com/blog/moving-averages-in-crypto",
+      "provider": "tavily",
+      "title": "Moving Averages in Crypto: Complete Guide for Profit",
+      "description": "Filtering with higher timeframe trends improves win rate. You trade moving average crossovers on 1-hour Bitcoin charts, but you only take long crossovers when the daily chart shows price above the 50-day MA, and only take short crossovers when price is below it. This simple filter aligns your short-term tactics with medium-term trends, removing many losing counter-trend trades. [...] This equal weighting creates a smooth line that responds slowly to price changes. When Bitcoin jumps 15% in a single day, the 50-day SMA barely budges because that one explosive close gets averaged with 49 other periods. The smoothness makes SMAs excellent for identifying long-term trends and major support/resistance levels.\n\nThe 200-day SMA is the most-watched moving average across all financial markets, including crypto. When Bitcoin breaks above its 200-day SMA after months below it, analysts call major trend changes. Equal weighting means this line represents the true average cost basis for everyone who bought over the last 200 days. [...] The system works best in trending markets and fails in consolidations. Sideways price action causes MAs to intertwine, generating multiple false crossovers that whipsaw you in and out of trades. Adding a filter like ADX (Average Directional Index) helps: only take crossover signals when ADX exceeds 25, indicating trending conditions exist.\n\nOptimize the specific periods for your chosen cryptocurrency and timeframe. Bitcoin’s behavior differs from small-cap altcoins. What works on 4-hour charts may fail on daily charts. Backtest combinations before trading them live.\n\n### Golden Cross and Death Cross"
+    }
+  ],
+  "sources_count": 21,
+  "primary_sources": [
+    {
+      "url": "https://www.bitcoinmagazinepro.com/charts/bitcoin-200-day-moving-average/",
+      "title": "Bitcoin: 200 Day Moving Average | BM Pro"
+    },
+    {
+      "url": "https://www.luxalgo.com/blog/position-trading-with-200-day-moving-average/",
+      "title": "Position Trading with 200-Day Moving Average"
+    },
+    {
+      "url": "https://www.researchgate.net/publication/395401021_Adaptive_Regime-Based_Trading_on_Bitcoin_Backtesting_and_Walk-Forward_Evaluation",
+      "title": "(PDF) Adaptive Regime-Based Trading on Bitcoin"
+    },
+    {
+      "url": "https://pyquantlab.medium.com/building-a-regime-filtered-risk-adjusted-momentum-strategy-for-cryptocurrencies-926f4bfa1240",
+      "title": "Building a Regime-Filtered, Risk-Adjusted Momentum ..."
+    },
+    {
+      "url": "https://research.grayscale.com/reports/the-trend-is-your-friend-managing-bitcoins-volatility-with-momentum-signals",
+      "title": "The Trend is Your Friend: Managing Bitcoin's Volatility with ..."
+    },
+    {
+      "url": "https://www.quantifiedstrategies.com/200-day-moving-average-trading-strategy/",
+      "title": "200 Day Moving Average Trading Strategy – (Backtest And ..."
+    },
+    {
+      "url": "https://www.quantifiedstrategies.com/200-day-moving-average/",
+      "title": "200 Day Moving Average Trading Strategy – (With Backtest)"
+    },
+    {
+      "url": "https://medium.com/@jsgastoniriartecabrera/from-academic-research-to-profitable-trading-building-a-market-regime-detection-algorithm-46a4791ee014",
+      "title": "Building a Market Regime Detection Algorithm"
+    },
+    {
+      "url": "https://link.springer.com/article/10.1007/s10614-026-11338-3",
+      "title": "Regime-Aware Adaptive Forecasting Framework for Bitcoin ..."
+    },
+    {
+      "url": "https://journal.uii.ac.id/ENTHUSIASTIC/article/view/39963",
+      "title": "Sharpe Ratio-Based Dynamic Crypto Asset Allocation with ..."
+    },
+    {
+      "url": "https://stoic.ai/blog/backtesting-trading-strategies/",
+      "title": "How to Backtest Crypto Trading Strategies: Complete Guide"
+    },
+    {
+      "url": "https://graniteshares.com/research/the-200-moving-average-strategy-explained/",
+      "title": "The 200 Moving Average Strategy Explained"
+    },
+    {
+      "url": "https://seekingalpha.com/article/4678880-bitcoin-strategy-using-200-day-simple-moving-average",
+      "title": "A Bitcoin Strategy Using The 200-Day Simple Moving ..."
+    },
+    {
+      "url": "https://www.hyrotrader.com/blog/moving-averages-in-crypto/",
+      "title": "Moving Averages in Crypto: Complete Guide for Profit"
+    },
+    {
+      "url": "https://blog.quantinsti.com/regime-adaptive-trading-python/",
+      "title": "Market Regime using Hidden Markov Model"
+    },
+    {
+      "url": "https://www.instagram.com/reel/DYmk9ZttBir/",
+      "title": "A strategy is not just about returns. In this Donchian ..."
+    },
+    {
+      "url": "https://medium.com/h7w/backtesting-optimizing-combining-multiple-algorithmic-trading-strategies-effectively-bitcoin-0344e1d5ca54",
+      "title": "Backtesting, Optimizing & Combining Multiple Algorithmic ..."
+    },
+    {
+      "url": "https://changelly.com/blog/how-to-backtest-a-crypto-trading-strategy/",
+      "title": "How to Backtest a Crypto Trading Strategy"
+    }
+  ],
+  "primary_sources_count": 18,
+  "extra_sources": [
+    {
+      "url": "https://in.tradingview.com/scripts/btcusd/page-4",
+      "provider": "tavily",
+      "title": "Page 4 | BTC USD — Bitcoin Price and Chart — Indicators and ...",
+      "description": "Simple Moving Average with Regime Detection by iGrey.TradingThis indicator helps traders identify market regimes using the powerful combination of 50 and 200 SMAs. It provides clear visual signals and detailed metrics for trend-following strategies. Key Features: - Dual SMA System (50/200) for regime identification - Colour-coded candles for easy trend visualisation - Metrics dashboard Core Signals: - Bullish Regime: Price < 200 SMA - Bearish Regime: Price > 200 SMA - Additional confirmation: 50 SMA Cross-over or Cross-under (golden cross or death cross) Metrics Dashboard: - Current Regime Status (Bull/Bear) - SMA Distance (% from price to 50 SMA) - Regime Distance (% from price to 200 SMA) - Regime Duration (bars in current regime) Usage Instructions: 1. Apply the indicator to your chart [...] Usage Instructions: 1. Apply the indicator to your chart 2. Configure the SMA lengths if desired (default: 50/200) 3. Monitor the color-coded candles: - Green: Bullish regime - Red: Bearish regime 4. Use the metrics dashboard for detailed analysis Settings Guide: - Length: Short-term SMA period (default: 50) - Source: Price calculation source (default: close) - Regime Filter Length: Long-term SMA period (default: 200) - Regime Filter Source: Price source for regime calculation (default: close) Trading Tips: - Use bullish regimes for long positions - Use bearish regimes for capital preservation or short positions - Consider regime duration for trend strength - Monitor distance metrics for potential reversals - Combine with other systems for confluence #trend-following #moving average [...] 200-day moving average to gauge the momentum of the trend itself. The result is a single, smooth line that oscillates around a zero value. How to Use It The signals are simple and based on the indicator's relationship to the zero line: Green Line (Gauge below 0): This indicates that the price has been compressed relative to its long-term trend and is now showing signs of building upward momentum. A cross into the green zone can be interpreted as a potential entry signal for a new bull run. Red Line (Gauge above 0): This suggests that the price has become over-extended or \"stretched\" and the upward momentum is beginning to weaken. A cross into the red zone can be used as a potential exit signal, indicating it may be time to take profits and wait for the next cycle. This indicator is"
+    },
+    {
+      "url": "https://www.bitcoinmagazinepro.com/charts/bitcoin-200-day-moving-average",
+      "provider": "tavily",
+      "title": "Bitcoin: 200 Day Moving Average | BM Pro",
+      "description": "Reset: Double click.\n\nThe Bitcoin 200 day moving average is a widely watched indicator used to assess trend direction and market momentum. By smoothing recent price action, it helps filter short-term volatility and highlight whether Bitcoin is trading in a strengthening or weakening trend.\n\n###### What Is the Bitcoin 200 Day Moving Average?\n\nThe 200 day moving average is calculated by averaging Bitcoin’s closing price over the previous 200-day periods. As new data is added, the moving average updates continuously, creating a dynamic reference line that adapts to changing market conditions.\n\n###### Why the Bitcoin 200 Day Moving Average Matters [...] ###### Why the Bitcoin 200 Day Moving Average Matters\n\nHistorically, Bitcoin’s interaction with the 200 day moving average has provided useful insight into market structure. Price trading above the average often reflects positive momentum, while sustained moves below it can signal trend deterioration or consolidation.\n\n###### How to Use This Indicator in Context\n\nThe Bitcoin 200 day moving average is most effective when viewed alongside other timeframes and indicators. Comparing short-, medium-, and long-term moving averages can help place current price action within a broader market context rather than relying on a single signal.\n\nFor a broader perspective, explore how Bitcoin behaves across multiple timeframes on the Bitcoin Key Moving Averages chart."
+    },
+    {
+      "url": "https://www.hyrotrader.com/blog/moving-averages-in-crypto",
+      "provider": "tavily",
+      "title": "Moving Averages in Crypto: Complete Guide for Profit",
+      "description": "Filtering with higher timeframe trends improves win rate. You trade moving average crossovers on 1-hour Bitcoin charts, but you only take long crossovers when the daily chart shows price above the 50-day MA, and only take short crossovers when price is below it. This simple filter aligns your short-term tactics with medium-term trends, removing many losing counter-trend trades. [...] This equal weighting creates a smooth line that responds slowly to price changes. When Bitcoin jumps 15% in a single day, the 50-day SMA barely budges because that one explosive close gets averaged with 49 other periods. The smoothness makes SMAs excellent for identifying long-term trends and major support/resistance levels.\n\nThe 200-day SMA is the most-watched moving average across all financial markets, including crypto. When Bitcoin breaks above its 200-day SMA after months below it, analysts call major trend changes. Equal weighting means this line represents the true average cost basis for everyone who bought over the last 200 days. [...] The system works best in trending markets and fails in consolidations. Sideways price action causes MAs to intertwine, generating multiple false crossovers that whipsaw you in and out of trades. Adding a filter like ADX (Average Directional Index) helps: only take crossover signals when ADX exceeds 25, indicating trending conditions exist.\n\nOptimize the specific periods for your chosen cryptocurrency and timeframe. Bitcoin’s behavior differs from small-cap altcoins. What works on 4-hour charts may fail on daily charts. Backtest combinations before trading them live.\n\n### Golden Cross and Death Cross"
+    }
+  ],
+  "extra_sources_count": 3,
+  "source_warning": "extra_sources are retrieved in parallel and are not automatically used to verify generated content; use fetch on key URLs for claim-level evidence.",
+  "routing_decision": {
+    "docs_intent": false,
+    "zh_current_intent": false,
+    "web_current_intent": false,
+    "fetch_intent": false,
+    "supplemental_paths": [],
+    "validation_level": "balanced",
+    "fallback_mode": "auto",
+    "providers": "auto",
+    "main_search_chain": [
+      "xai-responses"
+    ]
+  },
+  "providers_used": [
+    "xAI Responses",
+    "tavily"
+  ],
+  "provider_attempts": [
+    {
+      "capability": "main_search",
+      "provider": "xAI Responses",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 20041.64,
+      "result_count": 1
+    },
+    {
+      "capability": "web_search",
+      "provider": "tavily",
+      "status": "ok",
+      "error_type": "",
+      "error": "",
+      "elapsed_ms": 22918.61,
+      "result_count": 3
+    }
+  ],
+  "fallback_used": false,
+  "validation_level": "balanced",
+  "minimum_profile_ok": true,
+  "capability_status": {
+    "main_search": {
+      "configured": [
+        "xai-responses"
+      ],
+      "fallback_chain": [
+        "xai-responses",
+        "openai-compatible"
+      ],
+      "ok": true
+    },
+    "web_search": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "zhipu",
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    },
+    "docs_search": {
+      "configured": [
+        "context7"
+      ],
+      "fallback_chain": [
+        "exa",
+        "context7"
+      ],
+      "ok": true
+    },
+    "web_fetch": {
+      "configured": [
+        "tavily"
+      ],
+      "fallback_chain": [
+        "tavily",
+        "firecrawl"
+      ],
+      "ok": true
+    }
+  },
+  "elapsed_ms": 22918.64
+}

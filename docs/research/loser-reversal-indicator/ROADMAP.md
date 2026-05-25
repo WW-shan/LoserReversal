@@ -47,13 +47,14 @@ P7                                                          [持续]    Alpha �
 
 **修订执行优先级**（按学术证据强度排序）：
 
-| 优先级 | Phase | 学术证据 confidence | 预期 verdict |
+| 优先级 | Phase | 学术证据 confidence | 当前状态 |
 |---|---|---|---|
-| 1 | **Phase 1.5** Unlock v2 | 3 独立学术研究 + 我 thesis-check 87-90% converge | 大概率 GREEN/YELLOW |
-| 2 | **Phase 3** Funding arb | 92% positive bias + extreme contrarian 学术验证 | GREEN/YELLOW |
-| 3 | **Phase 2.5** Wallet v2 | HL 124k whale trades simulation 验证 account size > trade size | YELLOW |
-| 4 | **Phase 4** Bot 反向 | 独立 thesis, 未验证 | 未知 |
-| 5 | Phase 5 portfolio | 依赖至少一个 ≥ YELLOW | — |
+| **✅ 1** | **Phase 1.5** Unlock v2 | 3 独立学术 + thesis-check 87-90% converge | 🟡 **YELLOW** (OOS Sharpe 0.61, 36 trades) |
+| **⚠️ 1.6** | Phase 1.5 救援 ablations (A/B/C/D) | Part C dr-1 到 dr-6 6 个 deep research | 待执行 (3 day 工作量) |
+| 2 | **Phase 3** Funding contrarian (reframed) | 92% positive bias + extreme contrarian 学术验证 | 🚧 60% (Slice 1 ✅, Slice 2/3 待) |
+| 3 | **Phase 2.5** Wallet v2 | HL 124k whale trades simulation 验证 | 未开始 |
+| 4 | **Phase 4** Bot 反向 | 独立 thesis, 未验证 | 未开始 |
+| 5 | Phase 5 portfolio | 依赖 ≥1 GREEN/YELLOW (✅ 已有 P1.5 YELLOW) | 未开始 |
 
 **关键里程碑**（修订）：
 - ~~M1~~ ✅ (Week 2): 数据 pipeline 跑通
@@ -325,14 +326,12 @@ P7                                                          [持续]    Alpha �
 
 ---
 
-## Phase 1.5: 学术-tuned Unlock 重做（新增，最高优先级）
+## Phase 1.5: 学术-tuned Unlock 重做（已完成 — YELLOW）
 
 > 基于 `docs/research/literature-review.md` Part A 调研，修复 Phase 1 的 sub-optimal 配置。
 > 学术证据强 confidence: 3 独立研究 + thesis-check converge **87-90% negative rate**。
 
-### ✅ VERDICT YELLOW (2026-05-24)
-
-**Phase 1.5 完成 — 首个 GREEN/YELLOW phase**。详细 verdict 在 `reports/phase1_5_unlock_academic.md`。
+### ✅ VERDICT YELLOW (2026-05-24) — 首个可部署 signal
 
 **最佳 signal: v2 (T-30 → T0 short, Keyrock long-swing window)**
 - OOS Sharpe **0.61** (YELLOW band [0.3, 1.0))
@@ -342,10 +341,39 @@ P7                                                          [持续]    Alpha �
 - 最大回撤 -29%
 
 **关键洞察**:
-- v1 IS Sharpe 1.60 → OOS 0.46 (71% decay, 28 trades — 卡 30 阈值) — overfit
-- **v2 T-30 是更稳健的 retail-deployable window** — 与 Keyrock "T-30 anticipation" 完全契合
+- v1 IS Sharpe 1.60 → OOS 0.46 (71% decay) — overfit
+- **v2 T-30 更稳健** — 与 Keyrock "T-30 anticipation" 契合
 - Cliff vesting > Step > Linear (符合学术预测)
-- v5 (T+3→T+14 reversal long) OOS Sharpe 0.06 — 反弹做多假设**不成立** (Keyrock 的反向预测被 PASS/KILL 否决)
+- v5 (T+3→T+14 reversal long) OOS Sharpe 0.06 — 反弹做多假设**不成立**
+
+详细 verdict: `reports/phase1_5_unlock_academic.md`
+
+### ⚠️ Phase 1.6: YELLOW → GREEN 救援 ablations（待执行）
+
+基于 `docs/research/phase-1-5-diagnostic.md` 5 个根因 + `literature-review.md` Part C 调研：
+
+| 根因 | 学术依据 | Ablation | 预期 lift |
+|---|---|---|---|
+| Split 3 lucky-fold（Sharpe 1.70 单 split 拉高） | Q6 dr-6 walk-forward bootstrap | **A: Bootstrap CI** | 不变 Sharpe，揭示真 95% CI |
+| Cohort drift（5 splits 选 3 种 cohort） | Q1 dr-1 search space overfit | **B: 固定 cohort=team** | 更稳定 |
+| Bear-period failure（Split 4 Sharpe 0.23, MaxDD -29%） | Q2/Q5 regime detection | **C: BTC<200d MA filter (bear-only short)** | +0.2-0.4 Sharpe |
+| MaxDD -29% 超 GREEN 阈值 -20% | Q3 event-specific buffer | **D: -10% per-trade stop loss** | MaxDD 救到 -15%, Sharpe +0.1 |
+| Portfolio Sharpe drag (v1+v2 < v2 alone) | Q4 uncorrelated alpha required | **E: 推迟到 cross-thesis** (P3 + P2.5) | 真 portfolio lift |
+
+**执行顺序** (3 天工作量):
+- Day 1: A (bootstrap CI, 1h) → B (fix cohort, 0.5d)
+- Day 2: C (regime filter, 1d) → D (stop loss, 0.5d)
+- Day 3: 组合 A+B+C+D rerun，写 `phase-1-5-ablation-results.md`，决定最终 verdict
+
+**决策树**:
+- A 显示 95% CI lower > 0 → 信号 robust，B/C/D 试图升 GREEN
+- A 显示 CI lower < 0 → 接受 YELLOW 上限或承认 RED
+- A+B+C+D 组合后 Sharpe ≥ 1.0 AND MaxDD ≤ 20% → 升 GREEN
+- 否则 → 锁定 v2 当前配置作为 YELLOW 信号进 Phase 5
+
+详见 `docs/research/phase-1-5-diagnostic.md`。
+
+---
 
 **Portfolio (top-2 v2 + v1, equal-weight)**:
 - OOS Sharpe 0.54, 64 trades, 73% win rate
@@ -445,9 +473,44 @@ P7                                                          [持续]    Alpha �
 
 ---
 
-## Phase 3: 跨平台 Funding 套利（Week 9-10）
+## Phase 3: 跨平台 Funding 套利（Week 9-10）— **已 reframe**
 
-> **这是低风险底盘策略。即使其他全失败，这个也能扛住。**
+> **原 plan**：跨 HL + Binance + Bybit + Bitget funding arb (delta-neutral)
+> **当前 status**：🚧 60% complete，已 reframe 为 **HL-only funding extreme contrarian**
+
+### 🚧 Reframe 原因（2026-05-23 blocker）
+
+从当前网络环境无法访问 cross-exchange APIs:
+- `fapi.binance.com` — connection timeout
+- `api.bybit.com` — timeout
+- `api.bitget.com` — timeout
+- `www.okx.com` — timeout
+- 仅 `api.hyperliquid.xyz` ✅ 可用 (26k+ samples 回溯 2023-05)
+- `api.gateio.ws` 可达但 funding 历史只 ~1 个月
+
+**学术 backed reframe**: Literature review Part B.5 + 新 Q5 dr-5 证实**单 venue funding extreme contrarian** 是有效 thesis (92% time positive funding bias → 极端值是 contrarian signal)。
+
+详见 `.ccg/tasks/phase-3-funding-arbitrage/blocker.md`。
+
+### Phase 3 修订 Pass Criteria
+
+单 venue directional 不同于 cross-exchange neutral：
+- **绿灯**：walk-forward OOS Sharpe ≥ 1.2 AND 年化 ≥ 20%
+- **黄灯**：Sharpe ∈ [0.5, 1.2) AND 年化 ≥ 10%
+- **红灯**：Sharpe < 0.5 OR 负年化
+
+### 当前进度
+
+- ✅ Slice 1 — funding backfill + `funding_extreme_v1` signal (commits `f983554` → `9521c15`)
+  - `src/signals/funding_extreme_v1.py` — z-score contrarian (entry |z|≥thresh, exit hold_hours 或 z 回 0.5)
+  - `scripts/backfill_funding.py` — 30 HL tokens funding history seeded
+- 🚧 Slice 2 — backtest + grid sweep (48 cells: z × hold × lookback)
+- 🚧 Slice 3 — walk-forward + verdict
+
+待 builder 接力完成 Slice 2/3。
+
+### 原 Plan（保留作 reference，待网络条件允许时执行）
+
 
 ### 目标
 验证跨 Hyperliquid + 主要 CEX 的 funding 差套利可行性。

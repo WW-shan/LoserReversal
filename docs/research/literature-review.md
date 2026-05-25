@@ -263,4 +263,147 @@ def reverse_alpha_score(fill, wallet, context):
 2. **Cliff vs Linear quantitative impact** — Q1.4 search 失败，需要 retry
 3. **HL L2 order book data availability** — 影响 OFI 可行性
 4. **CryptoRank API pricing** — 决定是否能用做 Phase 1.5 数据源
-5. **Combined signal portfolio weight** — Phase 5 设计
+5. ~~**Combined signal portfolio weight**~~ — 已在 Part C #4 (Q4 dr-4) 回答：需要 cross-thesis 不是 cross-window
+
+---
+
+## Part C — Phase 1.5 YELLOW 救援学术调研 (6 个 deep research, 2026-05-24)
+
+> Trigger: Phase 1.5 v2 OOS Sharpe 0.61 = YELLOW. 调研 6 个救援方向的学术依据。
+> Raw search outputs: `docs/research/raw-search/dr-1.json` 到 `dr-6.json`
+
+### C.1 (Q1 dr-1) Walk-forward 中的 cohort 选择 overfit
+
+**Source**: arxiv 2512.12924, algotrading101, marketcalls
+
+> "Overfitting (Curve-Fitting): A model/strategy fits historical noise rather than true signals... Multiple parameters worsen this by increasing the search space."
+
+**应用到 Phase 1.5**：每 split IS 自由选 cohort × min_pct = 12 cells search，5 splits 选 3 cohort → search space 过大产生 overfit。
+
+**救援**：固定 cohort=`team`（学术 Part A 已证最强 -25% drawdown），只让 IS 选 min_pct。降 search space 4×。
+
+### C.2 (Q2 dr-2) BTC 200d MA regime filter
+
+**Source**: bitcoinmagazinepro, luxalgo, ResearchGate Adaptive Regime-Based Trading on Bitcoin, pyquantlab, grayscale
+
+> "200-day SMA is a popular long-term trend filter for BTC strategies. Price above the 200-day SMA generally signals a bull regime (favor long exposure), while below signals a bear regime (favor cash or reduced exposure)."
+>
+> "Combining the 200-day MA filter with regime detection helps avoid whipsaws in choppy markets and improves risk-adjusted returns (Sharpe ratio) by limiting trades or sizing positions to favorable conditions."
+
+**关键反直觉**：传统 trend filter "BTC > 200d MA 才入场" 适用于 **趋势跟随** 策略。
+**对 contrarian short 是反向**：BTC > 200d MA = bull 期 → 反向 short 容易被 squeezed（参见 Q5）。所以正确 filter 是 "BTC < 200d MA 才开 short"。
+
+**应用到 Phase 1.5**：Split 4 (2025-09→2026-03) 是 BTC 高位震荡期，unlock short 被多次反弹打掉 → -29% MaxDD。
+
+### C.3 (Q3 dr-3) Event-driven stop loss + position sizing
+
+**Source**: zignaly, IG, tradealgo, optimusfutures
+
+> "Place [stop losses] based on: Technical levels — Below recent support, volatility (ATR multiples), or structure. **Event-specific buffers — Wider stops (5-10%+) around news to avoid whipsaws from volatility spikes**."
+>
+> Kelly Criterion: `f = (bp - q) / b`; in crypto use **fractional Kelly (half-Kelly)** due to fat tails
+
+**应用到 Phase 1.5**：
+- 当前没有 stop loss → MaxDD -29% 失控
+- 加 -10% per-trade stop (event-specific buffer 上限)
+- 或 ATR-based 自适应 (2×ATR 经典)
+- 单笔风险 1-2% account equity（标准 retail risk management）
+
+### C.4 (Q4 dr-4) 多 signal portfolio 组合的 Sharpe drag
+
+**Source**: robotwealth, quantpedia
+
+> "'**Sharpe drag**' occurs when high-volatility assets (common in crypto) increase the denominator more than the numerator, **or when assets correlate highly and fail to diversify risk**."
+>
+> "**Uncorrelated Alpha**: Returns from signals or assets with low/negative correlations to each other and the broader market. This boosts overall Sharpe by smoothing returns."
+
+**应用到 Phase 1.5**：
+v1 (T-7) + v2 (T-30) 共享同一 unlock thesis，只是 window 不同 → 它们在 unlock event 周围必然 **highly correlated** → portfolio Sharpe 0.54 < v2 alone 0.61。
+
+**真正的 Sharpe boost** 必须 cross-thesis：
+- v2 unlock short (event-driven)
+- Phase 3 funding extreme contrarian (microstructure)
+- Phase 2.5 wallet anti-alpha reverse (flow-driven)
+
+这 3 个 thesis 之间预期相关性 < 0.3 → portfolio Sharpe lift = √N ≈ 1.7× 单 signal。
+
+**结论**：Phase 1.5 内部混 v1+v2 无意义；要等 Phase 3 + Phase 2.5 完成才能做真分散组合。
+
+### C.5 (Q5 dr-5) Bull/Bear regime 对 contrarian short 的影响
+
+**Source**: RePEc 2018-09, changelly, arkm
+
+> "Bull markets: High momentum, rising correlation across assets, and over-optimism create opportunities for contrarian shorts at peaks... However, **persistent upward trends can punish premature shorts via squeezes**."
+>
+> "Bear markets: ... high volatility favor shorts. Contrarian elements emerge in oversold conditions for mean-reversion longs, but **short-selling (via perpetual futures) is a direct profit path**. Grinding declines punctuated by relief rallies trap bulls."
+>
+> "Regime shifts (detectable via Hidden Markov Models or volatility/momentum filters) are critical—strategies that ignore them underperform."
+
+**应用到 Phase 1.5**：
+- Split 4 表现差 ✓ 与 "bull 期 short 被 squeeze" 一致
+- Phase 1.5 当前没 regime filter → bull/bear 期间盲目开 short
+- 加 BTC regime filter（Q2 的反向应用）应该剔除 squeeze 风险
+
+### C.6 (Q6 dr-6) Walk-forward "lucky fold" 与 bootstrap CI
+
+**Source**: Wikipedia walk-forward, Interactive Brokers, balaena medium, levelup gitconnected
+
+> "Single split is prone to '**lucky fold**' bias — one favorable random or arbitrary split can produce overly optimistic results that fail in live trading."
+>
+> "Walk-forward helps by evaluating performance across many rolling OOS periods. **Bootstrap resampling** of trade returns provides confidence intervals on Sharpe estimates."
+
+**应用到 Phase 1.5**：
+- Split 3 单 split Sharpe 1.70 拉高 mean → 典型 lucky-fold sign
+- 36 trades 可做 bootstrap：resample with replacement 10,000 次 → 算 Sharpe 95% CI
+- 决策：
+  - CI lower bound > 0 → 信号 robust，值得 tuning toward GREEN
+  - CI lower bound < 0 → 0.61 可能是 lucky-fold 假象，应该承认 YELLOW 上限或 RED
+
+### C 部分综合结论
+
+5 root causes（详见 `phase-1-5-diagnostic.md`）每个都有学术 mitigation：
+
+| Root cause | Source | Mitigation |
+|---|---|---|
+| 1. Split 3 outlier | Q6 | Bootstrap CI |
+| 2. Cohort drift | Q1 | Fix cohort=team |
+| 3. Bear-period failure | Q2 + Q5 | BTC < 200d MA filter |
+| 4. MaxDD -29% | Q3 | Per-trade stop loss |
+| 5. Portfolio Sharpe drag | Q4 | Defer to cross-thesis (P3 + P2.5) |
+
+### Part C cited sources (6 new)
+
+24. arXiv 2512.12924 — Walk-Forward Optimization
+    https://arxiv.org/html/2512.12924v1
+25. algotrading101 — Walk-Forward Optimization Guide
+    https://algotrading101.com/learn/walk-forward-optimization/
+26. marketcalls — Lookahead bias in Python
+    https://www.marketcalls.in/python/understanding-look-ahead-bias-and-how-to-avoid-it-in-trading-strategies.html
+27. Bitcoin Magazine Pro — 200-day MA chart
+    https://www.bitcoinmagazinepro.com/charts/bitcoin-200-day-moving-average/
+28. LuxAlgo — Position trading with 200-day MA
+    https://www.luxalgo.com/blog/position-trading-with-200-day-moving-average/
+29. ResearchGate 395401021 — Adaptive Regime-Based Trading on Bitcoin
+    https://www.researchgate.net/publication/395401021_Adaptive_Regime-Based_Trading_on_Bitcoin_Backtesting_and_Walk-Forward_Evaluation
+30. pyquantlab — Regime-filtered momentum strategy
+    https://pyquantlab.medium.com/building-a-regime-filtered-risk-adjusted-momentum-strategy-for-cryptocurrencies-926f4bfa1240
+31. Grayscale — Trend filter momentum signals
+    https://research.grayscale.com/reports/the-trend-is-your-friend-managing-bitcoins-volatility-with-momentum-signals
+32. zignaly — Event-driven crypto strategies
+    https://zignaly.com/crypto-trading/event-driven-trading-strategies
+33. tradealgo — Crypto risk management
+    https://www.tradealgo.com/trading-guides/crypto/crypto-risk-management
+34. RoboWealth — Combining crypto alphas
+    https://robotwealth.com/quantifying-and-combining-crypto-alphas/
+35. Quantpedia — Diversification tag
+    https://quantpedia.com/tag/diversification/
+36. RePEc 2018-09 — Cycle-dependent crypto contrarian
+    https://ideas.repec.org/p/war/wpaper/2018-09.html
+37. Changelly — Bears vs Bulls in crypto
+    https://changelly.com/blog/bears-vs-bulls-in-crypto-market-players/
+38. Wikipedia — Walk forward optimization
+    https://en.wikipedia.org/wiki/Walk_forward_optimization
+39. Interactive Brokers — Walk-forward analysis deep dive
+    https://www.interactivebrokers.com/campus/ibkr-quant-news/the-future-of-backtesting-a-deep-dive-into-walk-forward-analysis/
+40. balaena — Train/test/walk-forward for on-chain factors
+    https://medium.com/balaena-quant-insights/train-test-split-cross-validation-and-walk-forward-testing-for-on-chain-factors-b5fcf01572e2
