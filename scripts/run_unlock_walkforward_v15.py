@@ -26,6 +26,7 @@ else:
 
 
 DEFAULT_OUT = Path("data/parquet/phase1_5_walkforward.parquet")
+DEFAULT_TRADES_OUT = Path("data/parquet/phase1_5_walkforward_trades.parquet")
 DEFAULT_REPORT = Path("reports/phase1_5_walkforward.md")
 DEFAULT_UNLOCKS_PATH = Path("data/parquet/unlocks.parquet")
 DEFAULT_COVERAGE_PATH = Path("data/parquet/event_coverage.parquet")
@@ -53,6 +54,17 @@ OUTPUT_COLUMNS = [
     "total_return",
     "fallback_used",
 ]
+TRADE_COLUMNS = [
+    "signal",
+    "split_idx",
+    "token",
+    "entry_ts",
+    "exit_ts",
+    "direction",
+    "return",
+    "hold_days",
+    "win",
+]
 OUTPUT_SCHEMA = pa.schema(
     [
         ("kind", pa.string()),
@@ -73,6 +85,19 @@ OUTPUT_SCHEMA = pa.schema(
         ("fallback_used", pa.bool_()),
     ]
 )
+TRADE_SCHEMA = pa.schema(
+    [
+        ("signal", pa.string()),
+        ("split_idx", pa.int64()),
+        ("token", pa.string()),
+        ("entry_ts", pa.timestamp("us", tz="UTC")),
+        ("exit_ts", pa.timestamp("us", tz="UTC")),
+        ("direction", pa.int64()),
+        ("return", pa.float64()),
+        ("hold_days", pa.float64()),
+        ("win", pa.bool_()),
+    ]
+)
 
 
 @dataclass(frozen=True)
@@ -83,10 +108,12 @@ class WalkForwardV15Config:
     test_days: int = DEFAULT_TEST_DAYS
     top_k: int = 2
     out: Path = DEFAULT_OUT
+    trades_out: Path = DEFAULT_TRADES_OUT
     report: Path = DEFAULT_REPORT
     init_cash: float = 10_000.0
     fees: float = 0.0005
     slippage: float = 0.0002
+    record_trades: bool = False
     unlocks_path: Path = DEFAULT_UNLOCKS_PATH
     coverage_path: Path = DEFAULT_COVERAGE_PATH
     candles_dir: Path = DEFAULT_CANDLES_DIR
@@ -113,7 +140,7 @@ def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
         test_days=config.test_days,
     )
 
-    per_signal = run_per_signal_walkforward(
+    per_signal_result = run_per_signal_walkforward(
         events,
         prices,
         coverage,
@@ -124,7 +151,13 @@ def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
         fees=config.fees,
         slippage=config.slippage,
         fallback_used=fallback_used,
+        record_trades=config.record_trades,
     )
+    trades = pd.DataFrame(columns=TRADE_COLUMNS)
+    if config.record_trades:
+        per_signal, trades = _unpack_record_trades_result(per_signal_result)
+    else:
+        per_signal = per_signal_result
     portfolio = compose_portfolio(
         per_signal,
         events,
@@ -139,12 +172,18 @@ def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
     frame = pd.concat([per_signal, portfolio], ignore_index=True)
 
     _write_parquet(frame, config.out)
+    if config.record_trades:
+        _write_trades_parquet(trades, config.trades_out)
     _write_report(config.report, frame, grid_df, config, effective_test_days, fallback_used)
     print(f"wrote parquet: {config.out}")
+    if config.record_trades:
+        print(f"wrote trades parquet: {config.trades_out}")
     print(f"wrote report: {config.report}")
     return {
         "frame": frame,
+        "trades": trades,
         "out": config.out,
+        "trades_out": config.trades_out,
         "report": config.report,
         "effective_test_days": effective_test_days,
         "fallback_used": fallback_used,
@@ -236,6 +275,22 @@ def _write_parquet(frame: pd.DataFrame, path: Path) -> None:
     pq.write_table(table, path, coerce_timestamps="us")
 
 
+def _write_trades_parquet(frame: pd.DataFrame, path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    output = _normalize_trades_frame(frame)
+    table = pa.Table.from_pandas(output, schema=TRADE_SCHEMA, preserve_index=False)
+    pq.write_table(table, path, coerce_timestamps="us")
+
+
+def _unpack_record_trades_result(result: object) -> tuple[pd.DataFrame, pd.DataFrame]:
+    if not isinstance(result, tuple) or len(result) != 2:
+        raise RuntimeError("record_trades=True requires walkforward summary and trades frames")
+    summary, trades = result
+    if not isinstance(summary, pd.DataFrame) or not isinstance(trades, pd.DataFrame):
+        raise RuntimeError("record_trades=True returned invalid walkforward frames")
+    return summary, trades
+
+
 def _normalize_output_frame(frame: pd.DataFrame) -> pd.DataFrame:
     output = frame.copy()
     for column in OUTPUT_COLUMNS:
@@ -253,6 +308,26 @@ def _normalize_output_frame(frame: pd.DataFrame) -> pd.DataFrame:
     for column in ["sharpe", "sortino", "win_rate", "max_dd", "total_return"]:
         output[column] = pd.to_numeric(output[column], errors="coerce").astype("float64")
     output["fallback_used"] = output["fallback_used"].fillna(False).astype("bool")
+    return output
+
+
+def _normalize_trades_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    output = frame.copy()
+    for column in TRADE_COLUMNS:
+        if column not in output.columns:
+            output[column] = pd.NA
+    output = output[TRADE_COLUMNS]
+    for column in ["signal", "token"]:
+        output[column] = output[column].astype("string")
+    output["split_idx"] = pd.to_numeric(output["split_idx"], errors="coerce").fillna(-1)
+    output["split_idx"] = output["split_idx"].astype("int64")
+    for column in ["entry_ts", "exit_ts"]:
+        output[column] = pd.to_datetime(output[column], utc=True, errors="coerce")
+    output["direction"] = pd.to_numeric(output["direction"], errors="coerce").fillna(0)
+    output["direction"] = output["direction"].astype("int64")
+    for column in ["return", "hold_days"]:
+        output[column] = pd.to_numeric(output[column], errors="coerce").astype("float64")
+    output["win"] = output["win"].fillna(False).astype("bool")
     return output
 
 
@@ -470,6 +545,8 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--test-days", type=int, default=DEFAULT_TEST_DAYS)
     parser.add_argument("--top-k", type=int, default=2)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--record-trades", action="store_true")
+    parser.add_argument("--trades-out", type=Path, default=DEFAULT_TRADES_OUT)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--init-cash", type=float, default=10_000.0)
     parser.add_argument("--fees", type=float, default=0.0005)
@@ -505,10 +582,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         test_days=args.test_days,
         top_k=args.top_k,
         out=args.out,
+        trades_out=args.trades_out,
         report=args.report,
         init_cash=args.init_cash,
         fees=args.fees,
         slippage=args.slippage,
+        record_trades=args.record_trades,
     )
     try:
         run_walkforward(config)
