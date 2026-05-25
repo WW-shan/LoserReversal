@@ -135,3 +135,74 @@ def test_candle_range_cover_accepts_last_open_at_completed_end_boundary():
     )
 
     assert candles_cover_range(candles, config)
+
+
+def test_run_backtest_applies_stop_loss_caps_trade_loss():
+    """A short trade where price rises >10% must exit by the stop loss path.
+
+    Phase 1.5 Ablation D: per-trade -10% stop. We compare the no-stop short
+    (price climbs through entry, equity bleeds) against sl_stop=0.10 (engine
+    closes the position once the running price exceeds entry x 1.10).
+    """
+    prices = pd.Series(
+        [100.0, 105.0, 112.0, 118.0, 125.0],
+        index=pd.date_range("2026-01-01", periods=5, freq="1D", tz="UTC"),
+        name="close",
+    )
+    entries = pd.Series([True, False, False, False, False], index=prices.index)
+    exits = pd.Series(False, index=prices.index)
+    base_config = BacktestConfig(
+        init_cash=10_000.0,
+        fees=0.0,
+        slippage=0.0,
+        direction="shortonly",
+    )
+    stop_config = BacktestConfig(
+        init_cash=10_000.0,
+        fees=0.0,
+        slippage=0.0,
+        direction="shortonly",
+        stop_loss=0.10,
+    )
+
+    baseline = run_backtest(prices, entries, exits, base_config)
+    stopped = run_backtest(prices, entries, exits, stop_config)
+
+    # Baseline short held through full rally: loss ~ -25% on equity.
+    assert baseline.equity.iloc[-1] < 8_000.0
+    # Stop loss exits the trade after price first closes above entry*1.10,
+    # so final equity must be strictly larger than the unstopped run.
+    assert stopped.equity.iloc[-1] > baseline.equity.iloc[-1]
+    # And the stopped trade should be marked as closed with one realised trade.
+    assert stopped.stats["n_trades"] == 1
+
+
+def test_run_backtest_no_stop_loss_passes_through_unchanged():
+    """With stop_loss=None, engine output must match the pre-Ablation-D path."""
+    prices = pd.Series(
+        [100.0, 105.0, 112.0, 118.0, 125.0],
+        index=pd.date_range("2026-01-01", periods=5, freq="1D", tz="UTC"),
+        name="close",
+    )
+    entries = pd.Series([True, False, False, False, False], index=prices.index)
+    exits = pd.Series(False, index=prices.index)
+    legacy_config = BacktestConfig(
+        init_cash=10_000.0,
+        fees=0.0,
+        slippage=0.0,
+        direction="shortonly",
+    )
+    explicit_none = BacktestConfig(
+        init_cash=10_000.0,
+        fees=0.0,
+        slippage=0.0,
+        direction="shortonly",
+        stop_loss=None,
+    )
+
+    legacy = run_backtest(prices, entries, exits, legacy_config)
+    explicit = run_backtest(prices, entries, exits, explicit_none)
+
+    assert legacy.equity.tolist() == explicit.equity.tolist()
+    assert legacy.stats["n_trades"] == explicit.stats["n_trades"]
+    assert legacy.stats["total_return"] == pytest.approx(explicit.stats["total_return"])
