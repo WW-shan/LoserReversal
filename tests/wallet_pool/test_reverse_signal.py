@@ -105,6 +105,36 @@ def test_compute_reverse_alpha_score_applies_negative_funding_extreme() -> None:
     assert score == pytest.approx(1.4)
 
 
+def test_compute_reverse_alpha_score_applies_infinite_funding_extreme() -> None:
+    score = compute_reverse_alpha_score(
+        _fill(),
+        wallet_account_value=10_000.0,
+        funding_context={"funding_zscore": float("inf")},
+        config=ReverseScoreConfig(),
+    )
+
+    assert score == pytest.approx(1.4)
+
+
+def test_compute_reverse_alpha_score_derives_leverage_from_notional_when_missing() -> None:
+    fill = {
+        "fill_id": "fill-1",
+        "coin": "BTC",
+        "time": pd.Timestamp("2026-05-26T12:00:00Z"),
+        "px": 100.0,
+        "sz": 1_000.0,
+    }
+
+    score = compute_reverse_alpha_score(
+        fill,
+        wallet_account_value=10_000.0,
+        funding_context={"funding_zscore": 0.0},
+        config=ReverseScoreConfig(),
+    )
+
+    assert score == pytest.approx(3.0 * 1.3)
+
+
 def test_compute_reverse_alpha_score_applies_asian_session_start() -> None:
     score = compute_reverse_alpha_score(
         _fill(time="2026-05-26T00:00:00Z"),
