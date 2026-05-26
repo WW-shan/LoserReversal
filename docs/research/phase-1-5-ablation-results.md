@@ -161,10 +161,39 @@ Phase 5 portfolio composition picks this up:
   "cohort": "team",
   "min_unlock_pct": 0.02,
   "stop_loss": 0.10,
-  "max_position_pct": 0.05,
-  "regime_filter": "pending_btc_backfill"
+  "regime_filter": "pending_btc_backfill",
+  "portfolio_weight_max": 0.10,
+  "kelly_fraction": 0.25,
+  "sharpe_lower_ci_2_5": 0.5035,
+  "sharpe_median_50": 1.8812,
+  "sharpe_upper_ci_97_5": 3.3224,
+  "ci_method": "bayesian",
+  "ci_iterations": 10000,
+  "ci_seed": 20260524,
+  "n_trades_oos": 29
 }
 ```
+
+### Bayesian bootstrap CI on v1+stop (n=29) — sizing-confirmed
+
+The first cut of the Ablation D table flagged that v1+stop's n_trades
+sat below the Efron-Tibshirani percentile bootstrap reliability
+threshold (n>=30). The follow-up Bayesian bootstrap rerun
+(`reports/phase-1-5-bootstrap-ci-v1-stop.md`, 10,000 Dirichlet(1,...,1)
+draws on 29 OOS trades) yielded:
+
+| percentile | Bayesian CI |
+|---|---:|
+| 2.5% (lower) | **0.5035** |
+| 50% (median) | 1.8812 |
+| 97.5% (upper) | 3.3224 |
+| verdict | **robust** (lower > 0) |
+
+The CI lower bound 0.50 lives well above the 0.3 sizing threshold from
+`docs/research/phase-3-and-1-5-followups-research.md` finding 4, so
+v1+stop earns the **max 10% Phase 5 portfolio weight** band rather than
+the 2-5% low-conviction sleeve. The detailed sizing rationale lives in
+`reports/phase-1-5-v1-stop-portfolio-sizing.md`.
 
 ## Open follow-ups (carry into Phase 5 or later)
 
@@ -172,14 +201,17 @@ Phase 5 portfolio composition picks this up:
 |---|---|---|
 | 1 | Extend BTC 1d candle backfill to 2023-05 | Ablation C validation; Phase 3 walkforward rerun |
 | 2 | Add ATR-adaptive stop loss option | v2 + adaptive stop combo |
-| 3 | Bootstrap CI on v1+D combo (new winner) | n_trades=29 — need CI to size Phase 5 weight |
+| 3 | ~~Bootstrap CI on v1+D combo (new winner)~~ | ✅ done — Bayesian CI [0.50, 1.88, 3.32]; reports/phase-1-5-bootstrap-ci-v1-stop.md |
 | 4 | Cross-thesis portfolio (Ablation E) once Phase 2.5 + 3 finalize | True diversification lift |
 
 ## References
 
 - `docs/research/phase-1-5-diagnostic.md` — root causes 1-5 and ablation specs
 - `docs/research/literature-review.md` Part A + Part C — academic backing
-- `reports/phase-1-5-bootstrap-ci.md` — Ablation A
+- `docs/research/phase-3-and-1-5-followups-research.md` — Bayesian bootstrap rationale (finding 4)
+- `reports/phase-1-5-bootstrap-ci.md` — Ablation A (v2 percentile CI)
+- `reports/phase-1-5-bootstrap-ci-v1-stop.md` — v1+stop Bayesian CI (this update)
+- `reports/phase-1-5-v1-stop-portfolio-sizing.md` — Phase 5 sizing recommendation
 - `reports/phase-1-5-ablation-b.md` — Ablation B
 - `reports/phase-1-5-ablation-d.md` — Ablation D
 - `reports/phase1_5_walkforward.md` — baseline (commit ce30b2d)
@@ -187,3 +219,4 @@ Phase 5 portfolio composition picks this up:
 - `reports/phase1_5_walkforward_stop.md` — stop=10% raw (commit 8df7d8b)
 - `src/signals/regime_filter.py` — Ablation C module (commit 8d2d80b)
 - `data/parquet/phase1_5_walkforward_trades.parquet` — per-trade returns for bootstrap
+- `data/parquet/phase1_5_walkforward_stop_trades.parquet` — v1+stop per-trade returns
