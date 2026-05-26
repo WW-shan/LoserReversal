@@ -43,7 +43,7 @@ def compute_bot_features(fills: pd.DataFrame, account_value: float) -> dict[str,
         "size_uniformity_cv": _coefficient_of_variation(sizes),
         "coin_diversity": _coin_diversity(frame, n_trades),
         "avg_session_gap_minutes": _median_gap_minutes(times),
-        "round_number_pct": _round_number_pct(sizes),
+        "round_number_pct": _round_number_pct(frame["sz"], n_trades),
     }
 
 
@@ -145,10 +145,10 @@ def _median_gap_minutes(times: pd.Series) -> float:
     return float(gaps.median())
 
 
-def _round_number_pct(sizes: pd.Series) -> float:
-    if sizes.empty:
+def _round_number_pct(sizes: pd.Series, n_trades: int) -> float:
+    if n_trades <= 0:
         return 0.0
-    return float(sizes.map(_is_round_number_size).mean())
+    return float(pd.to_numeric(sizes, errors="coerce").map(_is_round_number_size).mean())
 
 
 def _is_round_number_size(value: Any) -> bool:
