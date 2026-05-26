@@ -38,6 +38,16 @@ def test_single_signal_uses_weight_cap_and_raw_combined_stats() -> None:
     assert metrics["max_dd"] == pytest.approx(-0.02)
 
 
+def test_single_signal_target_vol_scales_down_high_volatility_signal() -> None:
+    composer = PortfolioComposer()
+    composer.add_signal("wild", [1.0, -1.0, 1.0, -1.0], (0.5, 1.0, 1.5), 0.5, 1.0)
+
+    weights = composer.risk_parity_weights(target_vol=0.15)
+
+    assert weights["wild"] < 1.0
+    assert weights["wild"] == pytest.approx(0.15 / math.sqrt(14.4))
+
+
 def test_uncorrelated_equal_vol_signals_get_equal_risk_parity_weights() -> None:
     composer = PortfolioComposer()
     composer.add_signal("a", [0.10, -0.10, 0.10, -0.10], (0.5, 1.0, 1.5), 0.5, 0.50)
@@ -112,15 +122,49 @@ def test_highly_correlated_signals_do_not_get_square_root_n_sharpe_lift() -> Non
     assert combined["sharpe"] < max(row["sharpe"] for row in signal_stats.values()) * 1.10
 
 
+def test_disjoint_timestamped_returns_do_not_use_positional_correlation_fallback() -> None:
+    composer = PortfolioComposer()
+    composer.add_signal(
+        "left",
+        pd.Series([0.10, 0.20], index=pd.to_datetime(["2026-01-01", "2026-01-02"], utc=True)),
+        (0.5, 1.0, 1.5),
+        0.5,
+        0.50,
+    )
+    composer.add_signal(
+        "right",
+        pd.Series([0.10, 0.20], index=pd.to_datetime(["2026-02-01", "2026-02-02"], utc=True)),
+        (0.5, 1.0, 1.5),
+        0.5,
+        0.50,
+    )
+
+    corr = composer.correlation_matrix()
+
+    assert corr.loc["left", "right"] == 0.0
+
+
 def test_kelly_sizing_uses_quarter_kelly_from_ci_lower_bound() -> None:
     composer = PortfolioComposer()
     composer.add_signal("v1+D", [0.10, -0.02, 0.04], (0.5035, 1.8812, 3.3224), 0.5035, 0.10)
 
     stats = composer.signal_stats()["v1+D"]
-    full_kelly = 0.5035 / (1.0 + 0.5035**2)
+    annualized_vol = pd.Series([0.10, -0.02, 0.04], dtype="float64").std(ddof=0) * math.sqrt(14.4)
 
-    assert stats["kelly_fraction"] == pytest.approx(full_kelly * 0.25)
+    assert stats["kelly_fraction"] == pytest.approx(0.5035 / annualized_vol * 0.25)
     assert stats["kelly_weight"] == pytest.approx(0.10)
+
+
+def test_kelly_sizing_is_monotonic_in_ci_lower_bound_for_same_returns() -> None:
+    low = PortfolioComposer()
+    high = PortfolioComposer()
+    returns = [0.08, -0.03, 0.06, -0.01]
+    low.add_signal("low", returns, (0.5, 1.0, 1.5), 0.5, 10.0)
+    high.add_signal("high", returns, (1.5, 2.0, 2.5), 1.5, 10.0)
+
+    assert high.signal_stats()["high"]["kelly_fraction"] > low.signal_stats()["low"][
+        "kelly_fraction"
+    ]
 
 
 def test_negative_ci_lower_bound_gets_zero_kelly_weight() -> None:

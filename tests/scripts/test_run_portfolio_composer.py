@@ -117,7 +117,7 @@ def test_cli_smoke_equal_weight_uses_even_split(tmp_path: Path) -> None:
     assert "Kelly Sizing" in report.read_text(encoding="utf-8")
 
 
-def test_risk_check_uses_configured_observed_max_drawdown(tmp_path: Path) -> None:
+def test_risk_check_uses_weighted_portfolio_returns_for_drawdown(tmp_path: Path) -> None:
     config = _write_config(
         tmp_path / "unlock_v1_stop.json",
         name="v1+D",
@@ -136,7 +136,7 @@ def test_risk_check_uses_configured_observed_max_drawdown(tmp_path: Path) -> Non
     )
 
     checks = {row["check"]: row for row in result["risk_checks"]}
-    assert checks["monthly_max_drawdown <= 8%"]["value"] == 0.0777
+    assert checks["monthly_max_drawdown <= 8%"]["value"] == 0.02
     assert checks["monthly_max_drawdown <= 8%"]["pass"] is True
 
 
