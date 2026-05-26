@@ -16,11 +16,15 @@ from infra.storage import PARQUET_DIR
 
 try:
     from scripts.run_funding_extreme_backtest import (
+        DEFAULT_PRICE_INTERVAL,
+        SUPPORTED_PRICE_INTERVALS,
         BacktestConfig,
         run_single_config_with_coverage,
     )
 except ModuleNotFoundError:
     from run_funding_extreme_backtest import (
+        DEFAULT_PRICE_INTERVAL,
+        SUPPORTED_PRICE_INTERVALS,
         BacktestConfig,
         run_single_config_with_coverage,
     )
@@ -50,6 +54,7 @@ class GridSweepConfig:
     report: Path = DEFAULT_REPORT
     taker_fee: float = 0.0005
     slippage: float = 0.0002
+    price_interval: str = DEFAULT_PRICE_INTERVAL
 
 
 def iter_grid() -> Iterator[GridCell]:
@@ -77,6 +82,7 @@ def run_grid_sweep(config: GridSweepConfig) -> dict[str, Any]:
                 lookback_days=cell.lookback_days,
                 taker_fee=config.taker_fee,
                 slippage=config.slippage,
+                price_interval=config.price_interval,
             )
         )
         frames.append(result.frame)
@@ -163,7 +169,11 @@ def _format_report(
 ) -> str:
     generated = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     ranking = rank_aggregate_cells(frame)
-    coverage_lines = _coverage_section(skipped_tokens, covered_tokens)
+    coverage_lines = _coverage_section(
+        skipped_tokens,
+        covered_tokens,
+        price_interval=config.price_interval,
+    )
     lines = [
         "# Funding Extreme Contrarian Grid Sweep",
         "",
@@ -171,9 +181,11 @@ def _format_report(
         "",
         "## Methodology",
         "",
-        "- Each cell runs funding_extreme_signal for every token with matching 1h candles.",
+        f"- Each cell runs funding_extreme_signal for every token with matching "
+        f"{config.price_interval} candles.",
         "- Funding payment is charged as sum(funding_rate x signed position) while held.",
-        "- Per-token equity is mark-to-market hourly during open positions; flat between trades.",
+        f"- Per-token equity is mark-to-market per {config.price_interval} bar during open "
+        "positions; flat between trades.",
         "- Sharpe is annualized off daily-resampled equity returns (periods_per_year=365).",
         "- Aggregate Sharpe uses equal-weight portfolio of per-token daily returns "
         "so late-listed tokens do not inflate the denominator with idle BASE_CAPITAL.",
@@ -186,6 +198,7 @@ def _format_report(
         "| --- | --- |",
         f"| funding_dir | {config.funding_dir} |",
         f"| candles_dir | {config.candles_dir} |",
+        f"| price_interval | {config.price_interval} |",
         f"| taker_fee | {config.taker_fee:.6f} |",
         f"| slippage | {config.slippage:.6f} |",
         "",
@@ -204,15 +217,24 @@ def _format_report(
     return "\n".join(lines) + "\n"
 
 
-def _coverage_section(skipped_tokens: list[str], covered_tokens: list[str]) -> list[str]:
+def _coverage_section(
+    skipped_tokens: list[str],
+    covered_tokens: list[str],
+    *,
+    price_interval: str = DEFAULT_PRICE_INTERVAL,
+) -> list[str]:
     total = len(skipped_tokens) + len(covered_tokens)
     lines = [
-        f"Aggregate covers **{len(covered_tokens)}** of **{total}** funding tokens.",
+        f"Aggregate covers **{len(covered_tokens)}** of **{total}** funding tokens at the "
+        f"`{price_interval}` candle interval.",
         "",
     ]
     if skipped_tokens:
         joined = ", ".join(skipped_tokens)
-        lines.append(f"Skipped (no matching 1h candles or insufficient funding history): {joined}.")
+        lines.append(
+            f"Skipped (no matching {price_interval} candles or insufficient funding history): "
+            f"{joined}."
+        )
     else:
         lines.append("All funding tokens covered.")
     return lines
@@ -296,6 +318,12 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--taker-fee", type=float, default=0.0005)
     parser.add_argument("--slippage", type=float, default=0.0002)
+    parser.add_argument(
+        "--price-interval",
+        choices=SUPPORTED_PRICE_INTERVALS,
+        default=DEFAULT_PRICE_INTERVAL,
+        help="candle interval to load (default 1h; 4h enables 833d coverage)",
+    )
     args = parser.parse_args(argv)
     _validate_args(parser, args)
     return args
@@ -318,6 +346,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             report=args.report,
             taker_fee=args.taker_fee,
             slippage=args.slippage,
+            price_interval=args.price_interval,
         )
     )
     return 0
