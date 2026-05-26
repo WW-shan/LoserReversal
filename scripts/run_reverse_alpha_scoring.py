@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import time
 from pathlib import Path
 from typing import Any
@@ -77,9 +78,14 @@ def run_reverse_alpha_scoring(
         if scored.empty:
             wallets_empty_fills += 1
             continue
+        if len(scored) != len(tokens):
+            raise RuntimeError(
+                f"score row count mismatch for {wallet}: "
+                f"{len(scored)} score rows for {len(tokens)} fill rows"
+            )
 
         scored["wallet"] = wallet
-        scored["token"] = tokens[: len(scored)]
+        scored["token"] = tokens
         scored["components"] = scored["components"].map(_components_json)
         frames.append(scored[OUTPUT_COLUMNS])
         wallets_scored += 1
@@ -137,7 +143,27 @@ def _load_funding_history(
 
 
 def _components_json(components: dict[str, Any]) -> str:
-    return json.dumps(components, sort_keys=True, separators=(",", ":"))
+    return json.dumps(
+        _json_safe(components),
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    try:
+        if pd.isna(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return value
 
 
 def _write_scores(scores: pd.DataFrame, out: Path) -> None:
