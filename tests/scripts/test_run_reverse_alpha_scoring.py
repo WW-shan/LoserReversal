@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 
 def _pool_frame() -> pd.DataFrame:
@@ -81,7 +82,7 @@ def test_run_reverse_alpha_scoring_writes_scores_and_report(tmp_path: Path) -> N
     assert written["fill_id"].tolist() == ["fill-1"]
     assert written["wallet"].tolist() == ["0xpass"]
     assert written["token"].tolist() == ["BTC"]
-    assert written["score"].iloc[0] == 1.5 * 1.3 * 1.4
+    assert written["score"].iloc[0] == pytest.approx(1.5 * 1.3 * 1.4)
     components = json.loads(written["components"].iloc[0])
     assert components["wallet_confidence"] == 0.5
     assert components["funding_zscore"] == 2.5
@@ -113,6 +114,75 @@ def test_run_reverse_alpha_scoring_skips_missing_wallet_fills(tmp_path: Path) ->
     assert result["wallets_missing_fills"] == 1
     assert pd.read_parquet(out).empty
     assert report.exists()
+
+
+def test_run_reverse_alpha_scoring_serializes_nonfinite_components_as_json_null(
+    tmp_path: Path,
+) -> None:
+    import scripts.run_reverse_alpha_scoring as runner
+
+    pool_path, fills_dir, funding_dir = _write_inputs(tmp_path)
+    funding = pd.DataFrame(
+        {"funding_rate": [0.0001, 0.0010]},
+        index=pd.DatetimeIndex(
+            [
+                pd.Timestamp("2026-05-26T08:00:00Z"),
+                pd.Timestamp("2026-05-26T11:00:00Z"),
+            ],
+            name="timestamp",
+        ),
+    )
+    funding.to_parquet(funding_dir / "BTC.parquet")
+    out = tmp_path / "reverse_alpha_scores.parquet"
+
+    runner.run_reverse_alpha_scoring(
+        pool_path=pool_path,
+        fills_dir=fills_dir,
+        funding_dir=funding_dir,
+        out=out,
+        report=None,
+    )
+
+    written = pd.read_parquet(out)
+    raw_components = written["components"].iloc[0]
+    assert "Infinity" not in raw_components
+    components = json.loads(raw_components)
+    assert components["funding_zscore"] is None
+    assert written["score"].iloc[0] == pytest.approx(1.5 * 1.3 * 1.4)
+
+
+def test_run_reverse_alpha_scoring_rejects_score_token_count_mismatch(
+    mocker,
+    tmp_path: Path,
+) -> None:
+    import scripts.run_reverse_alpha_scoring as runner
+
+    pool_path, fills_dir, funding_dir = _write_inputs(tmp_path)
+    fills = pd.concat(
+        [
+            _fills_frame(),
+            _fills_frame().assign(fill_id="fill-2", coin="ETH"),
+        ],
+        ignore_index=True,
+    )
+    fills.to_parquet(fills_dir / "0xpass.parquet", index=False)
+    mocker.patch.object(
+        runner,
+        "score_wallet_fills",
+        return_value=pd.DataFrame(
+            [{"fill_id": "fill-1", "score": 1.0, "components": {}}],
+            columns=["fill_id", "score", "components"],
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="score row count"):
+        runner.run_reverse_alpha_scoring(
+            pool_path=pool_path,
+            fills_dir=fills_dir,
+            funding_dir=funding_dir,
+            out=tmp_path / "reverse_alpha_scores.parquet",
+            report=None,
+        )
 
 
 def test_run_reverse_alpha_scoring_main_prints_summary(
