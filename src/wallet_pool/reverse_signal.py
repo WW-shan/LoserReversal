@@ -34,6 +34,78 @@ def compute_reverse_alpha_score(
     return float(score)
 
 
+def wallet_confidence_weight(wallet_metrics: Any) -> float:
+    loss_rate = _numeric(_get_value(wallet_metrics, "realized_loss_rate_90d", 0.0), default=0.0)
+    leverage = _numeric(_get_value(wallet_metrics, "leverage_avg_90d", 0.0), default=0.0)
+    n_trades = _numeric(_get_value(wallet_metrics, "n_trades_90d", 0.0), default=0.0)
+
+    loss_component = _bounded_linear(loss_rate, low=0.50, high=1.00)
+    leverage_component = _bounded_linear(leverage, low=5.0, high=20.0)
+    trade_component = _bounded_linear(n_trades, low=50.0, high=200.0)
+    return float((loss_component + leverage_component + trade_component) / 3.0)
+
+
+def score_wallet_fills(
+    wallet_fills: pd.DataFrame,
+    wallet_metrics: Any,
+    funding_history: Any,
+    *,
+    config: ReverseScoreConfig,
+) -> pd.DataFrame:
+    if wallet_fills.empty:
+        return _empty_score_frame()
+
+    account_value = _numeric(_get_value(wallet_metrics, "account_value", 0.0), default=0.0)
+    confidence = wallet_confidence_weight(wallet_metrics)
+    rows: list[dict[str, Any]] = []
+
+    frame = wallet_fills.copy()
+    if "time" not in frame.columns and isinstance(frame.index, pd.DatetimeIndex):
+        frame = frame.reset_index(names="time")
+    if "time" in frame.columns:
+        frame["time"] = pd.to_datetime(frame["time"], utc=True, errors="coerce")
+    if "coin" in frame.columns:
+        frame["coin"] = frame["coin"].astype("string")
+    if "px" in frame.columns:
+        frame["px"] = pd.to_numeric(frame["px"], errors="coerce")
+    if "sz" in frame.columns:
+        frame["sz"] = pd.to_numeric(frame["sz"], errors="coerce")
+    if "leverage" in frame.columns:
+        frame["leverage"] = pd.to_numeric(frame["leverage"], errors="coerce")
+
+    for position, row in enumerate(frame.itertuples(index=False), start=0):
+        fill = row._asdict()
+        fill_id = _fill_id(fill, position)
+        coin = _string_value(fill.get("coin"))
+        timestamp = _fill_timestamp(fill)
+        context = _funding_context_for_fill(coin, timestamp, funding_history)
+        components = _score_components(fill, account_value, context, config)
+        score = 1.0
+        for multiplier in components.values():
+            score *= multiplier
+        rows.append(
+            {
+                "fill_id": fill_id,
+                "score": float(score),
+                "components": {
+                    "risk_ratio": _risk_ratio(fill, account_value),
+                    "oversized_multiplier": components["oversized"],
+                    "leverage_multiplier": components["leverage"],
+                    "funding_extreme_multiplier": components["funding_extreme"],
+                    "time_bucket_multiplier": components["time_bucket"],
+                    "leverage": _numeric(_get_value(fill, "leverage", 0.0), default=0.0),
+                    "funding_zscore": _funding_context_value(context),
+                    "wallet_confidence": confidence,
+                },
+            }
+        )
+
+    result = pd.DataFrame(rows, columns=["fill_id", "score", "components"])
+    result["fill_id"] = result["fill_id"].astype("string")
+    result["score"] = pd.to_numeric(result["score"], errors="coerce").astype("float64")
+    return result.reset_index(drop=True)
+
+
 def _score_components(
     fill: Any,
     wallet_account_value: float,
@@ -113,6 +185,121 @@ def _fill_timestamp(fill: Any) -> pd.Timestamp | None:
     if timestamp.tzinfo is None:
         return timestamp.tz_localize("UTC")
     return timestamp.tz_convert("UTC")
+
+
+def _funding_context_for_fill(
+    coin: str | None,
+    timestamp: pd.Timestamp | None,
+    funding_history: Any,
+) -> dict[str, float] | None:
+    if not coin or timestamp is None or funding_history is None:
+        return None
+
+    frame = _get_value(funding_history, coin, None)
+    if frame is None:
+        frame = _get_value(funding_history, coin.upper(), None)
+    if frame is None or not isinstance(frame, pd.DataFrame) or frame.empty:
+        return None
+
+    normalized = _normalize_funding_frame(frame)
+    if normalized.empty:
+        return None
+
+    window = normalized.loc[:timestamp]
+    if window.empty:
+        return None
+
+    for column in ("funding_zscore", "zscore", "z_score"):
+        if column in window.columns:
+            value = _numeric(window[column].iloc[-1], default=0.0)
+            return {"funding_zscore": value}
+
+    if "funding_rate" not in window.columns:
+        return None
+
+    rates = pd.to_numeric(window["funding_rate"], errors="coerce").dropna()
+    if len(rates) < 2:
+        return None
+
+    current = float(rates.iloc[-1])
+    history = rates.iloc[:-1]
+    if history.empty:
+        return None
+
+    mean = float(history.mean())
+    std = float(history.std(ddof=0))
+    if not math.isfinite(mean) or not math.isfinite(std):
+        return None
+    if std == 0:
+        zscore = 0.0 if current == mean else math.copysign(math.inf, current - mean)
+    else:
+        zscore = (current - mean) / std
+    if not math.isfinite(zscore):
+        return None
+    return {"funding_zscore": float(zscore)}
+
+
+def _normalize_funding_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    normalized = frame.copy()
+    if not isinstance(normalized.index, pd.DatetimeIndex):
+        if "timestamp" in normalized.columns:
+            normalized.index = pd.to_datetime(normalized["timestamp"], utc=True, errors="coerce")
+        elif "time" in normalized.columns:
+            normalized.index = pd.to_datetime(normalized["time"], utc=True, errors="coerce")
+        else:
+            return pd.DataFrame(index=pd.DatetimeIndex([], tz="UTC"))
+    else:
+        normalized.index = pd.to_datetime(normalized.index, utc=True, errors="coerce")
+
+    normalized = normalized.loc[normalized.index.notna()].sort_index()
+    if normalized.empty:
+        return normalized
+    normalized = normalized[~normalized.index.duplicated(keep="last")]
+    for column in ("funding_rate", "funding_zscore", "zscore", "z_score"):
+        if column in normalized.columns:
+            normalized[column] = pd.to_numeric(normalized[column], errors="coerce")
+    return normalized
+
+
+def _funding_context_value(context: dict[str, float] | None) -> float:
+    if not context:
+        return 0.0
+    return _numeric(context.get("funding_zscore"), default=0.0)
+
+
+def _fill_id(fill: Mapping[str, Any] | Any, position: int) -> str:
+    for key in ("fill_id", "tid", "oid", "hash"):
+        value = _get_value(fill, key, None)
+        if value is not None and str(value) != "":
+            return str(value)
+    return f"fill-{position + 1}"
+
+
+def _string_value(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value)
+    if not text or text == "<NA>":
+        return None
+    return text
+
+
+def _bounded_linear(value: float, *, low: float, high: float) -> float:
+    if not math.isfinite(value):
+        return 0.0
+    if high <= low:
+        return 0.0
+    return max(0.0, min(1.0, (float(value) - low) / (high - low)))
+
+
+def _empty_score_frame() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "fill_id": pd.Series(dtype="string"),
+            "score": pd.Series(dtype="float64"),
+            "components": pd.Series(dtype="object"),
+        }
+    )
 
 
 def _is_asian_session(timestamp: pd.Timestamp, config: ReverseScoreConfig) -> bool:
