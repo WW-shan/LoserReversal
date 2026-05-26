@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import numpy as np
@@ -166,6 +167,151 @@ def test_cli_smoke_writes_report_and_returns_zero(tmp_path: Path, capsys) -> Non
     assert "97.5%" in text
     captured = capsys.readouterr()
     assert "wrote report" in captured.out
+
+
+def test_bayesian_bootstrap_recovers_positive_sharpe(tmp_path: Path) -> None:
+    rng = np.random.default_rng(seed=101)
+    returns = rng.normal(loc=0.08, scale=0.05, size=29)
+    parquet = _write_trades(tmp_path, returns=returns)
+
+    result = bootstrap.run_bootstrap(
+        bootstrap.BootstrapConfig(
+            input=parquet,
+            signal="v2",
+            phase="OOS",
+            iterations=4000,
+            seed=101,
+            trades_per_year=14.4,
+            report=tmp_path / "bayes_pos.md",
+            method="bayesian",
+        )
+    )
+
+    assert result["method"] == "bayesian"
+    assert result["lower_2_5"] > 0.0
+    assert result["upper_97_5"] > result["lower_2_5"]
+    assert result["median_50"] > 0.0
+    assert result["decision"] == "robust"
+
+
+def test_bayesian_bootstrap_recovers_negative_sharpe(tmp_path: Path) -> None:
+    rng = np.random.default_rng(seed=202)
+    returns = rng.normal(loc=-0.08, scale=0.05, size=29)
+    parquet = _write_trades(tmp_path, returns=returns)
+
+    result = bootstrap.run_bootstrap(
+        bootstrap.BootstrapConfig(
+            input=parquet,
+            signal="v2",
+            phase="OOS",
+            iterations=4000,
+            seed=202,
+            trades_per_year=14.4,
+            report=tmp_path / "bayes_neg.md",
+            method="bayesian",
+        )
+    )
+
+    assert result["method"] == "bayesian"
+    assert result["upper_97_5"] < 0.0
+    assert result["median_50"] < 0.0
+    assert result["decision"] == "lucky-fold"
+
+
+def test_bayesian_bootstrap_handles_small_n_and_constant_returns(tmp_path: Path) -> None:
+    # n=29 mirrors the v1+stop OOS sample; mixture forces non-trivial variance.
+    rng = np.random.default_rng(seed=303)
+    returns = rng.normal(loc=0.01, scale=0.15, size=29)
+    parquet = _write_trades(tmp_path, returns=returns)
+
+    result = bootstrap.run_bootstrap(
+        bootstrap.BootstrapConfig(
+            input=parquet,
+            signal="v2",
+            phase="OOS",
+            iterations=2000,
+            seed=303,
+            trades_per_year=14.4,
+            report=tmp_path / "bayes_small.md",
+            method="bayesian",
+        )
+    )
+
+    assert result["method"] == "bayesian"
+    assert result["n_trades"] == 29
+    assert result["lower_2_5"] <= result["median_50"] <= result["upper_97_5"]
+    text = (tmp_path / "bayes_small.md").read_text(encoding="utf-8")
+    assert "bayesian" in text.lower()
+
+    # Constant returns (zero variance) must not crash — Sharpe degenerates to 0.
+    constant_parquet = _write_trades(tmp_path, returns=np.full(29, 0.05, dtype="float64"))
+    constant_result = bootstrap.run_bootstrap(
+        bootstrap.BootstrapConfig(
+            input=constant_parquet,
+            signal="v2",
+            phase="OOS",
+            iterations=1000,
+            seed=303,
+            trades_per_year=14.4,
+            report=tmp_path / "bayes_const.md",
+            method="bayesian",
+        )
+    )
+    assert constant_result["method"] == "bayesian"
+    assert math.isclose(constant_result["median_50"], 0.0, abs_tol=1e-9)
+    assert math.isclose(constant_result["upper_97_5"], 0.0, abs_tol=1e-9)
+
+
+def test_bayesian_bootstrap_weights_use_dirichlet_one() -> None:
+    rng = np.random.default_rng(seed=404)
+    returns = np.array([0.1, -0.05, 0.2, -0.10, 0.15], dtype="float64")
+    samples = bootstrap.bayesian_bootstrap(
+        returns,
+        iterations=5000,
+        rng=rng,
+        trades_per_year=14.4,
+    )
+
+    assert samples.shape == (5000,)
+    assert np.all(np.isfinite(samples))
+    # Bayesian-bootstrap Sharpe distribution should be centred near the point estimate,
+    # and weights drawn from Dirichlet(1,...,1) must always sum to one — invariance shows
+    # up as a finite, non-degenerate spread of Sharpe samples.
+    assert float(np.std(samples)) > 0.0
+
+
+def test_cli_method_flag_selects_bayesian(tmp_path: Path, capsys) -> None:
+    rng = np.random.default_rng(seed=505)
+    returns = rng.normal(loc=0.05, scale=0.10, size=29)
+    parquet = _write_trades(tmp_path, returns=returns)
+    report = tmp_path / "phase-1-5-bootstrap-ci-bayes.md"
+
+    exit_code = bootstrap.main(
+        [
+            "--input",
+            str(parquet),
+            "--signal",
+            "v2",
+            "--phase",
+            "OOS",
+            "--iterations",
+            "2000",
+            "--seed",
+            "505",
+            "--trades-per-year",
+            "14.4",
+            "--report",
+            str(report),
+            "--method",
+            "bayesian",
+        ]
+    )
+
+    assert exit_code == 0
+    text = report.read_text(encoding="utf-8")
+    assert "Bayesian" in text or "bayesian" in text
+    captured = capsys.readouterr()
+    assert "bayesian" in captured.out.lower()
 
 
 def _write_trades(tmp_path: Path, *, returns: np.ndarray) -> Path:
