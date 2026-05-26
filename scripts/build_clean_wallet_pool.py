@@ -38,17 +38,21 @@ def build_clean_wallet_pool(
     bot_score_threshold: float = 0.5,
     funding_source_graph_max_shared: int = 3,
     throttle_ms: int = DEFAULT_THROTTLE_MS,
+    fetch_attempts: int = 3,
+    retry_backoff_seconds: float = 0.25,
     lookback_days: int = LOOKBACK_DAYS,
     as_of: pd.Timestamp | None = None,
 ) -> dict[str, Any]:
     started = time.perf_counter()
     as_of_ts = _coerce_as_of(as_of)
     pool = _read_academic_pool(academic_pool_path)
-    bot_scores, fetched, failed = _score_wallets(
+    bot_scores, fetched, failed_wallets = _score_wallets(
         pool,
         as_of=as_of_ts,
         lookback_days=lookback_days,
         throttle_ms=throttle_ms,
+        fetch_attempts=fetch_attempts,
+        retry_backoff_seconds=retry_backoff_seconds,
         started=started,
     )
 
@@ -61,6 +65,8 @@ def build_clean_wallet_pool(
         bot_scores,
         config=config,
     )
+    fetch_failed_excluded = _fetch_failed_excluded(failed_wallets)
+    score_clean_pool = _remove_wallets(score_clean_pool, fetch_failed_excluded["wallet"])
 
     funding_sources = _read_funding_sources(funding_sources_path)
     funding_graph = funding_source_graph(funding_sources)
@@ -70,7 +76,12 @@ def build_clean_wallet_pool(
         max_shared=config.funding_source_graph_max_shared,
     )
     clean_pool = _remove_wallets(score_clean_pool, cluster_excluded["wallet"])
-    excluded_pool = _combine_excluded(score_excluded, cluster_excluded, bot_scores)
+    excluded_pool = _combine_excluded(
+        score_excluded,
+        cluster_excluded,
+        fetch_failed_excluded,
+        bot_scores,
+    )
 
     _write_frame(clean_pool, clean_out)
     _write_frame(excluded_pool, excluded_out)
@@ -80,6 +91,7 @@ def build_clean_wallet_pool(
         "academic_pool": int(len(pool)),
         "bot_scores_computed": int(len(bot_scores)),
         "bot_score_excluded": int(len(score_excluded)),
+        "fetch_failed_excluded": int(len(fetch_failed_excluded)),
         "funding_source_excluded": int(len(cluster_excluded)),
         "clean_retail_pool": int(len(clean_pool)),
         "excluded_bot_pool": int(len(excluded_pool)),
@@ -88,7 +100,7 @@ def build_clean_wallet_pool(
         "clean_out": clean_out,
         "excluded_out": excluded_out,
         "wallets_fetched": fetched,
-        "wallets_failed": failed,
+        "wallets_failed": len(failed_wallets),
         "funnel": funnel,
         "runtime_seconds": runtime,
         "as_of": as_of_ts,
@@ -110,11 +122,13 @@ def _score_wallets(
     as_of: pd.Timestamp,
     lookback_days: int,
     throttle_ms: int,
+    fetch_attempts: int,
+    retry_backoff_seconds: float,
     started: float,
-) -> tuple[pd.DataFrame, int, int]:
+) -> tuple[pd.DataFrame, int, list[str]]:
     rows: list[dict[str, Any]] = []
     fetched = 0
-    failed = 0
+    failed_wallets: list[str] = []
     total = len(pool)
     lookback_start = (as_of - timedelta(days=lookback_days)).to_pydatetime()
     lookback_end = as_of.to_pydatetime()
@@ -124,11 +138,23 @@ def _score_wallets(
         if not wallet:
             continue
         wallet_started = time.perf_counter()
-        try:
-            fills = fetch_user_fills(wallet, lookback_start, lookback_end)
-        except Exception as error:  # noqa: BLE001
-            failed += 1
-            _log(position, total, wallet, f"warning: fetch failed: {error}", wallet_started, started)
+        fills, error = _fetch_with_retries(
+            wallet,
+            lookback_start,
+            lookback_end,
+            fetch_attempts=fetch_attempts,
+            retry_backoff_seconds=retry_backoff_seconds,
+        )
+        if error is not None or fills is None:
+            failed_wallets.append(wallet)
+            _log(
+                position,
+                total,
+                wallet,
+                f"warning: fetch failed after {fetch_attempts} attempts: {error}",
+                wallet_started,
+                started,
+            )
             _sleep(throttle_ms, position, total)
             continue
 
@@ -140,12 +166,40 @@ def _score_wallets(
         _log(position, total, wallet, f"scored {bot_score:.3f}", wallet_started, started)
         _sleep(throttle_ms, position, total)
 
-    return pd.DataFrame(rows, columns=["wallet", "bot_score"]), fetched, failed
+    return pd.DataFrame(rows, columns=["wallet", "bot_score"]), fetched, failed_wallets
+
+
+def _fetch_with_retries(
+    wallet: str,
+    lookback_start: Any,
+    lookback_end: Any,
+    *,
+    fetch_attempts: int,
+    retry_backoff_seconds: float,
+) -> tuple[pd.DataFrame | None, Exception | None]:
+    last_error: Exception | None = None
+    for attempt in range(1, fetch_attempts + 1):
+        try:
+            return fetch_user_fills(wallet, lookback_start, lookback_end), None
+        except Exception as error:  # noqa: BLE001
+            last_error = error
+            if attempt < fetch_attempts and retry_backoff_seconds > 0:
+                time.sleep(retry_backoff_seconds * (2 ** (attempt - 1)))
+    return None, last_error
 
 
 def _read_funding_sources(path: Path) -> pd.DataFrame:
     if not path.exists():
-        return pd.DataFrame({"wallet": pd.Series(dtype="string"), "from_address": pd.Series(dtype="string")})
+        print(
+            f"warning: funding sources file not found at {path}; skipping clustering",
+            file=sys.stderr,
+        )
+        return pd.DataFrame(
+            {
+                "wallet": pd.Series(dtype="string"),
+                "from_address": pd.Series(dtype="string"),
+            }
+        )
     return pd.read_parquet(path)
 
 
@@ -160,6 +214,7 @@ def _remove_wallets(pool: pd.DataFrame, wallets: pd.Series) -> pd.DataFrame:
 def _combine_excluded(
     score_excluded: pd.DataFrame,
     cluster_excluded: pd.DataFrame,
+    fetch_failed_excluded: pd.DataFrame,
     bot_scores: pd.DataFrame,
 ) -> pd.DataFrame:
     score_rows = score_excluded.copy()
@@ -178,13 +233,26 @@ def _combine_excluded(
             columns=EXCLUDED_COLUMNS,
         )
 
-    excluded = pd.concat([score_rows, cluster_rows], ignore_index=True)
+    excluded = pd.concat([score_rows, fetch_failed_excluded, cluster_rows], ignore_index=True)
     if excluded.empty:
         return _empty_excluded()
     excluded["wallet"] = excluded["wallet"].astype("string").str.lower()
     excluded["bot_score"] = pd.to_numeric(excluded["bot_score"], errors="coerce").astype("float64")
     excluded["reason"] = excluded["reason"].astype("string")
     return excluded[EXCLUDED_COLUMNS].reset_index(drop=True)
+
+
+def _fetch_failed_excluded(wallets: list[str]) -> pd.DataFrame:
+    if not wallets:
+        return _empty_excluded()
+    return pd.DataFrame(
+        {
+            "wallet": pd.Series(wallets, dtype="string").str.lower(),
+            "bot_score": pd.Series([pd.NA] * len(wallets), dtype="Float64"),
+            "reason": pd.Series(["fetch_failed"] * len(wallets), dtype="string"),
+        },
+        columns=EXCLUDED_COLUMNS,
+    )
 
 
 def _write_frame(frame: pd.DataFrame, out: Path) -> None:
@@ -239,6 +307,7 @@ def _print_summary(result: dict[str, Any]) -> None:
     print(f"  academic pool rows: {funnel['academic_pool']}")
     print(f"  bot scores computed: {funnel['bot_scores_computed']}")
     print(f"  bot score excluded: {funnel['bot_score_excluded']}")
+    print(f"  fetch failed excluded: {funnel['fetch_failed_excluded']}")
     print(f"  funding source excluded: {funnel['funding_source_excluded']}")
     print(f"  clean retail pool rows: {funnel['clean_retail_pool']}")
     print(f"  excluded bot pool rows: {funnel['excluded_bot_pool']}")
@@ -258,6 +327,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--bot-score-threshold", type=float, default=0.5)
     parser.add_argument("--funding-source-max-shared", type=int, default=3)
     parser.add_argument("--throttle-ms", type=int, default=DEFAULT_THROTTLE_MS)
+    parser.add_argument("--fetch-attempts", type=int, default=3)
+    parser.add_argument("--retry-backoff-seconds", type=float, default=0.25)
     parser.add_argument("--lookback-days", type=int, default=LOOKBACK_DAYS)
     parser.add_argument("--as-of", type=_parse_timestamp, default=None)
     args = parser.parse_args()
@@ -279,6 +350,10 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
         parser.error("--funding-source-max-shared must be greater than 0")
     if args.throttle_ms < 0:
         parser.error("--throttle-ms must be non-negative")
+    if args.fetch_attempts <= 0:
+        parser.error("--fetch-attempts must be greater than 0")
+    if args.retry_backoff_seconds < 0:
+        parser.error("--retry-backoff-seconds must be non-negative")
     if args.lookback_days <= 0:
         parser.error("--lookback-days must be greater than 0")
 
@@ -293,6 +368,8 @@ def main() -> int:
         bot_score_threshold=args.bot_score_threshold,
         funding_source_graph_max_shared=args.funding_source_max_shared,
         throttle_ms=args.throttle_ms,
+        fetch_attempts=args.fetch_attempts,
+        retry_backoff_seconds=args.retry_backoff_seconds,
         lookback_days=args.lookback_days,
         as_of=args.as_of,
     )

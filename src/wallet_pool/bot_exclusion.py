@@ -11,6 +11,8 @@ import pandas as pd
 
 @dataclass(frozen=True, slots=True)
 class BotExclusionConfig:
+    """Inclusive bot and sybil-cluster thresholds for pool exclusion."""
+
     bot_score_threshold: float = 0.5
     funding_source_graph_max_shared: int = 3
 
@@ -21,6 +23,13 @@ def exclude_bots_from_pool(
     *,
     config: BotExclusionConfig,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Split a wallet pool into clean and score-excluded wallets.
+
+    Wallets missing from ``bot_scores`` are left in ``clean_pool``; production
+    pipelines that fail to score a wallet should exclude those failures before
+    treating the pool as clean.
+    """
+
     if wallet_pool.empty:
         return wallet_pool.copy(), _empty_excluded()
 
@@ -33,7 +42,7 @@ def exclude_bots_from_pool(
 
     merged = frame.merge(scores, on="wallet", how="left")
     threshold = float(config.bot_score_threshold)
-    excluded_mask = merged["bot_score"].fillna(-1.0) >= threshold - 1e-12
+    excluded_mask = merged["bot_score"].fillna(-1.0) >= threshold
 
     excluded = merged.loc[excluded_mask, ["wallet", "bot_score"]].copy()
     excluded["reason"] = "bot_score"
@@ -45,6 +54,8 @@ def exclude_bots_from_pool(
 def funding_source_graph(
     wallet_funding_sources: Mapping[str, object] | pd.DataFrame,
 ) -> dict[str, set[str]]:
+    """Build wallet adjacency sets from shared first-funding-source addresses."""
+
     records = _coerce_funding_sources(wallet_funding_sources)
     wallets = sorted({wallet for wallet, _ in records})
     parent = _parent_map(wallets)
@@ -72,6 +83,8 @@ def exclude_funding_source_clusters(
     *,
     max_shared: int,
 ) -> pd.DataFrame:
+    """Return pool rows belonging to funding-source clusters of at least ``max_shared``."""
+
     frame = wallet_pool.copy()
     if "wallet" in frame.columns:
         frame["wallet"] = frame["wallet"].astype("string").str.lower()

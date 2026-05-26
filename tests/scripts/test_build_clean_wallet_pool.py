@@ -149,6 +149,76 @@ def test_build_clean_wallet_pool_handles_empty_academic_pool(mocker, tmp_path: P
     assert pd.read_parquet(tmp_path / "excluded.parquet").empty
 
 
+def test_build_clean_wallet_pool_excludes_wallets_when_fetch_retries_fail(
+    mocker,
+    tmp_path: Path,
+) -> None:
+    import scripts.build_clean_wallet_pool as builder
+
+    academic_path = tmp_path / "academic_wallet_pool.parquet"
+    clean_path = tmp_path / "clean.parquet"
+    excluded_path = tmp_path / "excluded.parquet"
+    _academic_pool(["0xboom", "0xhuman"]).to_parquet(academic_path, index=False)
+
+    def _fake_fetch(address: str, start, end):
+        if address == "0xboom":
+            raise RuntimeError("network failure")
+        return _human_fills()
+
+    mocker.patch.object(builder, "fetch_user_fills", side_effect=_fake_fetch)
+
+    result = builder.build_clean_wallet_pool(
+        academic_pool_path=academic_path,
+        clean_out=clean_path,
+        excluded_out=excluded_path,
+        funding_sources_path=tmp_path / "missing_funding_sources.parquet",
+        throttle_ms=0,
+        retry_backoff_seconds=0.0,
+        as_of=pd.Timestamp("2026-05-26T00:00:00Z"),
+    )
+
+    clean = pd.read_parquet(clean_path)
+    excluded = pd.read_parquet(excluded_path)
+
+    assert clean["wallet"].tolist() == ["0xhuman"]
+    assert excluded["wallet"].tolist() == ["0xboom"]
+    assert excluded["reason"].tolist() == ["fetch_failed"]
+    assert result["wallets_failed"] == 1
+    assert result["funnel"]["fetch_failed_excluded"] == 1
+
+
+def test_build_clean_wallet_pool_retries_transient_fetch_failure(
+    mocker,
+    tmp_path: Path,
+) -> None:
+    import scripts.build_clean_wallet_pool as builder
+
+    academic_path = tmp_path / "academic_wallet_pool.parquet"
+    _academic_pool(["0xbot"]).to_parquet(academic_path, index=False)
+    fetch_user_fills = mocker.patch.object(
+        builder,
+        "fetch_user_fills",
+        side_effect=[RuntimeError("rate limited"), _bot_fills()],
+    )
+
+    result = builder.build_clean_wallet_pool(
+        academic_pool_path=academic_path,
+        clean_out=tmp_path / "clean.parquet",
+        excluded_out=tmp_path / "excluded.parquet",
+        funding_sources_path=tmp_path / "missing_funding_sources.parquet",
+        throttle_ms=0,
+        retry_backoff_seconds=0.0,
+        as_of=pd.Timestamp("2026-05-26T00:00:00Z"),
+    )
+
+    excluded = pd.read_parquet(tmp_path / "excluded.parquet")
+
+    assert fetch_user_fills.call_count == 2
+    assert result["wallets_failed"] == 0
+    assert excluded["wallet"].tolist() == ["0xbot"]
+    assert excluded["reason"].tolist() == ["bot_score"]
+
+
 def test_build_clean_wallet_pool_main_entrypoint_prints_summary(
     mocker,
     tmp_path: Path,
@@ -183,7 +253,10 @@ def test_build_clean_wallet_pool_main_entrypoint_prints_summary(
     exit_code = builder.main()
 
     assert exit_code == 0
-    stdout = capsys.readouterr().out
+    captured = capsys.readouterr()
+    stdout = captured.out
+    stderr = captured.err
     assert "clean wallet pool funnel" in stdout.lower()
+    assert "funding sources file not found" in stderr.lower()
     assert clean_path.exists()
     assert excluded_path.exists()
