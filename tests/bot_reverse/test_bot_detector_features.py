@@ -179,6 +179,23 @@ def test_compute_bot_features_round_number_pct_counts_large_integer_sizes() -> N
     assert features["round_number_pct"] == pytest.approx(0.5)
 
 
+def test_compute_bot_features_round_number_pct_uses_all_trades_as_denominator() -> None:
+    from bot_reverse.bot_detector import compute_bot_features
+
+    fills = _fills_df(
+        [
+            _fill_row("2026-05-01T00:00:00Z", sz=1_000.0),
+            _fill_row("2026-05-01T01:00:00Z", sz=0.0),
+            _fill_row("2026-05-01T02:00:00Z", sz=-100.0),
+            _fill_row("2026-05-01T03:00:00Z", sz=float("nan")),
+        ]
+    )
+
+    features = compute_bot_features(fills, account_value=10_000.0)
+
+    assert features["round_number_pct"] == pytest.approx(0.25)
+
+
 def test_compute_bot_features_accepts_time_column_without_datetime_index() -> None:
     from bot_reverse.bot_detector import compute_bot_features
 

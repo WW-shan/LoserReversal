@@ -9,7 +9,7 @@ from scripts import run_portfolio_composer as runner
 
 
 def test_cli_smoke_risk_parity_single_signal_writes_artifacts(tmp_path: Path) -> None:
-    config = _write_config(tmp_path / "unlock_v1_stop.json", name="v1+D", signal="v1")
+    _write_config(tmp_path / "unlock_v1_stop.json", name="v1+D", signal="v1")
     out = tmp_path / "portfolio_composition.parquet"
     report = tmp_path / "portfolio_composition.md"
 
