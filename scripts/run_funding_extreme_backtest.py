@@ -20,6 +20,8 @@ from signals.funding_extreme_v1 import funding_extreme_signal
 DEFAULT_FUNDING_DIR = PARQUET_DIR / "funding"
 DEFAULT_CANDLES_DIR = PARQUET_DIR / "candles"
 DEFAULT_OUT = PARQUET_DIR / "funding_extreme_backtest.parquet"
+DEFAULT_PRICE_INTERVAL = "1h"
+SUPPORTED_PRICE_INTERVALS = ("1h", "4h")
 BASE_CAPITAL = 10_000.0
 OUTPUT_COLUMNS = [
     "token",
@@ -51,6 +53,7 @@ class BacktestConfig:
     lookback_days: int = 30
     taker_fee: float = 0.0005
     slippage: float = 0.0002
+    price_interval: str = DEFAULT_PRICE_INTERVAL
 
 
 @dataclass(frozen=True)
@@ -83,7 +86,7 @@ def run_single_config(config: BacktestConfig) -> pd.DataFrame:
 
 def run_single_config_with_coverage(config: BacktestConfig) -> SingleConfigResult:
     funding_history = load_funding_history(config.funding_dir)
-    prices = load_prices(config.candles_dir)
+    prices = load_prices(config.candles_dir, price_interval=config.price_interval)
     return execute_backtest(funding_history, prices, config)
 
 
@@ -101,7 +104,7 @@ def execute_backtest(
         funding = funding_history[token]
         price = prices.get(token)
         if price is None:
-            logger.warning("skipping %s: missing 1h candles", token)
+            logger.warning("skipping %s: missing %s candles", token, config.price_interval)
             skipped.append(token)
             continue
         if not _has_sufficient_history(funding, config.lookback_days):
@@ -148,12 +151,29 @@ def load_funding_history(funding_dir: Path) -> dict[str, pd.DataFrame]:
     return history
 
 
-def load_prices(candles_dir: Path) -> dict[str, pd.Series]:
+def load_prices(
+    candles_dir: Path,
+    *,
+    price_interval: str = DEFAULT_PRICE_INTERVAL,
+) -> dict[str, pd.Series]:
+    """Load close-price series for every token whose candles match `price_interval`.
+
+    Globs `*_{price_interval}.parquet`. The `_sharpe` daily-resample downstream is
+    interval-agnostic because it operates on `equity.resample("1D").last()` (no per-bar
+    pct_change), so the only change a different interval introduces is fewer rows and a
+    coarser intra-trade mark-to-market — not a re-derivation of the Sharpe formula.
+    """
+    if price_interval not in SUPPORTED_PRICE_INTERVALS:
+        raise ValueError(
+            f"unsupported price_interval {price_interval!r}; "
+            f"expected one of {SUPPORTED_PRICE_INTERVALS}"
+        )
+    suffix = f"_{price_interval}.parquet"
     prices: dict[str, pd.Series] = {}
-    for path in sorted(candles_dir.glob("*_1h.parquet")):
-        token = path.name.removesuffix("_1h.parquet")
+    for path in sorted(candles_dir.glob(f"*{suffix}")):
+        token = path.name.removesuffix(suffix)
         try:
-            frame = read_candles(token, "1h", path=path)
+            frame = read_candles(token, price_interval, path=path)
         except Exception as exc:
             logger.warning("skipping %s: failed to read candle parquet: %s", token, exc)
             continue
@@ -547,6 +567,12 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--lookback-days", type=int, default=30)
     parser.add_argument("--taker-fee", type=float, default=0.0005)
     parser.add_argument("--slippage", type=float, default=0.0002)
+    parser.add_argument(
+        "--price-interval",
+        choices=SUPPORTED_PRICE_INTERVALS,
+        default=DEFAULT_PRICE_INTERVAL,
+        help="candle interval to load (default 1h; 4h matches Phase 3 4h refactor)",
+    )
     args = parser.parse_args(argv)
     _validate_args(parser, args)
     return args
@@ -577,6 +603,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             lookback_days=args.lookback_days,
             taker_fee=args.taker_fee,
             slippage=args.slippage,
+            price_interval=args.price_interval,
         )
     )
     write_results(frame, args.out)
