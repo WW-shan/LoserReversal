@@ -17,7 +17,7 @@ def test_compute_btc_regime_marks_bear_when_close_below_sma():
     bear = rf.compute_btc_regime(series, window=200)
 
     assert bear.iloc[:199].isna().all()  # not enough history yet
-    assert bear.iloc[199] in {True, False, pd.NA}
+    assert bear.iloc[198] is pd.NA and bear.iloc[199] in {True, False}
     assert bool(bear.iloc[210]) is True   # below SMA after drop
     assert bool(bear.iloc[200]) is True   # right at the drop
 
