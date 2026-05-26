@@ -44,12 +44,14 @@ def test_cli_smoke_mean_variance_prioritizes_higher_return_signal(tmp_path: Path
         tmp_path / "a.json",
         name="a",
         signal="a",
+        weight_max=0.50,
         source_returns=[0.01, 0.00, 0.02, 0.01],
     )
     _write_config(
         tmp_path / "b.json",
         name="b",
         signal="b",
+        weight_max=0.50,
         source_returns=[0.05, 0.04, 0.06, 0.05],
     )
     out = tmp_path / "portfolio_composition.parquet"
@@ -81,12 +83,14 @@ def test_cli_smoke_equal_weight_uses_even_split(tmp_path: Path) -> None:
         tmp_path / "a.json",
         name="a",
         signal="a",
+        weight_max=0.50,
         source_returns=[0.02, -0.01, 0.03, -0.02],
     )
     _write_config(
         tmp_path / "b.json",
         name="b",
         signal="b",
+        weight_max=0.50,
         source_returns=[-0.02, 0.01, -0.03, 0.02],
     )
     out = tmp_path / "portfolio_composition.parquet"
@@ -118,6 +122,7 @@ def _write_config(
     *,
     name: str,
     signal: str,
+    weight_max: float = 0.10,
     source_returns: list[float] | None = None,
 ) -> Path:
     source = path.with_suffix(".parquet")
@@ -135,7 +140,7 @@ def _write_config(
             {
                 "name": name,
                 "signal": signal,
-                "portfolio_weight_max": 0.10,
+                "portfolio_weight_max": weight_max,
                 "sharpe_lower_ci_2_5": 0.5035,
                 "sharpe_median_50": 1.8812,
                 "sharpe_upper_ci_97_5": 3.3224,
