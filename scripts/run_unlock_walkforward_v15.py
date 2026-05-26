@@ -15,7 +15,8 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from infra.backtest.walkforward import walk_forward_splits
-from infra.storage import read_unlocks
+from infra.storage import PARQUET_DIR, read_unlocks
+from signals.regime_filter import compute_btc_regime, filter_events_by_regime
 from signals.unlock_grid import SIGNAL_REGISTRY
 from signals.unlock_walkforward import compose_portfolio, run_per_signal_walkforward
 
@@ -121,12 +122,26 @@ class WalkForwardV15Config:
     grid_path: Path = DEFAULT_GRID_PATH
     fix_cohort: str | None = None
     stop_loss: float | None = None
+    regime_filter: str | None = None
+    btc_candles_path: Path | None = None
+
+
+REGIME_FILTER_CHOICES = ("none", "btc-200ma")
+DEFAULT_BTC_CANDLES_PATH = PARQUET_DIR / "candles" / "BTC_1d.parquet"
 
 
 def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
     events = _load_candidate_events(config.unlocks_path)
     if events.empty:
         raise RuntimeError("no has_hl_perp unlock events available")
+
+    if config.regime_filter == "btc-200ma":
+        events = apply_btc_regime_filter(events, config)
+        if events.empty:
+            raise RuntimeError(
+                "no events remain after btc-200ma regime filter "
+                "(check BTC candle history covers events)"
+            )
 
     coverage = load_coverage(config.coverage_path)
     prices = load_prices(events, config.candles_dir)
@@ -196,11 +211,42 @@ def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
     }
 
 
+def apply_btc_regime_filter(
+    events: pd.DataFrame,
+    config: "WalkForwardV15Config",
+) -> pd.DataFrame:
+    """Filter events to only those landing in BTC bear regime (< 200d SMA).
+
+    Reads BTC 1d closes from config.btc_candles_path (defaults to
+    `data/parquet/candles/BTC_1d.parquet`), computes the 200d-SMA bear flag,
+    and drops events whose unlock_date is in bull regime or pre-warmup.
+    """
+    btc_path = config.btc_candles_path or DEFAULT_BTC_CANDLES_PATH
+    if not btc_path.exists():
+        raise RuntimeError(
+            f"--regime-filter btc-200ma requires BTC 1d candles at {btc_path}; "
+            "run scripts/backfill_candles.py --interval 1d --start 2023-01-01 --tokens BTC"
+        )
+    btc_frame = pd.read_parquet(btc_path)
+    if "timestamp" in btc_frame.columns:
+        btc_frame = btc_frame.set_index("timestamp")
+    btc_index = pd.to_datetime(btc_frame.index, utc=True)
+    btc_close = pd.Series(
+        pd.to_numeric(btc_frame["close"], errors="coerce").to_numpy(),
+        index=btc_index,
+        dtype="float64",
+        name="close",
+    ).dropna()
+    regime = compute_btc_regime(btc_close, window=200)
+    return filter_events_by_regime(
+        events, regime, direction="short", pass_through_when_unknown=False
+    )
+
+
 def _load_candidate_events(path: Path) -> pd.DataFrame:
     events = read_unlocks(path)
     if events.empty or "unlock_date" not in events.columns:
         return events.iloc[0:0].copy()
-
     frame = events.copy()
     if "has_hl_perp" in frame.columns:
         frame = frame.loc[_coerce_bool_series(frame["has_hl_perp"])].copy()
@@ -397,6 +443,7 @@ def _methodology_lines(
         f"- test_days fallback_used: {_fmt_bool(fallback_used)}.",
         f"- fix_cohort: {config.fix_cohort if config.fix_cohort else 'none'}.",
         f"- stop_loss: {_fmt_stop_loss(config.stop_loss)}.",
+        f"- regime_filter: {config.regime_filter if config.regime_filter else 'none'}.",
     ]
 
 
@@ -585,6 +632,22 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
             "disables the stop and keeps prior behavior."
         ),
     )
+    parser.add_argument(
+        "--regime-filter",
+        choices=list(REGIME_FILTER_CHOICES),
+        default="none",
+        help=(
+            "Pre-filter events by macro regime. 'btc-200ma' keeps only events "
+            "landing while BTC < 200d SMA (bear regime favoring contrarian shorts). "
+            "Requires BTC 1d candles back to 2023-01. Default 'none' keeps all events."
+        ),
+    )
+    parser.add_argument(
+        "--btc-candles-path",
+        type=Path,
+        default=None,
+        help="Override BTC 1d candles parquet path used by --regime-filter btc-200ma.",
+    )
     args = parser.parse_args(argv)
     _validate_args(parser, args)
     return args
@@ -612,6 +675,7 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv)
     fix_cohort = None if args.fix_cohort == "none" else args.fix_cohort
+    regime_filter = None if args.regime_filter == "none" else args.regime_filter
     config = WalkForwardV15Config(
         n_splits=args.n_splits,
         mode=args.mode,
@@ -627,6 +691,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         record_trades=args.record_trades,
         fix_cohort=fix_cohort,
         stop_loss=args.stop_loss,
+        regime_filter=regime_filter,
+        btc_candles_path=args.btc_candles_path,
     )
     try:
         run_walkforward(config)
