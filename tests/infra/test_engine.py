@@ -246,15 +246,17 @@ def test_atr_stop_loss_widens_on_volatile_bar():
 
     Two short trades enter on the same bar. The volatile-history close path swings
     aggressively prior to entry, so the per-bar ATR(period=3) stop is materially
-    wider at entry than the calm-history equivalent. The wider stop survives the
-    same +10% post-entry move; the calm stop triggers and closes the position.
+    wider at entry than the calm-history equivalent. The post-entry path first
+    rises +5% (breaching the calm stop) then mean-reverts to flat by exit (which
+    is the contrarian-short thesis Phase 1.5 wants to preserve). The volatile
+    stop must survive the squeeze and close flat; the calm stop must fire and
+    realise the -5% loss.
     """
     index = pd.date_range("2026-01-01", periods=15, freq="1D", tz="UTC")
-    # Calm history: smooth ramp before entry; volatile history: large oscillation
-    # before entry. Both share the identical post-entry path (entries on bar 9).
     calm_history = [100.0, 100.5, 101.0, 100.8, 101.2, 100.9, 101.1, 101.3, 101.0, 101.5]
     volatile_history = [100.0, 115.0, 88.0, 118.0, 86.0, 120.0, 84.0, 122.0, 82.0, 101.5]
-    post_entry = [108.0, 113.0, 120.0, 125.0, 130.0]  # +5..+20% after entry
+    # Post-entry: +5% squeeze then mean-revert to flat
+    post_entry = [106.0, 105.0, 103.0, 101.5, 101.5]
 
     calm_prices = pd.Series(calm_history + post_entry, index=index, name="close")
     volatile_prices = pd.Series(
@@ -277,11 +279,14 @@ def test_atr_stop_loss_widens_on_volatile_bar():
     calm = run_backtest(calm_prices, entries, exits, atr_config)
     volatile = run_backtest(volatile_prices, entries, exits, atr_config)
 
-    # Calm path's tight ATR stop fires; volatile path's wider ATR stop survives
-    # the same proportional rise, so its short is still open / shows a smaller loss.
+    # Calm path: tight ATR stop fires on the +5% squeeze, locking the loss.
+    # Volatile path: wider ATR stop survives the squeeze, trade closes flat.
     assert calm.stats["n_trades"] == 1
     assert volatile.stats["n_trades"] >= 1
-    assert volatile.equity.iloc[-1] >= calm.equity.iloc[-1] - 1e-9
+    # The volatile (wider stop) variant ends with strictly more equity because
+    # its stop did not clip the recoverable squeeze. This is the headline
+    # property: ATR widens for the volatility regime that fires contrarian shorts.
+    assert volatile.equity.iloc[-1] > calm.equity.iloc[-1]
 
 
 def test_atr_stop_loss_caps_at_max():
