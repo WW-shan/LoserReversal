@@ -56,13 +56,14 @@ def run_portfolio_composer(config: PortfolioComposerConfig) -> dict[str, Any]:
         )
 
     weights = _select_weights(composer, signals, config)
+    portfolio_returns = composer.portfolio_returns(weights)
     combined = composer.combined_metrics(weights)
     correlation = composer.correlation_matrix()
     composition = composer.weights_frame(weights)
     composition.insert(0, "method", config.method)
     composition.insert(1, "target_vol", float(config.target_vol))
 
-    risk_checks = _risk_checks(signals, weights, combined)
+    risk_checks = _risk_checks(signals, weights, portfolio_returns)
     _write_parquet(composition, config.out)
     _write_report(
         config.report,
@@ -121,7 +122,7 @@ def _equal_weight(
 def _risk_checks(
     signals: Sequence[LoadedSignal],
     weights: Mapping[str, float],
-    combined: Mapping[str, float | int],
+    portfolio_returns: pd.Series,
 ) -> list[dict[str, object]]:
     max_single_trade_risk = max(
         (
@@ -133,7 +134,7 @@ def _risk_checks(
     )
     max_single_asset = max((abs(float(weight)) for weight in weights.values()), default=0.0)
     total_leverage = sum(abs(float(weight)) for weight in weights.values())
-    max_dd = _risk_check_max_drawdown(signals, combined)
+    max_dd = _portfolio_max_drawdown(portfolio_returns)
     return [
         {
             "check": "single_trade_risk <= 1%",
@@ -162,21 +163,13 @@ def _risk_checks(
     ]
 
 
-def _risk_check_max_drawdown(
-    signals: Sequence[LoadedSignal],
-    combined: Mapping[str, float | int],
-) -> float:
-    configured = []
-    for signal in signals:
-        raw_value = signal.raw_config.get("max_dd_observed_oos")
-        if raw_value is None:
-            continue
-        value = abs(float(raw_value))
-        if np.isfinite(value):
-            configured.append(value)
-    if configured:
-        return max(configured)
-    return abs(float(combined["max_dd"]))
+def _portfolio_max_drawdown(returns: pd.Series) -> float:
+    clean = returns.astype("float64").dropna()
+    if clean.empty:
+        return 0.0
+    equity = (1.0 + clean).cumprod()
+    drawdown = equity / equity.cummax() - 1.0
+    return abs(float(drawdown.min()))
 
 
 def _write_parquet(frame: pd.DataFrame, path: Path) -> None:

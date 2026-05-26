@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from scripts import run_portfolio_composer as runner
 
@@ -136,7 +137,7 @@ def test_risk_check_uses_weighted_portfolio_returns_for_drawdown(tmp_path: Path)
     )
 
     checks = {row["check"]: row for row in result["risk_checks"]}
-    assert checks["monthly_max_drawdown <= 8%"]["value"] == 0.02
+    assert checks["monthly_max_drawdown <= 8%"]["value"] == pytest.approx(0.02)
     assert checks["monthly_max_drawdown <= 8%"]["pass"] is True
 
 

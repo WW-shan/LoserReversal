@@ -1,6 +1,6 @@
 # Phase 5 Portfolio Composition
 
-_Generated 2026-05-26 01:25 UTC_
+_Generated 2026-05-26 01:47 UTC_
 
 ## Config
 
@@ -27,14 +27,14 @@ _Generated 2026-05-26 01:25 UTC_
 
 | signal | ci_lower | ci_median | ci_upper | kelly_fraction | kelly_weight | weight |
 | --- | --- | --- | --- | --- | --- | --- |
-| v1+D | 0.5035 | 1.8812 | 3.3224 | 0.1004 | 0.1000 | 0.1000 |
+| v1+D | 0.5035 | 1.8812 | 3.3224 | 0.2645 | 0.1000 | 0.1000 |
 
 ## Combined Stats
 
 | metric | value |
 | --- | ---: |
 | sharpe | 1.8377 |
-| max_dd | -29.96% |
+| max_dd | -3.32% |
 | n_trades | 29 |
 | win_rate | 72.41% |
 
@@ -45,7 +45,7 @@ _Generated 2026-05-26 01:25 UTC_
 | single_trade_risk <= 1% | 0.0100 | 0.0100 | PASS |
 | single_asset_exposure <= 15% | 0.1000 | 0.1500 | PASS |
 | total_leverage <= 5x | 0.1000 | 5.0000 | PASS |
-| monthly_max_drawdown <= 8% | 0.0777 | 0.0800 | PASS |
+| monthly_max_drawdown <= 8% | 0.0332 | 0.0800 | PASS |
 
 ## Sources
 

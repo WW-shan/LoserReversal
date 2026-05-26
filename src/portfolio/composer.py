@@ -96,7 +96,7 @@ class PortfolioComposer:
             return {}
         if len(names) == 1:
             signal = self._signals[names[0]]
-            return {signal.name: signal.weight_max}
+            return {signal.name: self._single_signal_weight(signal, target_vol)}
 
         vols = np.array([_std_or_nan(self._signals[name].returns) for name in names])
         positive_vols = vols[np.isfinite(vols) & (vols > 0.0)]
@@ -115,7 +115,7 @@ class PortfolioComposer:
             return {}
         if len(names) == 1:
             signal = self._signals[names[0]]
-            return {signal.name: signal.weight_max}
+            return {signal.name: self._single_signal_weight(signal, target_vol)}
 
         frame = self._returns_frame(names)
         means = frame.mean().to_numpy(dtype="float64")
@@ -143,20 +143,10 @@ class PortfolioComposer:
         if not names:
             return {"sharpe": 0.0, "max_dd": 0.0, "n_trades": 0, "win_rate": 0.0}
 
-        if len(names) == 1:
+        if len(names) == 1 and weights is None:
             combined = self._signals[names[0]].returns
         else:
-            active_weights = dict(weights or self.risk_parity_weights())
-            frame = self._returns_frame(names)
-            weight_vector = np.array(
-                [float(active_weights.get(name, 0.0)) for name in names],
-                dtype="float64",
-            )
-            combined = pd.Series(
-                frame.to_numpy(dtype="float64") @ weight_vector,
-                index=frame.index,
-                dtype="float64",
-            )
+            combined = self.portfolio_returns(weights or self.risk_parity_weights())
 
         return {
             "sharpe": _annualized_sharpe(combined, self.trades_per_year),
@@ -170,7 +160,7 @@ class PortfolioComposer:
         rows: dict[str, dict[str, float | int]] = {}
         for name, signal in self._signals.items():
             lower, median, upper = signal.bayesian_ci
-            kelly_fraction = self._kelly_fraction(lower)
+            kelly_fraction = self._kelly_fraction(signal)
             rows[name] = {
                 "n_trades": int(signal.returns.size),
                 "win_rate": _win_rate(signal.returns),
@@ -195,6 +185,22 @@ class PortfolioComposer:
         for name, row in stats.items():
             rows.append({"signal": name, "weight": float(weights.get(name, 0.0)), **row})
         return pd.DataFrame(rows)
+
+    def portfolio_returns(self, weights: Mapping[str, float]) -> pd.Series:
+        """Return weighted portfolio returns for the provided allocation."""
+        names = list(self._signals)
+        if not names:
+            return pd.Series(dtype="float64")
+        frame = self._returns_frame(names)
+        weight_vector = np.array(
+            [float(weights.get(name, 0.0)) for name in names],
+            dtype="float64",
+        )
+        return pd.Series(
+            frame.to_numpy(dtype="float64") @ weight_vector,
+            index=frame.index,
+            dtype="float64",
+        )
 
     def _cap_and_scale(
         self,
@@ -239,26 +245,33 @@ class PortfolioComposer:
         scale = min(1.0, target_vol / annualized_vol)
         return weights * scale
 
+    def _single_signal_weight(self, signal: SignalInput, target_vol: float) -> float:
+        annualized_vol = _annualized_volatility(signal.returns, self.trades_per_year)
+        if annualized_vol <= 0.0 or not math.isfinite(annualized_vol):
+            return float(signal.weight_max)
+        return float(min(signal.weight_max, target_vol / annualized_vol))
+
     def _returns_frame(self, names: list[str]) -> pd.DataFrame:
-        series = [self._signals[name].returns.rename(name) for name in names]
-        frame = pd.concat(series, axis=1).fillna(0.0)
-        if frame.empty:
-            max_len = max(len(item) for item in series)
-            frame = pd.DataFrame(
-                {
-                    name: self._signals[name].returns.reset_index(drop=True).reindex(
-                        range(max_len), fill_value=0.0
-                    )
-                    for name in names
-                },
-                dtype="float64",
-            )
+        max_len = max(len(self._signals[name].returns) for name in names)
+        frame = pd.DataFrame(
+            {
+                name: self._signals[name].returns.reset_index(drop=True).reindex(
+                    range(max_len), fill_value=0.0
+                )
+                for name in names
+            },
+            dtype="float64",
+        )
         return frame.astype("float64")
 
-    def _kelly_fraction(self, sharpe_lower: float) -> float:
-        if sharpe_lower <= 0.0:
+    def _kelly_fraction(self, signal: SignalInput) -> float:
+        sharpe_lower = float(signal.sharpe_lower)
+        if sharpe_lower <= 0.0 or not math.isfinite(sharpe_lower):
             return 0.0
-        full_kelly = sharpe_lower / (1.0 + sharpe_lower**2)
+        annualized_vol = _annualized_volatility(signal.returns, self.trades_per_year)
+        if annualized_vol <= 0.0 or not math.isfinite(annualized_vol):
+            return 0.0
+        full_kelly = sharpe_lower / annualized_vol
         return float(full_kelly * self.fractional_kelly)
 
     @staticmethod
@@ -325,16 +338,7 @@ def _allocate_with_caps(proportions: np.ndarray, caps: np.ndarray, target_total:
 def _pairwise_correlation(left: pd.Series, right: pd.Series) -> float:
     aligned = pd.concat([left, right], axis=1, join="inner").dropna()
     if len(aligned) < 2:
-        min_len = min(len(left), len(right))
-        if min_len < 2:
-            return 0.0
-        aligned = pd.DataFrame(
-            {
-                "left": left.reset_index(drop=True).iloc[:min_len],
-                "right": right.reset_index(drop=True).iloc[:min_len],
-            },
-            dtype="float64",
-        )
+        return 0.0
     corr = aligned.iloc[:, 0].corr(aligned.iloc[:, 1])
     if pd.isna(corr):
         return 0.0
