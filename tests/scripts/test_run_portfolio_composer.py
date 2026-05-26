@@ -117,12 +117,36 @@ def test_cli_smoke_equal_weight_uses_even_split(tmp_path: Path) -> None:
     assert "Kelly Sizing" in report.read_text(encoding="utf-8")
 
 
+def test_risk_check_uses_configured_observed_max_drawdown(tmp_path: Path) -> None:
+    config = _write_config(
+        tmp_path / "unlock_v1_stop.json",
+        name="v1+D",
+        signal="v1",
+        max_dd_observed_oos=-0.0777,
+        source_returns=[0.10, -0.20, 0.05],
+    )
+
+    result = runner.run_portfolio_composer(
+        runner.PortfolioComposerConfig(
+            signals=(str(config),),
+            target_vol=1.0,
+            out=tmp_path / "portfolio.parquet",
+            report=tmp_path / "portfolio.md",
+        )
+    )
+
+    checks = {row["check"]: row for row in result["risk_checks"]}
+    assert checks["monthly_max_drawdown <= 8%"]["value"] == 0.0777
+    assert checks["monthly_max_drawdown <= 8%"]["pass"] is True
+
+
 def _write_config(
     path: Path,
     *,
     name: str,
     signal: str,
     weight_max: float = 0.10,
+    max_dd_observed_oos: float | None = None,
     source_returns: list[float] | None = None,
 ) -> Path:
     source = path.with_suffix(".parquet")
@@ -135,18 +159,16 @@ def _write_config(
             "return": source_returns,
         }
     ).to_parquet(source, index=False)
-    path.write_text(
-        json.dumps(
-            {
-                "name": name,
-                "signal": signal,
-                "portfolio_weight_max": weight_max,
-                "sharpe_lower_ci_2_5": 0.5035,
-                "sharpe_median_50": 1.8812,
-                "sharpe_upper_ci_97_5": 3.3224,
-                "source_parquet": str(source),
-            }
-        ),
-        encoding="utf-8",
-    )
+    payload: dict[str, object] = {
+        "name": name,
+        "signal": signal,
+        "portfolio_weight_max": weight_max,
+        "sharpe_lower_ci_2_5": 0.5035,
+        "sharpe_median_50": 1.8812,
+        "sharpe_upper_ci_97_5": 3.3224,
+        "source_parquet": str(source),
+    }
+    if max_dd_observed_oos is not None:
+        payload["max_dd_observed_oos"] = max_dd_observed_oos
+    path.write_text(json.dumps(payload), encoding="utf-8")
     return path
