@@ -246,6 +246,11 @@ def apply_btc_regime_filter(
     btc_frame = pd.read_parquet(btc_path)
     if "timestamp" in btc_frame.columns:
         btc_frame = btc_frame.set_index("timestamp")
+    if "close" not in btc_frame.columns:
+        raise RuntimeError(
+            f"--regime-filter btc-200ma requires BTC 1d candles at {btc_path} "
+            "to include a close column"
+        )
     btc_index = pd.to_datetime(btc_frame.index, utc=True)
     btc_close = pd.Series(
         pd.to_numeric(btc_frame["close"], errors="coerce").to_numpy(),

@@ -68,6 +68,23 @@ def test_apply_btc_regime_filter_raises_when_btc_candles_missing(tmp_path: Path)
         cli.apply_btc_regime_filter(pd.DataFrame(), config)
 
 
+def test_apply_btc_regime_filter_raises_when_btc_close_column_missing(tmp_path: Path):
+    btc_path = tmp_path / "BTC_1d.parquet"
+    pd.DataFrame(
+        {
+            "timestamp": pd.date_range("2024-01-01T00:00:00Z", periods=3, freq="1D"),
+            "open": [100.0, 101.0, 102.0],
+        }
+    ).to_parquet(btc_path, index=False)
+    config = cli.WalkForwardV15Config(
+        regime_filter="btc-200ma",
+        btc_candles_path=btc_path,
+    )
+
+    with pytest.raises(RuntimeError, match="close"):
+        cli.apply_btc_regime_filter(pd.DataFrame(), config)
+
+
 def test_cli_parse_args_accepts_regime_filter_btc_200ma():
     args = cli._parse_args(["--regime-filter", "btc-200ma"])
     assert args.regime_filter == "btc-200ma"
