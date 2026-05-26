@@ -133,7 +133,7 @@ def _risk_checks(
     )
     max_single_asset = max((abs(float(weight)) for weight in weights.values()), default=0.0)
     total_leverage = sum(abs(float(weight)) for weight in weights.values())
-    max_dd = abs(float(combined["max_dd"]))
+    max_dd = _risk_check_max_drawdown(signals, combined)
     return [
         {
             "check": "single_trade_risk <= 1%",
@@ -160,6 +160,23 @@ def _risk_checks(
             "pass": max_dd <= MONTHLY_MAX_DD_LIMIT + 1e-12,
         },
     ]
+
+
+def _risk_check_max_drawdown(
+    signals: Sequence[LoadedSignal],
+    combined: Mapping[str, float | int],
+) -> float:
+    configured = []
+    for signal in signals:
+        raw_value = signal.raw_config.get("max_dd_observed_oos")
+        if raw_value is None:
+            continue
+        value = abs(float(raw_value))
+        if np.isfinite(value):
+            configured.append(value)
+    if configured:
+        return max(configured)
+    return abs(float(combined["max_dd"]))
 
 
 def _write_parquet(frame: pd.DataFrame, path: Path) -> None:
