@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from bot_reverse.bot_detector import compute_bot_features
+from bot_reverse.bot_detector import compute_bot_features, is_bot_wallet, score_bot_likelihood
 
 
-__all__ = ["compute_bot_features"]
+__all__ = ["compute_bot_features", "is_bot_wallet", "score_bot_likelihood"]

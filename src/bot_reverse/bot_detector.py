@@ -16,6 +16,14 @@ BOT_FEATURE_KEYS = (
     "round_number_pct",
 )
 
+BOT_SCORE_WEIGHTS = {
+    "tx_hour_entropy": 0.20,
+    "size_uniformity_cv": 0.25,
+    "coin_diversity": 0.20,
+    "avg_session_gap_minutes": 0.10,
+    "round_number_pct": 0.25,
+}
+
 
 def compute_bot_features(fills: pd.DataFrame, account_value: float) -> dict[str, float]:
     """Compute the five Phase 4 bot fingerprint dimensions."""
@@ -37,6 +45,32 @@ def compute_bot_features(fills: pd.DataFrame, account_value: float) -> dict[str,
         "avg_session_gap_minutes": _median_gap_minutes(times),
         "round_number_pct": _round_number_pct(sizes),
     }
+
+
+def score_bot_likelihood(features: dict[str, float]) -> float:
+    """Return weighted bot confidence in the closed interval [0, 1]."""
+
+    if not features:
+        return 0.0
+
+    score = (
+        BOT_SCORE_WEIGHTS["tx_hour_entropy"] * _hour_entropy_score(_feature(features, "tx_hour_entropy"))
+        + BOT_SCORE_WEIGHTS["size_uniformity_cv"]
+        * _size_uniformity_score(_feature(features, "size_uniformity_cv"))
+        + BOT_SCORE_WEIGHTS["coin_diversity"]
+        * _coin_concentration_score(_feature(features, "coin_diversity"))
+        + BOT_SCORE_WEIGHTS["avg_session_gap_minutes"]
+        * _session_gap_score(_feature(features, "avg_session_gap_minutes"))
+        + BOT_SCORE_WEIGHTS["round_number_pct"]
+        * _round_number_score(_feature(features, "round_number_pct"))
+    )
+    return _clamp01(score)
+
+
+def is_bot_wallet(features: dict[str, float], *, threshold: float = 0.5) -> bool:
+    """Classify wallets whose weighted bot score meets the confidence threshold."""
+
+    return score_bot_likelihood(features) + 1e-12 >= _clamp01(float(threshold))
 
 
 def _empty_features() -> dict[str, float]:
@@ -137,3 +171,49 @@ def _is_positive_finite(value: Any) -> bool:
 
 def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, value))
+
+
+def _feature(features: dict[str, float], key: str) -> float | None:
+    try:
+        value = float(features[key])
+    except (KeyError, TypeError, ValueError):
+        return None
+    if not math.isfinite(value):
+        return None
+    return value
+
+
+def _hour_entropy_score(value: float | None) -> float:
+    if value is None:
+        return 0.0
+    return _linear_score(value, low=0.35, high=0.80)
+
+
+def _size_uniformity_score(value: float | None) -> float:
+    if value is None:
+        return 0.0
+    return 1.0 - _linear_score(value, low=0.05, high=0.75)
+
+
+def _coin_concentration_score(value: float | None) -> float:
+    if value is None:
+        return 0.0
+    return 1.0 - _linear_score(value, low=0.20, high=0.80)
+
+
+def _session_gap_score(value: float | None) -> float:
+    if value is None:
+        return 0.0
+    return 1.0 - _linear_score(value, low=30.0, high=690.0)
+
+
+def _round_number_score(value: float | None) -> float:
+    if value is None:
+        return 0.0
+    return _linear_score(value, low=0.10, high=0.80)
+
+
+def _linear_score(value: float, *, low: float, high: float) -> float:
+    if high <= low:
+        return 0.0
+    return _clamp01((value - low) / (high - low))
