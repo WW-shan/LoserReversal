@@ -1,22 +1,22 @@
-# Phase 3 — HL Funding Extreme Contrarian: VERDICT RED (data_gap caveat)
+# Phase 3 — HL Funding Extreme Contrarian: VERDICT RED
 
 > Generated 2026-05-26
 > Sources: `data/parquet/funding_walkforward.parquet`, `reports/funding_walkforward.md`,
-> `reports/funding_extreme_grid.md`, three-way review trail.
+> `reports/funding_extreme_grid.md`, `data/parquet/funding_walkforward_4h.parquet`,
+> `reports/funding_walkforward_4h.md`, three-way review trail.
 
-## TL;DR — RED with data_gap caveat
+## TL;DR — RED confirmed after 4h re-evaluation
 
-**Phase 3 result: RED on aggregate OOS Sharpe 0.42 / annualized 5.23%.**
+**Phase 3 result: RED.** The original 1h-limited walk-forward produced
+aggregate OOS Sharpe 0.42 / annualized 5.23% on a 90-day overlap and was
+therefore marked RED with a data-gap caveat. The 4h re-evaluation removes
+that caveat: 30/30 funding tokens have matching 4h candles, and the full
+270d train / 90d test / 5-split walk-forward produced aggregate OOS
+Sharpe -3.80 / annualized -40.78% / MaxDD -14.17% / 550 trades.
 
-The strategy is *not* killed. Caveat: 1h candle backfill only covers
-2026-02-23 → 2026-05-23 (~90 days), while funding history covers 3 years
-(2023-05 → 2026-05). The walk-forward could only run on the 90-day
-overlap; the academic literature alpha-decay horizon for crypto
-microstructure signals is ~1 year, so 90 days is far below the
-statistical floor needed to confirm or reject the thesis.
-
-This mirrors the Phase 1 v1 "RED was misread as data_gap" lesson. The
-verdict is honest but reflects the available data, not the thesis.
+The funding-extreme contrarian thesis is killed as a standalone Phase 5
+candidate unless a new research question adds materially different gates
+or portfolio construction.
 
 ## Trail of evidence
 
@@ -67,41 +67,72 @@ with 6-22 trades each). This is structurally the same "lucky-fold"
 pattern Phase 1.5 split 3 exhibited and that the bootstrap CI on
 v2 OOS confirmed (CI lower drops below zero when split 3 is removed).
 
+## 4h re-evaluation (2026-05-26)
+
+The 4h rerun resolves the 1h data-gap caveat. Hyperliquid's 5000-candle
+cap gives roughly 833 days at 4h resolution, enough for the requested
+270d train / 90d test / 5-split design. The rerun artifacts are:
+
+- `data/parquet/funding_extreme_grid_4h.parquet`
+- `reports/funding_extreme_grid_4h.md`
+- `data/parquet/funding_walkforward_4h.parquet`
+- `reports/funding_walkforward_4h.md`
+
+4h grid sweep coverage improved from 18/30 tokens at 1h to 30/30 tokens.
+The top aggregate IS grid cell was weak even before walk-forward:
+z=3.0 / hold=168h / lookback=30d, Sharpe 0.17, annualized 1.46%,
+MaxDD -13.79%, 1945 trades.
+
+4h walk-forward:
+
+| metric | 1h-limited rerun | 4h re-evaluation |
+|---|---:|---:|
+| candle coverage | 18/30 tokens, ~90 days | 30/30 tokens, ~833 days |
+| train/test design | 30d / 15d / 3 splits | 270d / 90d / 5 splits |
+| aggregate OOS Sharpe | 0.42 | **-3.80** |
+| aggregate OOS annualized | 5.23% | **-40.78%** |
+| aggregate OOS MaxDD | -1.37% | -14.17% |
+| aggregate OOS trades | 45 | 550 |
+| verdict | RED with data_gap caveat | **RED confirmed** |
+
+The 4h run is not a borderline failure. Only split 0 produced OOS trades
+under the selected cells, and that split lost sharply: OOS Sharpe -3.80,
+annualized -40.78%, win_rate 45.45%. Splits 1-4 selected long-hold cells
+that produced no OOS trades in their test windows, which is itself a
+deployment failure.
+
 ## Verdict
 
 **RED** by the reframed Phase 3 thresholds in
 `.ccg/tasks/phase-3-funding-arbitrage/blocker.md`:
 
-- GREEN: OOS Sharpe ≥ 1.2 AND annualized ≥ 20% → 0.42, 5.23% — miss.
-- YELLOW: Sharpe ∈ [0.5, 1.2) AND annualized ≥ 10% → 0.42 below floor.
-- RED: Sharpe < 0.5 OR negative annualized — triggered.
+- GREEN: OOS Sharpe ≥ 1.2 AND annualized ≥ 20% → -3.80, -40.78% — miss.
+- YELLOW: Sharpe ∈ [0.5, 1.2) AND annualized ≥ 10% → miss.
+- RED: Sharpe < 0.5 OR negative annualized — triggered on both axes.
 
-Not INCONCLUSIVE: n_trades 45 ≥ 30, so the statistical floor is met
-on aggregate. But individual splits oscillate so widely that a
-bootstrap CI on these 45 trade returns would almost certainly span
-zero (mirroring Phase 1.5 ablation A's leave-split-3-out result).
+Not INCONCLUSIVE: n_trades 550 ≥ 30, and the 4h candle interval covers
+all 30 funding tokens over a materially longer window. The prior 1h
+data-gap caveat is superseded.
 
 ## Caveats (read before acting on this verdict)
 
-1. **90-day data window vs ~1-year alpha-decay horizon.** Crypto
-   microstructure literature (see `docs/research/literature-review.md`
-   Part B.5) cites 50% signal half-life around 1 year. Validating a
-   contrarian funding edge on 90 days is below the statistical floor
-   for confident GREEN/YELLOW/RED differentiation — the same problem
-   Phase 1 v1 had with 60-day candle backfill being misread as RED.
+1. **The 1h data caveat is superseded, not fixed at 1h.** 1h remains
+   HL-API capped to roughly 208 days, but 4h gives enough history for the
+   requested design. Future Phase 3 research should default to 4h unless
+   it brings an external candle source.
 
-2. **Split-3 carry pattern.** Split 0 OOS Sharpe 6.58 over 22 trades
+2. **Original lucky-fold carry pattern.** Split 0 OOS Sharpe 6.58 over 22 trades
    on a 15-day window is well into "lucky cluster" territory. Without
    it the remaining aggregate (Sharpe = mean of -4.69 + -0.62 = -2.66,
    annualized ≈ -10%) is solidly RED but on n_trades 23 only —
-   INCONCLUSIVE-eligible.
+   INCONCLUSIVE-eligible. The 4h rerun turns this from caveat into
+   confirmation: the expanded test loses money instead of preserving the
+   lucky-fold uplift.
 
-3. **Token coverage 18 of 30.** 12 funding-history tokens have no
-   matching 1h candles: ADA, BNB, DOGE, INJ, LINK, ONDO, PENDLE,
-   PENGU, PUMP, WLD, XPL, kPEPE. Tokens missing here include the
-   high-trade-count majors (BTC has only 35 hours of 1h data
-   actually!), so AGGREGATE is dominated by HYPE / SOL / FARTCOIN /
-   ZEC / XMR / AVAX / XRP.
+3. **4h OOS sparsity after selection.** The 5-split 4h walk-forward has
+   550 OOS trades in split 0 and zero in splits 1-4. This does not rescue
+   the strategy; it means the IS-selected cells are not consistently
+   deployable across time.
 
 4. **Fee/slippage assumption conservative for IS, possibly optimistic
    for OOS.** `taker_fee=0.0005, slippage=0.0002` reflects calm-market
@@ -118,17 +149,20 @@ zero (mirroring Phase 1.5 ablation A's leave-split-3-out result).
 
 | Priority | Action |
 |---|---|
-| 1 | **Extend 1h candle backfill to 2023-05** to match funding history. Run `scripts/backfill_candles.py` with the larger window. Without this Phase 3 cannot be re-validated. |
-| 2 | Re-run the full 5-split walk-forward (train_days=270 / test_days=180) once candles cover 3 years. If aggregate OOS Sharpe stays below 0.5 on the extended dataset → final RED. Above 0.5 → upgrade YELLOW. |
-| 3 | Defer Phase 3 inclusion in Phase 5 portfolio composition until #1 + #2 land. Phase 5 still has Phase 1.5 v2 YELLOW as the only deployable signal. |
-| 4 | Consider funding-extreme + BTC-regime gate (mirror Phase 1.5 Ablation C). Pre-emptive: if the bear-only short-side filter holds OOS, it should be applied here too. |
+| 1 | Exclude Phase 3 funding-extreme from Phase 5 portfolio composition. |
+| 2 | Do not spend more implementation time on the standalone funding-extreme signal without a new research-backed gate. |
+| 3 | If revisited, start from 4h candles and test a BTC-regime or volatility gate before any portfolio inclusion discussion. |
 
 ## Artifacts
 
 - `data/parquet/funding_extreme_grid.parquet` — 48 cells × 18 tokens
 - `data/parquet/funding_walkforward.parquet` — 3 splits + aggregate
+- `data/parquet/funding_extreme_grid_4h.parquet` — 48 cells × 30 tokens
+- `data/parquet/funding_walkforward_4h.parquet` — 5 splits + aggregate
 - `reports/funding_extreme_grid.md` — IS grid report
 - `reports/funding_walkforward.md` — walk-forward + verdict
+- `reports/funding_extreme_grid_4h.md` — 4h IS grid report
+- `reports/funding_walkforward_4h.md` — 4h walk-forward + verdict
 - `reports/phase_3_verdict.md` — this report
 
 ## Code modules
