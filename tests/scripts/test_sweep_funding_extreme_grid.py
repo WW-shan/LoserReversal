@@ -150,6 +150,92 @@ def test_sweep_cli_file_execution_smoke(tmp_path: Path):
     assert len(pd.read_parquet(out).loc[lambda frame: frame["token"].eq("AGGREGATE")]) == 48
 
 
+def test_sweep_propagates_price_interval_to_backtest_config(monkeypatch, tmp_path: Path):
+    """run_grid_sweep must forward sweep config price_interval into each BacktestConfig."""
+    captured: list[str] = []
+
+    def fake_with_capture(config) -> backtest.SingleConfigResult:
+        captured.append(config.price_interval)
+        return backtest.SingleConfigResult(
+            frame=_fake_single_config(config),
+            skipped_tokens=[],
+        )
+
+    monkeypatch.setattr(sweep, "run_single_config_with_coverage", fake_with_capture)
+
+    sweep.run_grid_sweep(
+        sweep.GridSweepConfig(
+            out=tmp_path / "grid.parquet",
+            report=tmp_path / "grid.md",
+            price_interval="4h",
+        )
+    )
+
+    assert captured  # at least one cell ran
+    assert all(value == "4h" for value in captured)
+
+
+def test_sweep_cli_accepts_price_interval_flag(monkeypatch, tmp_path: Path):
+    """`--price-interval 4h` parses cleanly and is forwarded to GridSweepConfig."""
+    captured_config: dict[str, sweep.GridSweepConfig] = {}
+
+    def fake_run(config: sweep.GridSweepConfig) -> dict[str, object]:
+        captured_config["config"] = config
+        return {"frame": pd.DataFrame(), "ranking": pd.DataFrame()}
+
+    monkeypatch.setattr(sweep, "run_grid_sweep", fake_run)
+
+    exit_code = sweep.main(
+        [
+            "--funding-dir",
+            str(tmp_path / "funding"),
+            "--candles-dir",
+            str(tmp_path / "candles"),
+            "--out",
+            str(tmp_path / "grid.parquet"),
+            "--report",
+            str(tmp_path / "grid.md"),
+            "--taker-fee",
+            "0",
+            "--slippage",
+            "0",
+            "--price-interval",
+            "4h",
+        ]
+    )
+
+    assert exit_code == 0
+    assert captured_config["config"].price_interval == "4h"
+
+
+def test_sweep_report_coverage_section_mentions_interval(monkeypatch, tmp_path: Path):
+    """Coverage section should declare which candle interval drove the run."""
+    out = tmp_path / "grid.parquet"
+    report = tmp_path / "grid.md"
+
+    def fake_with_skips(config) -> backtest.SingleConfigResult:
+        return backtest.SingleConfigResult(
+            frame=_fake_single_config(config),
+            skipped_tokens=["DOGE"],
+        )
+
+    monkeypatch.setattr(sweep, "run_single_config_with_coverage", fake_with_skips)
+
+    sweep.run_grid_sweep(
+        sweep.GridSweepConfig(out=out, report=report, price_interval="4h")
+    )
+
+    text = report.read_text(encoding="utf-8")
+    assert "4h" in text
+    assert "price_interval" in text or "price interval" in text.lower()
+
+
+def test_sweep_default_price_interval_is_1h():
+    """Default price interval stays 1h to preserve back-compat."""
+    config = sweep.GridSweepConfig()
+    assert config.price_interval == "1h"
+
+
 def _fake_with_coverage(config) -> backtest.SingleConfigResult:
     return backtest.SingleConfigResult(
         frame=_fake_single_config(config),
