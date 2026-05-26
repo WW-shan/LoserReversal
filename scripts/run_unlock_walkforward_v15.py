@@ -122,12 +122,18 @@ class WalkForwardV15Config:
     grid_path: Path = DEFAULT_GRID_PATH
     fix_cohort: str | None = None
     stop_loss: float | None = None
+    stop_loss_mode: str = "fixed"
+    stop_loss_atr_period: int = 14
+    stop_loss_atr_multiplier: float = 2.0
+    stop_loss_atr_floor: float = 0.08
+    stop_loss_atr_cap: float = 0.25
     regime_filter: str | None = None
     btc_candles_path: Path | None = None
 
 
 REGIME_FILTER_CHOICES = ("none", "btc-200ma")
 DEFAULT_BTC_CANDLES_PATH = PARQUET_DIR / "candles" / "BTC_1d.parquet"
+STOP_LOSS_MODE_CHOICES = ("fixed", "atr")
 
 
 def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
@@ -172,6 +178,11 @@ def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
         record_trades=config.record_trades,
         fix_cohort=config.fix_cohort,
         stop_loss=config.stop_loss,
+        stop_loss_mode=config.stop_loss_mode,
+        stop_loss_atr_period=config.stop_loss_atr_period,
+        stop_loss_atr_multiplier=config.stop_loss_atr_multiplier,
+        stop_loss_floor=config.stop_loss_atr_floor,
+        stop_loss_cap=config.stop_loss_atr_cap,
     )
     trades = pd.DataFrame(columns=TRADE_COLUMNS)
     if config.record_trades:
@@ -189,6 +200,11 @@ def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
         fees=config.fees,
         slippage=config.slippage,
         stop_loss=config.stop_loss,
+        stop_loss_mode=config.stop_loss_mode,
+        stop_loss_atr_period=config.stop_loss_atr_period,
+        stop_loss_atr_multiplier=config.stop_loss_atr_multiplier,
+        stop_loss_floor=config.stop_loss_atr_floor,
+        stop_loss_cap=config.stop_loss_atr_cap,
     )
     frame = pd.concat([per_signal, portfolio], ignore_index=True)
 
@@ -442,7 +458,7 @@ def _methodology_lines(
         "use worst split max_dd, compound total_return, and keep mean per-split Sharpe.",
         f"- test_days fallback_used: {_fmt_bool(fallback_used)}.",
         f"- fix_cohort: {config.fix_cohort if config.fix_cohort else 'none'}.",
-        f"- stop_loss: {_fmt_stop_loss(config.stop_loss)}.",
+        f"- stop_loss: {_fmt_stop_loss(config)}.",
         f"- regime_filter: {config.regime_filter if config.regime_filter else 'none'}.",
     ]
 
@@ -567,10 +583,17 @@ def _fmt_bool(value: bool) -> str:
     return "yes" if value else "no"
 
 
-def _fmt_stop_loss(value: float | None) -> str:
-    if value is None:
+def _fmt_stop_loss(config: WalkForwardV15Config) -> str:
+    if config.stop_loss_mode == "atr":
+        return (
+            f"atr (period={config.stop_loss_atr_period}, "
+            f"multiplier={config.stop_loss_atr_multiplier:.2f}x, "
+            f"floor={config.stop_loss_atr_floor * 100:.2f}%, "
+            f"cap={config.stop_loss_atr_cap * 100:.2f}%)"
+        )
+    if config.stop_loss is None:
         return "none"
-    return f"{float(value) * 100:.2f}%"
+    return f"fixed {float(config.stop_loss) * 100:.2f}%"
 
 
 def _fmt_pct(value: Any) -> str:
@@ -627,9 +650,51 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         type=float,
         default=None,
         help=(
-            "Per-trade stop loss as a fraction in [0, 1]. e.g. --stop-loss 0.10 "
-            "exits a trade once price moves 10% against entry. Default None "
-            "disables the stop and keeps prior behavior."
+            "Per-trade fixed stop loss as a fraction in (0, 1). e.g. --stop-loss 0.10 "
+            "exits a trade once price moves 10% against entry. Used only when "
+            "--stop-loss-mode=fixed (the default). Default None disables the stop."
+        ),
+    )
+    parser.add_argument(
+        "--stop-loss-mode",
+        choices=list(STOP_LOSS_MODE_CHOICES),
+        default="fixed",
+        help=(
+            "How the per-trade stop loss is computed. 'fixed' (default) uses the "
+            "--stop-loss scalar. 'atr' replaces the scalar with a per-bar "
+            "fraction-of-close stop = multiplier x ATR(period) / close, clipped to "
+            "[floor, cap]. ATR mode addresses the Ablation D failure where a fixed "
+            "10% stop killed v2 by ejecting T-30 mean-reversion winners mid-hold."
+        ),
+    )
+    parser.add_argument(
+        "--stop-loss-atr-period",
+        type=int,
+        default=14,
+        help="ATR window length in bars (default 14). Only used in --stop-loss-mode=atr.",
+    )
+    parser.add_argument(
+        "--stop-loss-atr-multiplier",
+        type=float,
+        default=2.0,
+        help="ATR multiplier (default 2.0). Only used in --stop-loss-mode=atr.",
+    )
+    parser.add_argument(
+        "--stop-loss-atr-floor",
+        type=float,
+        default=0.08,
+        help=(
+            "Lower bound on the ATR-derived stop fraction (default 0.08 = 8%). "
+            "Prevents micro-volatility from triggering immediate exits."
+        ),
+    )
+    parser.add_argument(
+        "--stop-loss-atr-cap",
+        type=float,
+        default=0.25,
+        help=(
+            "Upper bound on the ATR-derived stop fraction (default 0.25 = 25%). "
+            "Prevents runaway volatility from blowing up risk budget."
         ),
     )
     parser.add_argument(
@@ -670,6 +735,19 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
         parser.error("--slippage must be non-negative")
     if args.stop_loss is not None and (args.stop_loss <= 0.0 or args.stop_loss >= 1.0):
         parser.error("--stop-loss must be in the open interval (0, 1)")
+    if args.stop_loss_atr_period < 1:
+        parser.error("--stop-loss-atr-period must be at least 1")
+    if args.stop_loss_atr_multiplier <= 0:
+        parser.error("--stop-loss-atr-multiplier must be greater than 0")
+    if args.stop_loss_atr_floor < 0:
+        parser.error("--stop-loss-atr-floor must be non-negative")
+    if args.stop_loss_atr_cap <= 0:
+        parser.error("--stop-loss-atr-cap must be greater than 0")
+    if args.stop_loss_atr_floor > args.stop_loss_atr_cap:
+        parser.error(
+            "--stop-loss-atr-floor must be <= --stop-loss-atr-cap "
+            f"(got floor={args.stop_loss_atr_floor}, cap={args.stop_loss_atr_cap})"
+        )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -691,6 +769,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         record_trades=args.record_trades,
         fix_cohort=fix_cohort,
         stop_loss=args.stop_loss,
+        stop_loss_mode=args.stop_loss_mode,
+        stop_loss_atr_period=args.stop_loss_atr_period,
+        stop_loss_atr_multiplier=args.stop_loss_atr_multiplier,
+        stop_loss_atr_floor=args.stop_loss_atr_floor,
+        stop_loss_atr_cap=args.stop_loss_atr_cap,
         regime_filter=regime_filter,
         btc_candles_path=args.btc_candles_path,
     )
