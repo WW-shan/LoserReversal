@@ -378,3 +378,179 @@ def test_run_single_config_returns_skipped_tokens(mocker):
     assert "DOGE" in result.skipped_tokens
     assert "BTC" not in result.skipped_tokens
     assert "ETH" not in result.skipped_tokens
+
+
+def test_backtest_config_defaults_to_1h_price_interval():
+    """price_interval is a new BacktestConfig knob; default preserves back-compat."""
+    config = backtest.BacktestConfig()
+    assert config.price_interval == "1h"
+
+
+def test_load_prices_respects_price_interval_config(tmp_path: Path):
+    """load_prices globs *_<interval>.parquet using the configured price_interval."""
+    candles_dir = tmp_path / "candles"
+    candles_dir.mkdir(parents=True)
+    timestamps_1h = pd.date_range("2026-01-01T00:00:00Z", periods=24, freq="1h", tz="UTC")
+    timestamps_4h = pd.date_range("2026-01-01T00:00:00Z", periods=12, freq="4h", tz="UTC")
+
+    _write_candles(candles_dir / "BTC_1h.parquet", timestamps_1h, base=100.0)
+    _write_candles(candles_dir / "ETH_1h.parquet", timestamps_1h, base=2_000.0)
+    _write_candles(candles_dir / "BTC_4h.parquet", timestamps_4h, base=200.0)
+    _write_candles(candles_dir / "SOL_4h.parquet", timestamps_4h, base=50.0)
+
+    prices_1h = backtest.load_prices(candles_dir, price_interval="1h")
+    prices_4h = backtest.load_prices(candles_dir, price_interval="4h")
+
+    assert set(prices_1h) == {"BTC", "ETH"}
+    assert set(prices_4h) == {"BTC", "SOL"}
+    assert prices_1h["BTC"].iloc[0] == pytest.approx(100.0)
+    assert prices_4h["BTC"].iloc[0] == pytest.approx(200.0)
+
+
+def test_load_prices_default_interval_is_1h(tmp_path: Path):
+    """load_prices without an explicit price_interval keeps the existing 1h behaviour."""
+    candles_dir = tmp_path / "candles"
+    candles_dir.mkdir(parents=True)
+    timestamps = pd.date_range("2026-01-01T00:00:00Z", periods=24, freq="1h", tz="UTC")
+    _write_candles(candles_dir / "BTC_1h.parquet", timestamps, base=100.0)
+    _write_candles(candles_dir / "BTC_4h.parquet", timestamps, base=200.0)
+
+    prices = backtest.load_prices(candles_dir)
+
+    assert set(prices) == {"BTC"}
+    assert prices["BTC"].iloc[0] == pytest.approx(100.0)
+
+
+def test_cli_accepts_price_interval_flag(mocker, tmp_path: Path):
+    """`--price-interval 4h` is parsed and threaded into BacktestConfig."""
+    captured: dict[str, object] = {}
+
+    def fake_run(config: backtest.BacktestConfig) -> pd.DataFrame:
+        captured["config"] = config
+        return pd.DataFrame(
+            [
+                {
+                    "token": "AGGREGATE",
+                    "z_threshold": config.z_threshold,
+                    "hold_hours": config.hold_hours,
+                    "lookback_days": config.lookback_days,
+                    "n_trades": 0,
+                    "n_long": 0,
+                    "n_short": 0,
+                    "sharpe": float("nan"),
+                    "annualized_return": float("nan"),
+                    "max_dd": 0.0,
+                    "win_rate": 0.0,
+                    "avg_trade_return": 0.0,
+                    "avg_hold_hours": 0.0,
+                    "total_funding_paid": 0.0,
+                }
+            ],
+            columns=backtest.OUTPUT_COLUMNS,
+        )
+
+    mocker.patch.object(backtest, "run_single_config", side_effect=fake_run)
+    out = tmp_path / "out.parquet"
+
+    exit_code = backtest.main(
+        [
+            "--funding-dir",
+            str(tmp_path / "funding"),
+            "--candles-dir",
+            str(tmp_path / "candles"),
+            "--out",
+            str(out),
+            "--z-threshold",
+            "2.0",
+            "--hold-hours",
+            "8",
+            "--lookback-days",
+            "30",
+            "--price-interval",
+            "4h",
+        ]
+    )
+
+    assert exit_code == 0
+    config = captured["config"]
+    assert isinstance(config, backtest.BacktestConfig)
+    assert config.price_interval == "4h"
+
+
+def test_cli_rejects_unsupported_price_interval(mocker, tmp_path: Path, capsys):
+    """argparse rejects price intervals outside the supported choices."""
+    mocker.patch.object(backtest, "run_single_config")
+    out = tmp_path / "out.parquet"
+
+    try:
+        backtest.main(
+            [
+                "--funding-dir",
+                str(tmp_path / "funding"),
+                "--candles-dir",
+                str(tmp_path / "candles"),
+                "--out",
+                str(out),
+                "--price-interval",
+                "15m",
+            ]
+        )
+    except SystemExit as exc:
+        assert exc.code == 2
+
+    err = capsys.readouterr().err
+    assert "--price-interval" in err
+
+
+def test_run_single_config_uses_4h_candles_when_configured(mocker, tmp_path: Path):
+    """run_single_config plumbs price_interval into load_prices end-to-end."""
+    candles_dir = tmp_path / "candles"
+    candles_dir.mkdir(parents=True)
+    timestamps_1h = pd.date_range("2026-01-01T00:00:00Z", periods=48, freq="1h", tz="UTC")
+    timestamps_4h = pd.date_range("2026-01-01T00:00:00Z", periods=24, freq="4h", tz="UTC")
+    _write_candles(candles_dir / "BTC_1h.parquet", timestamps_1h, base=111.0)
+    _write_candles(candles_dir / "BTC_4h.parquet", timestamps_4h, base=222.0)
+
+    received: dict[str, dict[str, pd.Series]] = {}
+
+    def fake_execute(funding_history, prices, config):
+        received["prices"] = prices
+        return backtest.SingleConfigResult(
+            frame=pd.DataFrame(columns=backtest.OUTPUT_COLUMNS),
+            skipped_tokens=[],
+        )
+
+    mocker.patch.object(backtest, "load_funding_history", return_value={"BTC": _funding_frame([0.0001] * 48)})
+    mocker.patch.object(backtest, "execute_backtest", side_effect=fake_execute)
+
+    backtest.run_single_config_with_coverage(
+        backtest.BacktestConfig(
+            candles_dir=candles_dir,
+            z_threshold=2.0,
+            hold_hours=4,
+            lookback_days=2,
+            taker_fee=0.0,
+            slippage=0.0,
+            price_interval="4h",
+        )
+    )
+
+    prices = received["prices"]
+    assert "BTC" in prices
+    # 4h fixture used base=222.0; confirms 4h parquet was selected
+    assert prices["BTC"].iloc[0] == pytest.approx(222.0)
+
+
+def _write_candles(path: Path, timestamps: pd.DatetimeIndex, *, base: float) -> None:
+    n = len(timestamps)
+    close = base + np.arange(n, dtype="float64") * 0.1
+    pd.DataFrame(
+        {
+            "timestamp": timestamps,
+            "open": close,
+            "high": close,
+            "low": close,
+            "close": close,
+            "volume": 1.0,
+        }
+    ).to_parquet(path, index=False)
