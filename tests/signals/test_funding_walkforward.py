@@ -191,3 +191,96 @@ def empty_history() -> tuple[dict, dict]:
         np.linspace(100.0, 110.0, hours), index=timestamps, dtype="float64", name="close"
     )
     return ({"BTC": funding}, {"BTC": close})
+
+
+def test_select_best_cell_forwards_price_interval(monkeypatch, synthetic_history):
+    """select_best_cell must thread price_interval into every BacktestConfig."""
+    from signals import funding_walkforward as wf
+    from scripts import run_funding_extreme_backtest as backtest
+
+    captured: list[str] = []
+
+    def fake_execute(funding_history, prices, config):
+        captured.append(config.price_interval)
+        return backtest.SingleConfigResult(
+            frame=pd.DataFrame(columns=backtest.OUTPUT_COLUMNS),
+            skipped_tokens=[],
+        )
+
+    monkeypatch.setattr(wf, "execute_backtest", fake_execute)
+
+    funding_history, prices = synthetic_history
+    wf.select_best_cell(
+        funding_history,
+        prices,
+        min_n_trades=1,
+        taker_fee=0.0,
+        slippage=0.0,
+        price_interval="4h",
+    )
+
+    assert captured  # at least one cell evaluated
+    assert all(value == "4h" for value in captured)
+
+
+def test_run_oos_forwards_price_interval(monkeypatch, synthetic_history):
+    """run_oos passes the price_interval into its single BacktestConfig."""
+    from signals import funding_walkforward as wf
+    from scripts import run_funding_extreme_backtest as backtest
+
+    captured: dict[str, str] = {}
+
+    def fake_execute(funding_history, prices, config):
+        captured["price_interval"] = config.price_interval
+        return backtest.SingleConfigResult(
+            frame=pd.DataFrame(columns=backtest.OUTPUT_COLUMNS),
+            skipped_tokens=[],
+        )
+
+    monkeypatch.setattr(wf, "execute_backtest", fake_execute)
+
+    funding_history, prices = synthetic_history
+    cell = wf.GridCell(z_threshold=2.0, hold_hours=24, lookback_days=30)
+    wf.run_oos(funding_history, prices, cell, taker_fee=0.0, slippage=0.0, price_interval="4h")
+
+    assert captured["price_interval"] == "4h"
+
+
+def test_run_walkforward_forwards_price_interval(monkeypatch, synthetic_history):
+    """run_walkforward must thread price_interval through to BacktestConfig."""
+    from signals import funding_walkforward as wf
+    from scripts import run_funding_extreme_backtest as backtest
+
+    captured: list[str] = []
+
+    def fake_execute(funding_history, prices, config):
+        captured.append(config.price_interval)
+        return backtest.SingleConfigResult(
+            frame=pd.DataFrame(columns=backtest.OUTPUT_COLUMNS),
+            skipped_tokens=[],
+        )
+
+    monkeypatch.setattr(wf, "execute_backtest", fake_execute)
+
+    funding_history, prices = synthetic_history
+    history_index = list(funding_history.values())[0].index
+    splits = wf.build_expanding_splits(
+        history_index.min(),
+        history_index.max(),
+        n_splits=1,
+        train_days=120,
+        test_days=60,
+    )
+
+    wf.run_walkforward(
+        funding_history,
+        prices,
+        splits,
+        min_n_trades=1,
+        taker_fee=0.0,
+        slippage=0.0,
+        price_interval="4h",
+    )
+
+    assert captured  # IS sweep + OOS evaluation both call execute_backtest
+    assert all(value == "4h" for value in captured)
