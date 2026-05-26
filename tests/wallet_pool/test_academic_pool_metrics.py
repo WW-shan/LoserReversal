@@ -31,6 +31,10 @@ def _fill_row(
 
 
 def _fills_df(rows: list[dict[str, object]]) -> pd.DataFrame:
+    if not rows:
+        empty = pd.DataFrame(columns=list(_fill_row("2026-01-01T00:00:00Z").keys()))
+        empty["time"] = pd.to_datetime(empty["time"], utc=True)
+        return empty.set_index("time")
     frame = pd.DataFrame(rows)
     frame["time"] = pd.to_datetime(frame["time"], utc=True)
     return frame.set_index("time").sort_index()
