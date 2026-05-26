@@ -1,0 +1,12 @@
+{
+  "id": "phase-5-portfolio-composer",
+  "title": "Phase 5 Slice 1 risk-parity portfolio composer",
+  "status": "in_progress",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "backend",
+  "currentPhase": "implementation",
+  "nextAction": "Write failing PortfolioComposer core tests",
+  "createdAt": "2026-05-26T00:00:00Z",
+  "branch": "main"
+}
