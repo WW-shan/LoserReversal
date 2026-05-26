@@ -24,9 +24,19 @@ from signals.funding_walkforward import (
 )
 
 try:
-    from scripts.run_funding_extreme_backtest import load_funding_history, load_prices
+    from scripts.run_funding_extreme_backtest import (
+        DEFAULT_PRICE_INTERVAL,
+        SUPPORTED_PRICE_INTERVALS,
+        load_funding_history,
+        load_prices,
+    )
 except ModuleNotFoundError:
-    from run_funding_extreme_backtest import load_funding_history, load_prices
+    from run_funding_extreme_backtest import (
+        DEFAULT_PRICE_INTERVAL,
+        SUPPORTED_PRICE_INTERVALS,
+        load_funding_history,
+        load_prices,
+    )
 
 
 DEFAULT_FUNDING_DIR = PARQUET_DIR / "funding"
@@ -47,9 +57,10 @@ def run(
     min_is_trades: int = DEFAULT_MIN_IS_TRADES,
     taker_fee: float = DEFAULT_TAKER_FEE,
     slippage: float = DEFAULT_SLIPPAGE,
+    price_interval: str = DEFAULT_PRICE_INTERVAL,
 ) -> dict[str, object]:
     funding_history = load_funding_history(funding_dir)
-    prices = load_prices(candles_dir)
+    prices = load_prices(candles_dir, price_interval=price_interval)
     if not funding_history:
         raise RuntimeError(f"no funding history found in {funding_dir}")
 
@@ -75,6 +86,7 @@ def run(
         min_n_trades=min_is_trades,
         taker_fee=taker_fee,
         slippage=slippage,
+        price_interval=price_interval,
     )
 
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -95,6 +107,7 @@ def run(
             test_days=test_days,
             taker_fee=taker_fee,
             slippage=slippage,
+            price_interval=price_interval,
         ),
         encoding="utf-8",
     )
@@ -151,6 +164,7 @@ def _format_report(
     test_days: int,
     taker_fee: float,
     slippage: float,
+    price_interval: str = DEFAULT_PRICE_INTERVAL,
 ) -> str:
     generated = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     per_split = frame.loc[frame["split_idx"] >= 0].sort_values("split_idx")
@@ -167,15 +181,16 @@ def _format_report(
         "",
         "## Methodology",
         "",
-        "- Expanding-window walk-forward: 5 splits, train 270d, test 180d per Phase 3 plan.",
+        f"- Expanding-window walk-forward at `{price_interval}` candle interval: "
+        f"{n_splits} splits, train {train_days}d, test {test_days}d.",
         "- IS step: sweep the same 48-cell grid as `sweep_funding_extreme_grid.py` over "
         "the train window; pick top-1 by aggregate Sharpe with n_trades >= 5.",
         "- OOS step: apply the selected (z, hold, lookback) to the test window only; "
         "record aggregate Sharpe / annualized / MaxDD / win_rate / n_trades.",
         "- Aggregate row averages OOS Sharpe and annualized over splits, takes worst MaxDD, "
         "and pools win_rate by trade count.",
-        "- Funding/price slicing uses `(index >= window_start) & (index < window_end)` so "
-        "splits do not overlap a single hourly bar.",
+        f"- Funding/price slicing uses `(index >= window_start) & (index < window_end)` so "
+        f"splits do not overlap a single {price_interval} bar.",
         "",
         "## Config",
         "",
@@ -183,6 +198,7 @@ def _format_report(
         "| --- | --- |",
         f"| history_start | {history_start.isoformat()} |",
         f"| history_end | {history_end.isoformat()} |",
+        f"| price_interval | {price_interval} |",
         f"| n_splits | {n_splits} |",
         f"| train_days | {train_days} |",
         f"| test_days | {test_days} |",
@@ -322,6 +338,12 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--min-is-trades", type=int, default=DEFAULT_MIN_IS_TRADES)
     parser.add_argument("--taker-fee", type=float, default=DEFAULT_TAKER_FEE)
     parser.add_argument("--slippage", type=float, default=DEFAULT_SLIPPAGE)
+    parser.add_argument(
+        "--price-interval",
+        choices=SUPPORTED_PRICE_INTERVALS,
+        default=DEFAULT_PRICE_INTERVAL,
+        help="candle interval to load (default 1h; 4h matches Phase 3 4h refactor)",
+    )
     args = parser.parse_args(argv)
     if args.n_splits <= 0:
         parser.error("--n-splits must be > 0")
@@ -351,6 +373,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         min_is_trades=args.min_is_trades,
         taker_fee=args.taker_fee,
         slippage=args.slippage,
+        price_interval=args.price_interval,
     )
     return 0
 

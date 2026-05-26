@@ -10,13 +10,21 @@ from typing import Any
 import pandas as pd
 
 try:
-    from scripts.run_funding_extreme_backtest import BacktestConfig, execute_backtest
+    from scripts.run_funding_extreme_backtest import (
+        DEFAULT_PRICE_INTERVAL,
+        BacktestConfig,
+        execute_backtest,
+    )
 except ModuleNotFoundError:
     import sys
     from pathlib import Path
 
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
-    from run_funding_extreme_backtest import BacktestConfig, execute_backtest  # type: ignore[no-redef]
+    from run_funding_extreme_backtest import (  # type: ignore[no-redef]
+        DEFAULT_PRICE_INTERVAL,
+        BacktestConfig,
+        execute_backtest,
+    )
 
 
 Z_THRESHOLDS = (1.5, 2.0, 2.5, 3.0)
@@ -131,6 +139,7 @@ def select_best_cell(
     min_n_trades: int = DEFAULT_MIN_IS_TRADES,
     taker_fee: float = DEFAULT_TAKER_FEE,
     slippage: float = DEFAULT_SLIPPAGE,
+    price_interval: str = DEFAULT_PRICE_INTERVAL,
 ) -> tuple[GridCell | None, float, int]:
     """Return (best_cell, sharpe, n_trades) over the loaded history.
 
@@ -149,6 +158,7 @@ def select_best_cell(
             lookback_days=cell.lookback_days,
             taker_fee=taker_fee,
             slippage=slippage,
+            price_interval=price_interval,
         )
         result = execute_backtest(funding_history, prices, config)
         agg = _aggregate_row(result.frame)
@@ -176,6 +186,7 @@ def run_oos(
     *,
     taker_fee: float = DEFAULT_TAKER_FEE,
     slippage: float = DEFAULT_SLIPPAGE,
+    price_interval: str = DEFAULT_PRICE_INTERVAL,
 ) -> dict[str, float | int]:
     config = BacktestConfig(
         z_threshold=cell.z_threshold,
@@ -183,6 +194,7 @@ def run_oos(
         lookback_days=cell.lookback_days,
         taker_fee=taker_fee,
         slippage=slippage,
+        price_interval=price_interval,
     )
     result = execute_backtest(funding_history, prices, config)
     agg = _aggregate_row(result.frame)
@@ -211,6 +223,7 @@ def run_walkforward(
     min_n_trades: int = DEFAULT_MIN_IS_TRADES,
     taker_fee: float = DEFAULT_TAKER_FEE,
     slippage: float = DEFAULT_SLIPPAGE,
+    price_interval: str = DEFAULT_PRICE_INTERVAL,
 ) -> pd.DataFrame:
     """Run an IS->OOS walk-forward and return per-split + AGGREGATE rows."""
     rows: list[dict[str, Any]] = []
@@ -230,6 +243,7 @@ def run_walkforward(
             min_n_trades=min_n_trades,
             taker_fee=taker_fee,
             slippage=slippage,
+            price_interval=price_interval,
         )
         if best_cell is None:
             row = _empty_row(split_idx, split, None)
@@ -255,6 +269,7 @@ def run_walkforward(
             best_cell,
             taker_fee=taker_fee,
             slippage=slippage,
+            price_interval=price_interval,
         )
         decay = _decay(is_sharpe, oos["sharpe"])
 
