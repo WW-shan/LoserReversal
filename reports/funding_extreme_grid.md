@@ -1,12 +1,12 @@
 # Funding Extreme Contrarian Grid Sweep
 
-_Generated 2026-05-25 19:52 UTC_
+_Generated 2026-05-26 02:37 UTC_
 
 ## Methodology
 
 - Each cell runs funding_extreme_signal for every token with matching 1h candles.
 - Funding payment is charged as sum(funding_rate x signed position) while held.
-- Per-token equity is mark-to-market hourly during open positions; flat between trades.
+- Per-token equity is mark-to-market per 1h bar during open positions; flat between trades.
 - Sharpe is annualized off daily-resampled equity returns (periods_per_year=365).
 - Aggregate Sharpe uses equal-weight portfolio of per-token daily returns so late-listed tokens do not inflate the denominator with idle BASE_CAPITAL.
 - Aggregate equity sums per-token mark-to-market equities; tokens contribute 0 before their first observation.
@@ -17,12 +17,13 @@ _Generated 2026-05-25 19:52 UTC_
 | --- | --- |
 | funding_dir | /Users/ww/Project/crypto-alpha-portfolio/data/parquet/funding |
 | candles_dir | /Users/ww/Project/crypto-alpha-portfolio/data/parquet/candles |
+| price_interval | 1h |
 | taker_fee | 0.000500 |
 | slippage | 0.000200 |
 
 ## Coverage
 
-Aggregate covers **18** of **30** funding tokens.
+Aggregate covers **18** of **30** funding tokens at the `1h` candle interval.
 
 Skipped (no matching 1h candles or insufficient funding history): ADA, BNB, DOGE, INJ, LINK, ONDO, PENDLE, PENGU, PUMP, WLD, XPL, kPEPE.
 
