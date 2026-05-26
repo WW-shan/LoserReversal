@@ -40,10 +40,23 @@ def select_best_config(
     slippage: float = DEFAULT_SLIPPAGE,
     fix_cohort: str | None = None,
     stop_loss: float | None = None,
+    stop_loss_mode: str = "fixed",
+    stop_loss_atr_period: int | None = None,
+    stop_loss_atr_multiplier: float | None = None,
+    stop_loss_floor: float | None = None,
+    stop_loss_cap: float | None = None,
 ) -> GridCell | None:
     best_cell: GridCell | None = None
     best_sharpe = float("-inf")
 
+    stop_kwargs = _stop_loss_kwargs(
+        stop_loss,
+        stop_loss_mode=stop_loss_mode,
+        stop_loss_atr_period=stop_loss_atr_period,
+        stop_loss_atr_multiplier=stop_loss_atr_multiplier,
+        stop_loss_floor=stop_loss_floor,
+        stop_loss_cap=stop_loss_cap,
+    )
     for cell in _candidate_cells(grid_df, signal_code, fix_cohort=fix_cohort):
         row = run_cell(
             train_events,
@@ -53,7 +66,7 @@ def select_best_config(
             init_cash=init_cash,
             fees=fees,
             slippage=slippage,
-            **_stop_loss_kwargs(stop_loss),
+            **stop_kwargs,
         )
         n_trades = int(row["n_trades"])
         sharpe = _finite_sharpe(row["sharpe"])
@@ -80,10 +93,24 @@ def run_per_signal_walkforward(
     record_trades: bool = False,
     fix_cohort: str | None = None,
     stop_loss: float | None = None,
+    stop_loss_mode: str = "fixed",
+    stop_loss_atr_period: int | None = None,
+    stop_loss_atr_multiplier: float | None = None,
+    stop_loss_floor: float | None = None,
+    stop_loss_cap: float | None = None,
 ) -> pd.DataFrame | tuple[pd.DataFrame, pd.DataFrame]:
     grid = _grid_frame(grid_df)
     rows: list[dict[str, Any]] = []
     trade_rows: list[dict[str, Any]] = []
+
+    stop_kwargs = _stop_loss_kwargs(
+        stop_loss,
+        stop_loss_mode=stop_loss_mode,
+        stop_loss_atr_period=stop_loss_atr_period,
+        stop_loss_atr_multiplier=stop_loss_atr_multiplier,
+        stop_loss_floor=stop_loss_floor,
+        stop_loss_cap=stop_loss_cap,
+    )
 
     for split_idx, ((train_start, train_end), (test_start, test_end)) in enumerate(splits):
         train_window_start = _utc_timestamp(train_start)
@@ -111,7 +138,12 @@ def run_per_signal_walkforward(
                 fees=fees,
                 slippage=slippage,
                 fix_cohort=fix_cohort,
-                **_stop_loss_kwargs(stop_loss),
+                stop_loss=stop_loss,
+                stop_loss_mode=stop_loss_mode,
+                stop_loss_atr_period=stop_loss_atr_period,
+                stop_loss_atr_multiplier=stop_loss_atr_multiplier,
+                stop_loss_floor=stop_loss_floor,
+                stop_loss_cap=stop_loss_cap,
             )
             selected_cohort = None
             if selected is None:
@@ -125,7 +157,12 @@ def run_per_signal_walkforward(
                     fees=fees,
                     slippage=slippage,
                     fix_cohort=fix_cohort,
-                    **_stop_loss_kwargs(stop_loss),
+                    stop_loss=stop_loss,
+                    stop_loss_mode=stop_loss_mode,
+                    stop_loss_atr_period=stop_loss_atr_period,
+                    stop_loss_atr_multiplier=stop_loss_atr_multiplier,
+                    stop_loss_floor=stop_loss_floor,
+                    stop_loss_cap=stop_loss_cap,
                 )
                 if selected is None:
                     selected_cohort = "no_train_signal"
@@ -139,7 +176,7 @@ def run_per_signal_walkforward(
                 }
                 if record_trades:
                     run_kwargs["record_trades"] = True
-                run_kwargs.update(_stop_loss_kwargs(stop_loss))
+                run_kwargs.update(stop_kwargs)
                 stats = run_cell(test_events, prices, test_coverage, selected, **run_kwargs)
                 if record_trades:
                     trade_rows.extend(
@@ -184,9 +221,23 @@ def compose_portfolio(
     fees: float = DEFAULT_FEES,
     slippage: float = DEFAULT_SLIPPAGE,
     stop_loss: float | None = None,
+    stop_loss_mode: str = "fixed",
+    stop_loss_atr_period: int | None = None,
+    stop_loss_atr_multiplier: float | None = None,
+    stop_loss_floor: float | None = None,
+    stop_loss_cap: float | None = None,
 ) -> pd.DataFrame:
     selected_signals = _top_signals_by_oos(per_signal_df, top_k)
     rows: list[dict[str, Any]] = []
+
+    stop_kwargs = _stop_loss_kwargs(
+        stop_loss,
+        stop_loss_mode=stop_loss_mode,
+        stop_loss_atr_period=stop_loss_atr_period,
+        stop_loss_atr_multiplier=stop_loss_atr_multiplier,
+        stop_loss_floor=stop_loss_floor,
+        stop_loss_cap=stop_loss_cap,
+    )
 
     for split_idx, ((train_start, train_end), (test_start, test_end)) in enumerate(splits):
         train_window_start = _utc_timestamp(train_start)
@@ -214,7 +265,7 @@ def compose_portfolio(
                     init_cash=init_cash,
                     fees=fees,
                     slippage=slippage,
-                    **_stop_loss_kwargs(stop_loss),
+                    **stop_kwargs,
                 )
             )
             selection_labels.append(f"{cell.code}:{cell.cohort_name}")
@@ -375,11 +426,24 @@ def _fallback_config_for_signal(
     slippage: float,
     fix_cohort: str | None = None,
     stop_loss: float | None = None,
+    stop_loss_mode: str = "fixed",
+    stop_loss_atr_period: int | None = None,
+    stop_loss_atr_multiplier: float | None = None,
+    stop_loss_floor: float | None = None,
+    stop_loss_cap: float | None = None,
 ) -> GridCell | None:
     candidate_cells = _candidate_cells(grid_df, signal_code, fix_cohort=fix_cohort)
     if not candidate_cells:
         return None
 
+    stop_kwargs = _stop_loss_kwargs(
+        stop_loss,
+        stop_loss_mode=stop_loss_mode,
+        stop_loss_atr_period=stop_loss_atr_period,
+        stop_loss_atr_multiplier=stop_loss_atr_multiplier,
+        stop_loss_floor=stop_loss_floor,
+        stop_loss_cap=stop_loss_cap,
+    )
     rows: list[tuple[GridCell, dict[str, Any]]] = []
     for cell in candidate_cells:
         row = run_cell(
@@ -390,7 +454,7 @@ def _fallback_config_for_signal(
             init_cash=init_cash,
             fees=fees,
             slippage=slippage,
-            **_stop_loss_kwargs(stop_loss),
+            **stop_kwargs,
         )
         rows.append((cell, row))
 
@@ -604,13 +668,35 @@ def _finite_sharpe(value: Any) -> float:
     return float("-inf")
 
 
-def _stop_loss_kwargs(stop_loss: float | None) -> dict[str, Any]:
-    """Return a one-shot kwargs dict that forwards stop_loss only when set.
+def _stop_loss_kwargs(
+    stop_loss: float | None,
+    stop_loss_mode: str = "fixed",
+    stop_loss_atr_period: int | None = None,
+    stop_loss_atr_multiplier: float | None = None,
+    stop_loss_floor: float | None = None,
+    stop_loss_cap: float | None = None,
+) -> dict[str, Any]:
+    """Return a one-shot kwargs dict that forwards stop kwargs only when set.
 
     Existing callers (tests, sweeps) call ``run_cell`` with a fixed kwarg list
     (init_cash, fees, slippage). We keep that signature stable by adding the
-    new ``stop_loss`` kwarg only when the caller actually requested a stop.
+    stop-related kwargs only when the caller actually requested a stop:
+
+    - ``stop_loss`` (legacy scalar) is forwarded only when not None.
+    - ``stop_loss_mode='atr'`` plus the ATR knobs are forwarded when the caller
+      asks for ATR mode. Defaults to fixed-mode (back-compat).
     """
-    if stop_loss is None:
-        return {}
-    return {"stop_loss": float(stop_loss)}
+    kwargs: dict[str, Any] = {}
+    if stop_loss is not None:
+        kwargs["stop_loss"] = float(stop_loss)
+    if stop_loss_mode == "atr":
+        kwargs["stop_loss_mode"] = "atr"
+        if stop_loss_atr_period is not None:
+            kwargs["stop_loss_atr_period"] = int(stop_loss_atr_period)
+        if stop_loss_atr_multiplier is not None:
+            kwargs["stop_loss_atr_multiplier"] = float(stop_loss_atr_multiplier)
+        if stop_loss_floor is not None:
+            kwargs["stop_loss_floor"] = float(stop_loss_floor)
+        if stop_loss_cap is not None:
+            kwargs["stop_loss_cap"] = float(stop_loss_cap)
+    return kwargs
