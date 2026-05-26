@@ -93,7 +93,7 @@ def score_wallet_fills(
                     "leverage_multiplier": components["leverage"],
                     "funding_extreme_multiplier": components["funding_extreme"],
                     "time_bucket_multiplier": components["time_bucket"],
-                    "leverage": _numeric(_get_value(fill, "leverage", 0.0), default=0.0),
+                    "leverage": _fill_leverage(fill, account_value),
                     "funding_zscore": _funding_context_value(context),
                     "wallet_confidence": confidence,
                 },
@@ -113,7 +113,7 @@ def _score_components(
     config: ReverseScoreConfig,
 ) -> dict[str, float]:
     risk_ratio = _risk_ratio(fill, wallet_account_value)
-    leverage = _numeric(_get_value(fill, "leverage", 0.0), default=0.0)
+    leverage = _fill_leverage(fill, wallet_account_value)
     funding_zscore = _funding_zscore(funding_context)
     timestamp = _fill_timestamp(fill)
 
@@ -168,8 +168,16 @@ def _funding_zscore(funding_context: Any) -> float:
     for key in ("funding_zscore", "funding_z", "zscore", "z_score"):
         value = _get_value(funding_context, key, None)
         if value is not None:
-            return _numeric(value, default=0.0)
-    return _numeric(funding_context, default=0.0)
+            return _funding_numeric(value, default=0.0)
+    return _funding_numeric(funding_context, default=0.0)
+
+
+def _fill_leverage(fill: Any, wallet_account_value: float) -> float:
+    value = _get_value(fill, "leverage", None)
+    leverage = _numeric(value, default=math.nan)
+    if math.isfinite(leverage) and leverage > 0:
+        return leverage
+    return _risk_ratio(fill, wallet_account_value)
 
 
 def _fill_timestamp(fill: Any) -> pd.Timestamp | None:
@@ -211,7 +219,7 @@ def _funding_context_for_fill(
 
     for column in ("funding_zscore", "zscore", "z_score"):
         if column in window.columns:
-            value = _numeric(window[column].iloc[-1], default=0.0)
+            value = _funding_numeric(window[column].iloc[-1], default=0.0)
             return {"funding_zscore": value}
 
     if "funding_rate" not in window.columns:
@@ -234,7 +242,7 @@ def _funding_context_for_fill(
         zscore = 0.0 if current == mean else math.copysign(math.inf, current - mean)
     else:
         zscore = (current - mean) / std
-    if not math.isfinite(zscore):
+    if math.isnan(zscore):
         return None
     return {"funding_zscore": float(zscore)}
 
@@ -264,7 +272,7 @@ def _normalize_funding_frame(frame: pd.DataFrame) -> pd.DataFrame:
 def _funding_context_value(context: dict[str, float] | None) -> float:
     if not context:
         return 0.0
-    return _numeric(context.get("funding_zscore"), default=0.0)
+    return _funding_numeric(context.get("funding_zscore"), default=0.0)
 
 
 def _fill_id(fill: Mapping[str, Any] | Any, position: int) -> str:
@@ -336,5 +344,15 @@ def _numeric(value: Any, *, default: float) -> float:
     except (TypeError, ValueError):
         return default
     if not math.isfinite(numeric):
+        return default
+    return numeric
+
+
+def _funding_numeric(value: Any, *, default: float) -> float:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return default
+    if math.isnan(numeric):
         return default
     return numeric
