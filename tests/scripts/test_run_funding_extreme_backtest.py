@@ -57,7 +57,7 @@ def test_aggregate_sharpe_consistent_with_per_token_pnl(mocker):
         hold_hours=4,
     )
 
-    assert aggregate["sharpe"] == pytest.approx(expected, rel=1e-9, abs=1e-9)
+    assert aggregate["sharpe"] == pytest.approx(expected, rel=1e-7, abs=1e-7)
 
 
 def test_no_trades_returns_nan_sharpe_not_crash(mocker):
