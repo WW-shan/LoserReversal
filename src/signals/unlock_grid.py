@@ -96,6 +96,11 @@ def run_cell(
     slippage: float,
     record_trades: bool = False,
     stop_loss: float | None = None,
+    stop_loss_mode: str = "fixed",
+    stop_loss_atr_period: int = 14,
+    stop_loss_atr_multiplier: float = 2.0,
+    stop_loss_floor: float = 0.08,
+    stop_loss_cap: float = 0.25,
 ) -> dict[str, Any]:
     filtered = apply_category_filter(events, cell.category_filter)
     signal_result = cell.signal_fn(
@@ -113,6 +118,11 @@ def run_cell(
         slippage=slippage,
         record_trades=record_trades,
         stop_loss=stop_loss,
+        stop_loss_mode=stop_loss_mode,
+        stop_loss_atr_period=stop_loss_atr_period,
+        stop_loss_atr_multiplier=stop_loss_atr_multiplier,
+        stop_loss_floor=stop_loss_floor,
+        stop_loss_cap=stop_loss_cap,
     )
     row: dict[str, Any] = {
         "signal": cell.code,
@@ -142,6 +152,11 @@ def backtest_signals(
     slippage: float,
     record_trades: bool = False,
     stop_loss: float | None = None,
+    stop_loss_mode: str = "fixed",
+    stop_loss_atr_period: int = 14,
+    stop_loss_atr_multiplier: float = 2.0,
+    stop_loss_floor: float = 0.08,
+    stop_loss_cap: float = 0.25,
 ) -> PortfolioStats:
     config = BacktestConfig(
         init_cash=init_cash,
@@ -150,6 +165,11 @@ def backtest_signals(
         freq="1D",
         direction=_vectorbt_direction(direction),
         stop_loss=stop_loss,
+        stop_loss_mode=stop_loss_mode,
+        stop_loss_atr_period=stop_loss_atr_period,
+        stop_loss_atr_multiplier=stop_loss_atr_multiplier,
+        stop_loss_floor=stop_loss_floor,
+        stop_loss_cap=stop_loss_cap,
     )
     equities: list[pd.Series] = []
     pnl_values: list[float] = []
