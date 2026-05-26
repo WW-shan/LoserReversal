@@ -512,7 +512,10 @@ def _portfolio_equity_curve(equities: list[pd.Series]) -> pd.Series:
         return pd.Series(dtype="float64")
     cumulative = (1.0 + portfolio_returns).cumprod() * BASE_CAPITAL
     seed_index = portfolio_returns.index[0] - pd.Timedelta(days=1)
-    seed = pd.Series([BASE_CAPITAL], index=pd.DatetimeIndex([seed_index], tz=cumulative.index.tz))
+    seed = pd.Series(
+        [BASE_CAPITAL],
+        index=pd.DatetimeIndex([seed_index], tz=cumulative.index.tz or "UTC"),
+    )
     return pd.concat([seed, cumulative]).sort_index()
 
 
