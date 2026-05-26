@@ -38,6 +38,24 @@ LOOKBACK_DAYS = 90
 OPEN_DIRECTIONS = {"Open Long", "Open Short"}
 CLOSE_DIRECTIONS = {"Close Long", "Close Short"}
 
+POOL_COLUMNS = [
+    "wallet",
+    "account_value",
+    "realized_loss_rate_90d",
+    "leverage_avg_90d",
+    "n_trades_90d",
+    "size_cv_90d",
+    "eligible_at",
+]
+
+FUNNEL_AXES = (
+    "account_value",
+    "realized_loss_rate",
+    "leverage",
+    "n_trades",
+    "size_cv",
+)
+
 
 def compute_wallet_metrics(
     fills: pd.DataFrame,
@@ -108,6 +126,111 @@ def is_academic_anti_alpha(metrics: Mapping[str, Any]) -> bool:
     return True
 
 
+def build_academic_pool(
+    leaderboard: pd.DataFrame,
+    fills_by_wallet: Mapping[str, pd.DataFrame],
+    as_of: pd.Timestamp | None = None,
+    lookback_days: int = LOOKBACK_DAYS,
+) -> pd.DataFrame:
+    """Apply the academic metrics + predicate pipeline to a leaderboard slice.
+
+    ``leaderboard`` is the dataframe produced by
+    ``infra.fetchers.leaderboard.fetch_leaderboard`` (must contain
+    ``eth_address`` and ``account_value`` columns). ``fills_by_wallet`` maps
+    lowercase address → user fills dataframe (the parquet schema produced by
+    ``infra.fetchers.user_fills.fetch_user_fills``). Returns a dataframe with
+    ``POOL_COLUMNS`` containing only the wallets that pass all 5 filters.
+    """
+
+    pool, _ = build_academic_pool_with_funnel(
+        leaderboard,
+        fills_by_wallet,
+        as_of=as_of,
+        lookback_days=lookback_days,
+    )
+    return pool
+
+
+def build_academic_pool_with_funnel(
+    leaderboard: pd.DataFrame,
+    fills_by_wallet: Mapping[str, pd.DataFrame],
+    as_of: pd.Timestamp | None = None,
+    lookback_days: int = LOOKBACK_DAYS,
+) -> tuple[pd.DataFrame, dict[str, int]]:
+    """Same as ``build_academic_pool`` but also returns the per-axis funnel."""
+
+    eligible_at = _coerce_eligible_at(as_of)
+    funnel: dict[str, int] = {"leaderboard": int(len(leaderboard))}
+    for axis in FUNNEL_AXES:
+        funnel[axis] = 0
+    funnel["final"] = 0
+
+    if leaderboard.empty or "eth_address" not in leaderboard.columns:
+        return _empty_pool(), funnel
+
+    rows: list[dict[str, Any]] = []
+    for record in leaderboard.itertuples(index=False):
+        raw_address = getattr(record, "eth_address", None)
+        if raw_address is None:
+            continue
+        wallet = str(raw_address).lower()
+        account_value = float(getattr(record, "account_value", 0.0) or 0.0)
+        if account_value <= 0:
+            continue
+
+        fills = fills_by_wallet.get(wallet)
+        if fills is None or fills.empty:
+            continue
+
+        metrics = compute_wallet_metrics(
+            fills,
+            account_value=account_value,
+            as_of=eligible_at,
+            lookback_days=lookback_days,
+        )
+
+        if not (MIN_ACCOUNT_VALUE <= account_value <= MAX_ACCOUNT_VALUE):
+            continue
+        funnel["account_value"] += 1
+
+        if metrics["realized_loss_rate_90d"] < MIN_LOSS_RATE:
+            continue
+        funnel["realized_loss_rate"] += 1
+
+        if metrics["leverage_avg_90d"] < MIN_LEVERAGE:
+            continue
+        funnel["leverage"] += 1
+
+        if metrics["n_trades_90d"] < MIN_N_TRADES:
+            continue
+        funnel["n_trades"] += 1
+
+        if metrics["size_cv_90d"] < MIN_SIZE_CV:
+            continue
+        funnel["size_cv"] += 1
+
+        rows.append(
+            {
+                "wallet": wallet,
+                "account_value": account_value,
+                "realized_loss_rate_90d": metrics["realized_loss_rate_90d"],
+                "leverage_avg_90d": metrics["leverage_avg_90d"],
+                "n_trades_90d": int(metrics["n_trades_90d"]),
+                "size_cv_90d": metrics["size_cv_90d"],
+                "eligible_at": eligible_at,
+            }
+        )
+
+    funnel["final"] = len(rows)
+    if not rows:
+        return _empty_pool(), funnel
+
+    frame = pd.DataFrame(rows, columns=POOL_COLUMNS)
+    frame["wallet"] = frame["wallet"].astype("string").str.lower()
+    frame["eligible_at"] = pd.to_datetime(frame["eligible_at"], utc=True)
+    return frame.reset_index(drop=True), funnel
+
+
 def _window_start(as_of: pd.Timestamp | None, lookback_days: int) -> pd.Timestamp:
     if as_of is None:
         as_of = pd.Timestamp.now(tz="UTC")
@@ -116,6 +239,30 @@ def _window_start(as_of: pd.Timestamp | None, lookback_days: int) -> pd.Timestam
     else:
         as_of = as_of.tz_convert("UTC")
     return as_of - pd.Timedelta(days=lookback_days)
+
+
+def _coerce_eligible_at(as_of: pd.Timestamp | None) -> pd.Timestamp:
+    if as_of is None:
+        return pd.Timestamp.now(tz="UTC")
+    if as_of.tzinfo is None:
+        return as_of.tz_localize("UTC")
+    return as_of.tz_convert("UTC")
+
+
+def _empty_pool() -> pd.DataFrame:
+    frame = pd.DataFrame(
+        {
+            "wallet": pd.Series(dtype="string"),
+            "account_value": pd.Series(dtype="float64"),
+            "realized_loss_rate_90d": pd.Series(dtype="float64"),
+            "leverage_avg_90d": pd.Series(dtype="float64"),
+            "n_trades_90d": pd.Series(dtype="int64"),
+            "size_cv_90d": pd.Series(dtype="float64"),
+            "eligible_at": pd.Series(dtype="datetime64[ns, UTC]"),
+        },
+        columns=POOL_COLUMNS,
+    )
+    return frame
 
 
 def _filter_window(fills: pd.DataFrame, horizon: pd.Timestamp) -> pd.DataFrame:
