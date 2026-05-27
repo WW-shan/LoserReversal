@@ -180,6 +180,12 @@ def exclude_funding_source_clusters(
 
 
 def _coerce_bot_scores(bot_scores: Mapping[str, float] | pd.DataFrame) -> pd.DataFrame:
+    """Normalize wallet bot scores.
+
+    Identical duplicates collapse silently. Mixed valid+NaN keeps valid.
+    Distinct non-NaN values raise ValueError.
+    """
+
     if isinstance(bot_scores, pd.DataFrame):
         if bot_scores.empty:
             return pd.DataFrame({"wallet": pd.Series(dtype="string"), "bot_score": pd.Series(dtype="float64")})
@@ -202,11 +208,18 @@ def _coerce_bot_scores(bot_scores: Mapping[str, float] | pd.DataFrame) -> pd.Dat
     frame["wallet"] = frame["wallet"].astype("string").str.lower()
     frame["bot_score"] = pd.to_numeric(frame["bot_score"], errors="coerce").astype("float64")
     frame = frame.dropna(subset=["wallet"])
-    conflicting_scores = frame.groupby("wallet")["bot_score"].nunique(dropna=True)
+    non_nan_scores = frame.dropna(subset=["bot_score"])
+    conflicting_scores = non_nan_scores.groupby("wallet")["bot_score"].nunique()
     conflicts = sorted(conflicting_scores[conflicting_scores > 1].index.tolist())
     if conflicts:
         raise ValueError(f"bot_scores contains conflicting values for wallets: {conflicts}")
+    frame = frame.assign(
+        _wallet_order=pd.factorize(frame["wallet"], sort=False)[0],
+        _bot_score_present=frame["bot_score"].notna(),
+    )
+    frame = frame.sort_values(["_wallet_order", "_bot_score_present"], kind="stable")
     frame = frame.drop_duplicates(subset=["wallet"], keep="last")
+    frame = frame.drop(columns=["_wallet_order", "_bot_score_present"])
     return frame.reset_index(drop=True)
 
 

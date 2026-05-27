@@ -423,6 +423,38 @@ def test_coerce_bot_scores_collapses_identical_duplicates() -> None:
     assert coerced["bot_score"].tolist() == [0.20, 0.50]
 
 
+def test_coerce_bot_scores_prefers_valid_over_nan() -> None:
+    from wallet_pool.bot_exclusion import _coerce_bot_scores
+
+    scores = pd.DataFrame(
+        {
+            "wallet": ["0xA", "0xa"],
+            "bot_score": [0.90, float("nan")],
+        }
+    )
+
+    coerced = _coerce_bot_scores(scores)
+
+    assert coerced["wallet"].tolist() == ["0xa"]
+    assert coerced["bot_score"].tolist() == [0.90]
+
+
+def test_coerce_bot_scores_prefers_valid_over_nan_in_reverse_row_order() -> None:
+    from wallet_pool.bot_exclusion import _coerce_bot_scores
+
+    scores = pd.DataFrame(
+        {
+            "wallet": ["0xA", "0xa"],
+            "bot_score": [float("nan"), 0.90],
+        }
+    )
+
+    coerced = _coerce_bot_scores(scores)
+
+    assert coerced["wallet"].tolist() == ["0xa"]
+    assert coerced["bot_score"].tolist() == [0.90]
+
+
 def test_coerce_funding_sources_counts_empty_sources() -> None:
     from wallet_pool.bot_exclusion import _coerce_funding_sources
 
