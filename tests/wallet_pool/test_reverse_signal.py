@@ -231,7 +231,11 @@ def test_compute_reverse_alpha_score_applies_funding_settle_window() -> None:
     score = compute_reverse_alpha_score(
         _fill(time="2026-05-26T15:45:00Z"),
         wallet_account_value=10_000.0,
-        funding_context={"funding_zscore": 0.0},
+        funding_context={
+            "funding_zscore": 0.0,
+            "funding_settle_interval_hours": 8.0,
+            "funding_settle_anchor_ts": pd.Timestamp("2026-05-26T08:00:00Z"),
+        },
         config=ReverseScoreConfig(),
     )
 
@@ -593,6 +597,80 @@ def test_score_wallet_fills_can_score_non_open_fills_when_configured() -> None:
     assert scores["reverse_side"].tolist() == ["short", "long", "long", "short"]
 
 
+def test_score_wallet_fills_does_not_use_future_funding_cadence_before_first_row() -> None:
+    fills = _fills_frame([_fill(time="2026-05-26T07:45:00Z")])
+    funding = pd.DataFrame(
+        {"funding_zscore": [0.0, 0.0]},
+        index=pd.to_datetime(
+            ["2026-05-26T08:00:00Z", "2026-05-26T16:00:00Z"],
+            utc=True,
+        ),
+    )
+
+    scores = score_wallet_fills(
+        fills,
+        _wallet_metrics(),
+        {"BTC": funding},
+        config=ReverseScoreConfig(),
+    )
+
+    assert scores["components"].iloc[0]["time_bucket_multiplier"] == pytest.approx(
+        _time_multiplier(0.0)
+    )
+
+
+def test_score_wallet_fills_uses_non_midnight_funding_phase_for_settle_window() -> None:
+    fills = _fills_frame([_fill(time="2026-05-26T10:45:00Z")])
+    funding = pd.DataFrame(
+        {"funding_zscore": [0.0, 0.0, 0.0]},
+        index=pd.to_datetime(
+            [
+                "2026-05-25T19:00:00Z",
+                "2026-05-26T03:00:00Z",
+                "2026-05-26T11:00:00Z",
+            ],
+            utc=True,
+        ),
+    )
+
+    scores = score_wallet_fills(
+        fills,
+        _wallet_metrics(),
+        {"BTC": funding},
+        config=ReverseScoreConfig(),
+    )
+
+    assert scores["components"].iloc[0]["time_bucket_multiplier"] == pytest.approx(
+        _time_multiplier(0.5)
+    )
+
+
+def test_score_wallet_fills_uses_utc_midnight_funding_phase_for_settle_window() -> None:
+    fills = _fills_frame([_fill(time="2026-05-26T15:45:00Z")])
+    funding = pd.DataFrame(
+        {"funding_zscore": [0.0, 0.0, 0.0]},
+        index=pd.to_datetime(
+            [
+                "2026-05-26T00:00:00Z",
+                "2026-05-26T08:00:00Z",
+                "2026-05-26T16:00:00Z",
+            ],
+            utc=True,
+        ),
+    )
+
+    scores = score_wallet_fills(
+        fills,
+        _wallet_metrics(),
+        {"BTC": funding},
+        config=ReverseScoreConfig(),
+    )
+
+    assert scores["components"].iloc[0]["time_bucket_multiplier"] == pytest.approx(
+        _time_multiplier(0.5)
+    )
+
+
 def test_score_wallet_fills_derives_non_eight_hour_funding_settle_interval() -> None:
     fills = _fills_frame([_fill(time="2026-05-26T11:45:00Z")])
     funding = pd.DataFrame(
@@ -614,7 +692,9 @@ def test_score_wallet_fills_derives_non_eight_hour_funding_settle_interval() -> 
         config=ReverseScoreConfig(),
     )
 
-    assert scores["components"].iloc[0]["time_bucket_multiplier"] > 1.0
+    assert scores["components"].iloc[0]["time_bucket_multiplier"] == pytest.approx(
+        _time_multiplier(0.5)
+    )
 
 
 @pytest.mark.parametrize(

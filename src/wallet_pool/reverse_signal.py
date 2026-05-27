@@ -8,7 +8,6 @@ from typing import Any, Mapping
 
 import pandas as pd
 
-DEFAULT_FUNDING_SETTLE_INTERVAL_HOURS = 8.0
 OPEN_DIRECTIONS = frozenset({"Open Long", "Open Short"})
 CLOSE_DIRECTIONS = frozenset({"Close Long", "Close Short"})
 ACTIONABLE_DIRECTIONS = OPEN_DIRECTIONS | CLOSE_DIRECTIONS
@@ -23,7 +22,7 @@ class ReverseScoreConfig:
     (default 23:00-07:00 UTC, per the Asia liquidity handoff notes in
     ``docs/research/literature-review.md``) and proximity to the next funding
     settle. ``funding_settle_interval_hours`` defaults to auto-detect from
-    funding history and falls back to 8 hours.
+    strictly prior funding history.
     """
 
     oversized_threshold_1: float = 0.05
@@ -277,7 +276,7 @@ def _funding_context_for_fill(
     timestamp: pd.Timestamp | None,
     funding_history: Any,
     config: ReverseScoreConfig,
-) -> dict[str, float] | None:
+) -> dict[str, Any] | None:
     if not coin or timestamp is None or funding_history is None:
         return None
 
@@ -291,14 +290,16 @@ def _funding_context_for_fill(
     if normalized.empty:
         return None
 
-    interval_hours = _funding_settle_interval_hours(normalized, config)
-    context: dict[str, float] = {}
-    if interval_hours is not None:
-        context["funding_settle_interval_hours"] = interval_hours
-
     window = normalized.loc[normalized.index < timestamp]
     if window.empty:
-        return context or None
+        return None
+
+    context: dict[str, Any] = {}
+    if len(window.index) >= 2:
+        interval_hours = _funding_settle_interval_hours(window, config)
+        if interval_hours is not None:
+            context["funding_settle_interval_hours"] = interval_hours
+            context["funding_settle_anchor_ts"] = pd.Timestamp(window.index[-1]).tz_convert("UTC")
 
     for column in ("funding_zscore", "zscore", "z_score"):
         if column in window.columns:
@@ -338,7 +339,7 @@ def _normalize_funding_frame(frame: pd.DataFrame) -> pd.DataFrame:
     return normalized
 
 
-def _funding_context_value(context: dict[str, float] | None) -> float:
+def _funding_context_value(context: Mapping[str, Any] | None) -> float:
     if not context:
         return 0.0
     return _funding_numeric(context.get("funding_zscore"), default=0.0)
@@ -452,10 +453,19 @@ def _funding_settle_signal(
     if config.funding_settle_minutes_before <= 0:
         return 0.0
 
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.tz_localize("UTC")
+    else:
+        timestamp = timestamp.tz_convert("UTC")
+    anchor = _context_anchor_timestamp(funding_context)
+    if anchor is None or timestamp <= anchor:
+        return 0.0
     interval_hours = _context_interval_hours(funding_context, config)
+    if interval_hours is None:
+        return 0.0
     interval_minutes = interval_hours * 60.0
-    minutes_since_day_start = timestamp.hour * 60 + timestamp.minute + timestamp.second / 60
-    minutes_since_last_settle = minutes_since_day_start % interval_minutes
+    minutes_since_anchor = (timestamp - anchor).total_seconds() / 60.0
+    minutes_since_last_settle = minutes_since_anchor % interval_minutes
     minutes_until_next_settle = (interval_minutes - minutes_since_last_settle) % interval_minutes
     if not 0 < minutes_until_next_settle <= config.funding_settle_minutes_before:
         return 0.0
@@ -521,7 +531,7 @@ def _funding_settle_interval_hours(
     return seconds / 3600.0
 
 
-def _context_interval_hours(funding_context: Any, config: ReverseScoreConfig) -> float:
+def _context_interval_hours(funding_context: Any, config: ReverseScoreConfig) -> float | None:
     if config.funding_settle_interval_hours is not None:
         return float(config.funding_settle_interval_hours)
     interval = _numeric(
@@ -530,7 +540,24 @@ def _context_interval_hours(funding_context: Any, config: ReverseScoreConfig) ->
     )
     if math.isfinite(interval) and interval > 0:
         return interval
-    return DEFAULT_FUNDING_SETTLE_INTERVAL_HOURS
+    return None
+
+
+def _context_anchor_timestamp(funding_context: Any) -> pd.Timestamp | None:
+    value = _get_value(funding_context, "funding_settle_anchor_ts", None)
+    if value is None:
+        value = _get_value(funding_context, "funding_settle_anchor_timestamp", None)
+    if value is None:
+        return None
+    try:
+        timestamp = pd.Timestamp(value)
+    except (TypeError, ValueError):
+        return None
+    if pd.isna(timestamp):
+        return None
+    if timestamp.tzinfo is None:
+        return timestamp.tz_localize("UTC")
+    return timestamp.tz_convert("UTC")
 
 
 def _validate_positive(name: str, value: float) -> None:
