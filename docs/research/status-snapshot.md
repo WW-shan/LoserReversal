@@ -1,7 +1,7 @@
 # Project Status Snapshot — crypto-alpha-portfolio
 
-> Last updated: 2026-05-27
-> Current branch: main, 689 tests passing, ruff clean
+> Last updated: 2026-05-27 (post smart-search failed-case investigation)
+> Current branch: main, 805 tests passing, ruff clean
 
 ## Where we are right now
 
@@ -29,11 +29,12 @@
 
 ### Open questions blocking progress
 
-1. **Phase 1.5 救援 closed**: A robust (CI [0.84, 4.09]) / B team-is-driver / C REJECT / D mixed.
+1. **Phase 1.5 救援 closed**: A robust (CI [0.84, 4.09]) / B team-is-driver / C REJECT-then-pivot-to-funding-regime / D mixed.
    Combined v1+D YELLOW remains best. Path to GREEN: needs cross-thesis portfolio (gated on Phase 2.5/3/4 success).
-2. **Phase 3 RED revisit blocked on 1h candle backfill** (HL `/info` candleSnapshot 5000-cap → paginated rewrite needed; ~50-90 min wall time for full 70-token 3-year backfill). See `.ccg/tasks/phase-3-funding-arbitrage/blocker.md`.
-3. **Phase 2.5 Slices 2/3 + Phase 4 Slice 2: implemented but un-archived** because original task spec used "anti-monitor" directive that blocked archive step. Per CCG retro closure flow, each needs 3-way review + fix loop to converge to 0-issue before archive (estimate ~5-10 rounds per slice based on Phase 2.5 Slice 1 + Phase 4 Slice 1 precedent).
-4. **Phase 5 implemented before gate met** (only 1 YELLOW signal in inventory vs required ≥2). Gate-check happens when Slice 5 walkforward verdict lands.
+2. **Phase 3 RED revisit blocked on 1h candle backfill** (HL `/info` candleSnapshot 5000-cap → paginated rewrite needed; ~50-90 min wall time for full 70-token 3-year backfill). See `.ccg/tasks/phase-3-funding-arbitrage/blocker.md`. **Smart-search 2026-05-27 confirms: 90-day window + 45 OOS trades is below 100+ statistical floor — true data_gap, not thesis fail.**
+3. **Phase 2.5 Slice 4 / Slice 5 decoupled per 2026-05-27 research**: Slice 5 walkforward can run on Slice 2's `reverse_alpha_score` independently at fill-level (1000s observations), not blocked on Slice 4 cluster v2. This unlocks parallel P1/P2 work.
+4. **Phase 4 Slice 2 archived but un-verified**: Signal generator complete; alpha verdict in Phase 4 Slice 3 walkforward. Per smart-search, must include (N,W) sensitivity sweep.
+5. **Phase 5 implemented before gate met** (only 1 YELLOW signal in inventory vs required ≥2). Gate-check happens when P1/P2/P3/P5 lands.
 
 ## What still needs to be done (priority order)
 
@@ -95,16 +96,37 @@ Verdict thresholds (single-venue directional, not cross-exchange neutral):
 
 Phase 5 only meaningful when ≥2 phases reach GREEN/YELLOW (cross-thesis diversification per Q4 literature). Slice 1 implementation existed before gate met; archive deferred until cumulative signal inventory satisfies gate.
 
-## Recommended next-session order (post-2026-05-27)
+## 2026-05-27 Smart-Search Failed-Case Investigation
 
-1. **Phase 2.5 Slice 2 retro closure** — finish R1 review (Codex done, subagent running) → fix loop → archive. ~50-100k tokens / 1 session.
-2. **Phase 2.5 Slice 3 retro closure** — same pattern. ~50-100k tokens.
-3. **Phase 4 Slice 2 retro closure** — fill missing Claude + subagent reviews → fix loop → archive.
-4. **Phase 2.5 Slice 4 implement** — cluster v2 + cascade reversal (new code).
-5. **Phase 2.5 Slice 5 implement + walkforward verdict** — Pass criteria check on n=21 pool.
-6. **Phase 4 Slice 3 walkforward verdict** — independent bot reverse thesis.
-7. **Phase 3 1h backfill + walkforward re-run** — script rewrite + ~50-90 min API run + walkforward.
-8. **Phase 5 gate-check + paper signal** — only if cumulative ≥2 GREEN/YELLOW.
+Investigated 5 failed/unclear cases via smart-search. Evidence at
+`/tmp/smart-search-evidence/2026-05-27-failed-cases/01-05.json` (reproducible —
+re-run smart-search to regenerate). Key reclassifications:
+
+| Failed Case | Prior Read | Smart-Search Finding | Reclassified Root Cause |
+|---|---|---|---|
+| Phase 3 funding RED | thesis 失败 | 100+ trades needed; 34 folds → 12% power | **data_gap + entry threshold too strict**, not thesis fail |
+| Phase 1.5 D mixed (v2 崩) | 10% stop wrong size | ATR-adaptive outperforms fixed % for crypto long holds | **固定 % stop 错** — ATR is textbook answer |
+| Phase 1.5 Ablation C deferred | BTC candle 不足 | BTC<200d SMA has lag + whipsaw + 24/7 issues | **SMA suboptimal regardless** — funding/F&G/vol regime is better |
+| Phase 2.5 n=21 power | wallet-level n=21 too small | n=20 OOS folds → 12% power; bootstrap CI is correct tool | **fill-level walkforward** (1000s observations), not wallet-level |
+| Phase 4 bot N/W design | needs academic precedent | No hyperparameter; behavioral patterns + (N,W) sweep | **sensitivity sweep**, current N=3/W=30min reasonable |
+
+## Recommended next-session order (revised 2026-05-27 post smart-search)
+
+Now organized by ROI + dependency unlock, not original ROADMAP order:
+
+| ID | Task | Tokens | Unblocks Phase 5 gate? |
+|---|---|---|---|
+| #15 (P3) | Phase 1.5 Ablation D-ATR full walkforward (rescue v2) | 30-50k | ✓ cheapest bet |
+| #13 (P1) | Phase 4 Slice 3 walkforward + (N,W) sweep + bootstrap CI | 80-120k | ✓ |
+| #14 (P2) | Phase 2.5 Slice 5 walkforward (fill-level, skip Slice 4) | 80-120k | ✓ |
+| #17 (P5) | Phase 1.5 Ablation C — funding-regime filter (not BTC SMA) | 40-60k | ✓ (combo with v1+D) |
+| #16 (P4) | Phase 3 1h candle paginated backfill + walkforward re-run | 50-80k + 90min wall | independent track |
+| #18 (P6) | Phase 2.5 Slice 4 cluster v2 + cascade reversal (innovation) | 100-150k | independent track |
+| #19 (P7) | Phase 5 paper signal generator | 80-100k | gated on ≥2 GREEN/YELLOW |
+
+**Phase 5 gate status**: 1/2 (Phase 1.5 v1+D YELLOW). Any of P1/P2/P3/P5 reaching
+YELLOW+ satisfies gate. P3 (D-ATR) is **lowest-cost first move** at 30-50k token
+using existing harness — if v2+ATR rescues, immediate second YELLOW.
 
 ## Reference documents
 
@@ -114,6 +136,7 @@ Phase 5 only meaningful when ≥2 phases reach GREEN/YELLOW (cross-thesis divers
 | `docs/research/phase-1-5-diagnostic.md` | YELLOW 5-root-cause analysis + 5 救援 ablation specs (NEW this update) |
 | `docs/research/status-snapshot.md` | This file |
 | `docs/research/raw-search/dr-*.json` | Raw smart-search outputs (6 deep research queries) |
+| `/tmp/smart-search-evidence/2026-05-27-failed-cases/01-05.json` | **2026-05-27 failed-case research evidence (5 queries)** |
 | `docs/research/loser-reversal-indicator/ROADMAP.md` | Master plan with revised priorities + Phase 1.5/2.5 specs |
 | `.ccg/tasks/archive/2026-05/phase-1.5-unlock-academic-tuned/` | Full slice prompts + plan + task.json |
 | `.ccg/tasks/phase-3-funding-arbitrage/blocker.md` | Phase 3 reframed plan (HL-only contrarian) |

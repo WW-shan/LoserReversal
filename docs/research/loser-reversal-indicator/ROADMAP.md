@@ -30,6 +30,57 @@
 > **修订（2026-05-24）**：基于学术调研发现 Phase 1 / Phase 2 都有 sub-optimal 设计而非 thesis 失败。
 > 新增 Phase 1.5（学术-tuned unlock 重做）和 Phase 2.5（学术-rebuilt wallet contrarian），并调整优先级。
 > 详见 `docs/research/literature-review.md`。
+>
+> **再修订（2026-05-27）**：smart-search 调研所有失败/不明案例，结果重定性 5 个"疑似失败"为可解决问题。详见本文件 §"2026-05-27 Smart-Search Failed-Case Investigation"。
+
+## 2026-05-27 Smart-Search Failed-Case Investigation
+
+5 个失败/不明案例的根因 + 解决方案（证据：`/tmp/smart-search-evidence/2026-05-27-failed-cases/01-05.json`）：
+
+### Finding 1 — Phase 3 funding RED 是 data_gap 不是 thesis 失败
+- 30 trades = CLT 最小；100-500+ 才可靠；研究示例 34 folds 仅 12% power
+- Phase 3 实际：90 天 / 45 OOS trades — 远低于 100+ floor
+- **方案**：paginated backfill 1h candle 到 2023-05（与 funding 3y 匹配）+ 重跑 walkforward
+- **预期**：data 齐后 Sharpe 可能跳升或维持 RED，二者都是有效 verdict
+
+### Finding 2 — Phase 1.5 Ablation D 的 v2 崩盘可救
+- ATR-adaptive stop **普遍优于** crypto unlock 长 hold 的固定 % stop
+- v1 (T-7, 短 hold) + 10% 固定 stop 工作；v2 (T-30, 长 hold) + 10% 固定崩
+- **方案**：ATR-adaptive (1.5-3× ATR14) 已部分实现 (commit `cb374f4`)，需 v2+ATR 完整 walkforward
+- **预期**：v2+ATR 可能从 Sharpe 0.27 救回 → 第二个 GREEN/YELLOW
+
+### Finding 3 — Phase 1.5 Ablation C 应换 regime filter 类型
+- BTC<200d SMA 在 perps 上有 lag + whipsaw + 24/7 问题
+- **更好替代**：funding-rate regime（主流币 N 日均 funding < 0 = bear）/ Fear & Greed / volatility regime
+- **方案**：放弃 BTC SMA 路线；用 funding-rate regime filter（**有 3y HL funding 数据**）
+- **预期**：与 v1+D 组合可能进一步降 MaxDD
+
+### Finding 4 — Phase 2.5 n=21 不是 walkforward 瓶颈
+- n=20 wallet-level → 12% power 是真的
+- 但 walkforward 应在 **fill-level**（n=21 × 100-500 fills = 数千观察）
+- bootstrap CI 是正确工具，不增 power 但给可信 CI
+- **方案**：Slice 5 = fill-level walkforward + bootstrap CI；可独立于 Slice 4 跑
+
+### Finding 5 — Phase 4 bot cluster 设计无学术 hyperparameter
+- HL 已 ban 27k+ sybil；行为 pattern（timing / funding / size）比参数 sweep 更稳
+- 当前 N=3 / W=30min 是合理默认；但需 sensitivity sweep
+- **方案**：(N,W) ∈ {2,3,4} × {15,30,60} min sweep + bootstrap CI
+
+### 修订执行优先级（按 ROI + Phase 5 gate 解锁顺序）
+
+| 优先级 | Task | Tokens | 是否解锁 Phase 5 gate |
+|---|---|---|---|
+| **P1** | Phase 1.5 Ablation D-ATR 完整 walkforward (rescue v2) | 30-50k | ✓ 最便宜的赌注 |
+| **P2** | Phase 4 Slice 3 walkforward + (N,W) sweep + bootstrap CI | 80-120k | ✓ |
+| **P3** | Phase 2.5 Slice 5 walkforward (fill-level, 跳过 Slice 4) | 80-120k | ✓ |
+| **P4** | Phase 1.5 Ablation C 改用 funding-regime filter | 40-60k | ✓ 组合 v1+D |
+| **P5** | Phase 3 1h candle paginated backfill + 重跑 | 50-80k + 90min wall | independent |
+| **P6** | Phase 2.5 Slice 4 cluster v2 + cascade reversal | 100-150k | independent |
+| **P7** | Phase 5 paper signal generator | 80-100k | gated on ≥2 GREEN/YELLOW |
+
+Phase 5 gate 现状: 1/2 (Phase 1.5 v1+D YELLOW)。任何 P1/P2/P3/P4 出 YELLOW+ → gate 满足。
+
+---
 
 ```
 Week:  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20+
@@ -49,12 +100,12 @@ P7                                                          [持续]    Alpha �
 
 | 优先级 | Phase | 学术证据 confidence | 当前状态 |
 |---|---|---|---|
-| **✅ 1** | **Phase 1.5** Unlock v2 | 3 独立学术 + thesis-check 87-90% converge | 🟡 **YELLOW** (OOS Sharpe 0.61, 36 trades) |
-| **⚠️ 1.6** | Phase 1.5 救援 ablations (A/B/C/D) | Part C dr-1 到 dr-6 6 个 deep research | 待执行 (3 day 工作量) |
-| 2 | **Phase 3** Funding contrarian (reframed) | 92% positive bias + extreme contrarian 学术验证 | 🚧 60% (Slice 1 ✅, Slice 2/3 待) |
-| 3 | **Phase 2.5** Wallet v2 | HL 124k whale trades simulation 验证 | 未开始 |
-| 4 | **Phase 4** Bot 反向 | 独立 thesis, 未验证 | 未开始 |
-| 5 | Phase 5 portfolio | 依赖 ≥1 GREEN/YELLOW (✅ 已有 P1.5 YELLOW) | 未开始 |
+| **✅ 1** | **Phase 1.5** Unlock v2 | 3 独立学术 + thesis-check 87-90% converge | 🟡 **YELLOW** (OOS Sharpe 0.61, 36 trades) — v1+D recommended |
+| **⚠️ 1.6** | Phase 1.5 救援 ablations (A/B/C/D + D-ATR) | Part C dr-1 到 dr-6 6 个 deep research | ✅ A/B/D done; C pivoted to funding-regime (per 2026-05-27); D-ATR pending |
+| 2 | **Phase 3** Funding contrarian (reframed) | 92% positive bias + extreme contrarian 学术验证 | 🔴 RED-data_gap → 待 1h candle backfill 重判 |
+| 3 | **Phase 2.5** Wallet v2 | HL 124k whale trades simulation 验证 | Slice 1/2/3 ✅ archived; Slice 5 fill-level walkforward 可独立跑 |
+| 4 | **Phase 4** Bot 反向 | 独立 thesis, 未验证 | Slice 1/2 ✅ archived; Slice 3 walkforward 待跑 |
+| 5 | Phase 5 portfolio | 依赖 ≥2 GREEN/YELLOW (✅ 1/2 — Phase 1.5 v1+D) | composer 已实现，gate 未满足 |
 
 **关键里程碑**（修订）：
 - ~~M1~~ ✅ (Week 2): 数据 pipeline 跑通
