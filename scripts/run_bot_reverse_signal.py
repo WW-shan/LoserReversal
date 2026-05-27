@@ -17,6 +17,10 @@ DEFAULT_FILLS_DIR = Path("data/parquet/fills")
 DEFAULT_CANDLES_DIR = Path("data/parquet/candles")
 DEFAULT_OUT = Path("data/parquet/bot_reverse_signal.parquet")
 OUTPUT_COLUMNS = ["timestamp", "coin", "direction", "entry", "exit"]
+CANDLE_TIMEFRAMES = frozenset(
+    {"1m", "5m", "15m", "30m", "1h", "2h", "4h", "8h", "12h", "1d", "1w"}
+)
+DEFAULT_CLUSTER_CONFIG = BotClusterConfig()
 
 
 @dataclass(frozen=True)
@@ -25,17 +29,26 @@ class BotReverseSignalConfig:
     fills_dir: Path = DEFAULT_FILLS_DIR
     candles_dir: Path = DEFAULT_CANDLES_DIR
     out: Path = DEFAULT_OUT
+    n_bots_min: int = DEFAULT_CLUSTER_CONFIG.n_bots_min
+    window_minutes: int = DEFAULT_CLUSTER_CONFIG.window_minutes
+    bot_score_threshold: float = DEFAULT_CLUSTER_CONFIG.bot_score_threshold
+    hold_hours: int = DEFAULT_CLUSTER_CONFIG.hold_hours
 
 
 def run_bot_reverse_signal(config: BotReverseSignalConfig) -> dict[str, Any]:
     bot_scores = load_bot_scores(config.bot_pool)
-    fills_by_wallet = load_fills_by_wallet(config.fills_dir, bot_scores.keys())
+    fills_by_wallet, missing_wallets = load_fills_by_wallet(config.fills_dir, bot_scores.keys())
     prices = load_prices(config.candles_dir)
     signals = cluster_bot_signal(
         fills_by_wallet,
         bot_scores,
         prices,
-        config=BotClusterConfig(),
+        config=BotClusterConfig(
+            n_bots_min=config.n_bots_min,
+            window_minutes=config.window_minutes,
+            bot_score_threshold=config.bot_score_threshold,
+            hold_hours=config.hold_hours,
+        ),
     )
     frame = signals_to_frame(signals)
     write_signal_frame(frame, config.out)
@@ -43,6 +56,8 @@ def run_bot_reverse_signal(config: BotReverseSignalConfig) -> dict[str, Any]:
         "out": config.out,
         "bot_wallets": len(bot_scores),
         "fills_loaded": len(fills_by_wallet),
+        "fills_missing": len(missing_wallets),
+        "fills_missing_sample": missing_wallets[:5],
         "price_tokens": len(prices),
         "signal_rows": int(len(frame)),
         "entry_rows": int(frame["entry"].sum()) if not frame.empty else 0,
@@ -54,27 +69,34 @@ def load_bot_scores(path: Path) -> dict[str, float]:
     frame = pd.read_parquet(path)
     if frame.empty:
         return {}
-    wallet_column = "wallet" if "wallet" in frame.columns else "eth_address"
-    scores: dict[str, float] = {}
-    for row in frame.itertuples(index=False):
-        wallet = str(getattr(row, wallet_column, "") or "").lower()
-        if not wallet:
-            continue
-        scores[wallet] = float(getattr(row, "bot_score", 0.0) or 0.0)
-    return scores
+    if "wallet" in frame.columns:
+        wallet_column = "wallet"
+    elif "eth_address" in frame.columns:
+        wallet_column = "eth_address"
+    else:
+        raise KeyError("bot pool parquet must contain a wallet or eth_address column")
+    if "bot_score" not in frame.columns:
+        raise KeyError("bot pool parquet must contain a bot_score column")
+    frame = frame[[wallet_column, "bot_score"]].copy()
+    frame["bot_score"] = pd.to_numeric(frame["bot_score"], errors="coerce")
+    frame[wallet_column] = frame[wallet_column].astype("string").str.lower()
+    frame = frame.dropna(subset=[wallet_column, "bot_score"])
+    return dict(zip(frame[wallet_column].astype(str), frame["bot_score"].astype(float), strict=True))
 
 
-def load_fills_by_wallet(fills_dir: Path, wallets: Any) -> dict[str, pd.DataFrame]:
+def load_fills_by_wallet(fills_dir: Path, wallets: Any) -> tuple[dict[str, pd.DataFrame], list[str]]:
     fills_by_wallet: dict[str, pd.DataFrame] = {}
+    missing_wallets: list[str] = []
     for wallet in sorted({str(wallet).lower() for wallet in wallets}):
         path = fills_dir / f"{wallet}.parquet"
         if not path.exists():
+            missing_wallets.append(wallet)
             continue
         frame = pd.read_parquet(path)
         if "time" in frame.columns:
             frame["time"] = pd.to_datetime(frame["time"], utc=True, errors="coerce")
         fills_by_wallet[wallet] = frame
-    return fills_by_wallet
+    return fills_by_wallet, missing_wallets
 
 
 def load_prices(candles_dir: Path) -> dict[str, pd.Series]:
@@ -89,27 +111,49 @@ def load_prices(candles_dir: Path) -> dict[str, pd.Series]:
 
 
 def signals_to_frame(signals: dict[str, tuple[pd.DataFrame, pd.DataFrame]]) -> pd.DataFrame:
-    rows: list[dict[str, object]] = []
+    frames: list[pd.DataFrame] = []
+    field_map = pd.DataFrame(
+        [
+            {"field": "entry_long", "direction": "long", "kind": "entry"},
+            {"field": "entry_short", "direction": "short", "kind": "entry"},
+            {"field": "exit_long", "direction": "long", "kind": "exit"},
+            {"field": "exit_short", "direction": "short", "kind": "exit"},
+        ]
+    )
     for coin in sorted(signals):
         entries, exits = signals[coin]
-        for timestamp in entries.index:
-            for direction in ("long", "short"):
-                has_entry = bool(entries.at[timestamp, direction])
-                has_exit = bool(exits.at[timestamp, direction])
-                if not has_entry and not has_exit:
-                    continue
-                rows.append(
-                    {
-                        "timestamp": pd.Timestamp(timestamp),
-                        "coin": coin,
-                        "direction": direction,
-                        "entry": has_entry,
-                        "exit": has_exit,
-                    }
-                )
-    if not rows:
+        entry_long = entries["long"].rename("entry_long")
+        entry_short = entries["short"].rename("entry_short")
+        exit_long = exits["long"].rename("exit_long")
+        exit_short = exits["short"].rename("exit_short")
+        combined = pd.concat([entry_long, entry_short, exit_long, exit_short], axis=1)
+        if combined.empty:
+            continue
+        combined["coin"] = coin
+        melted = combined.rename_axis("timestamp").reset_index().melt(
+            id_vars=["timestamp", "coin"],
+            value_vars=["entry_long", "entry_short", "exit_long", "exit_short"],
+            var_name="field",
+            value_name="value",
+        )
+        melted = melted.merge(field_map, on="field", how="inner")
+        frame = (
+            melted.pivot(
+                index=["timestamp", "coin", "direction"],
+                columns="kind",
+                values="value",
+            )
+            .reset_index()
+            .rename_axis(columns=None)
+        )
+        frame["entry"] = frame["entry"].fillna(False).astype(bool)
+        frame["exit"] = frame["exit"].fillna(False).astype(bool)
+        frame = frame.loc[frame["entry"] | frame["exit"], OUTPUT_COLUMNS]
+        if not frame.empty:
+            frames.append(frame)
+    if not frames:
         return _empty_output_frame()
-    frame = pd.DataFrame(rows, columns=OUTPUT_COLUMNS)
+    frame = pd.concat(frames, ignore_index=True)
     frame["timestamp"] = pd.to_datetime(frame["timestamp"], utc=True)
     frame["coin"] = frame["coin"].astype("string")
     frame["direction"] = frame["direction"].astype("string")
@@ -142,11 +186,14 @@ def _read_close(path: Path) -> pd.Series | None:
 def _coin_from_candle_path(path: Path) -> str:
     stem = path.stem
     if "_" not in stem:
-        return stem
+        raise ValueError(f"candle parquet stem must use '{{coin}}_{{tf}}' format; got {stem!r}")
     coin, suffix = stem.rsplit("_", 1)
-    if suffix in {"1m", "5m", "15m", "1h", "4h", "1d"}:
-        return coin
-    return stem
+    if suffix not in CANDLE_TIMEFRAMES:
+        raise ValueError(
+            f"unknown timeframe suffix {suffix!r} in {path.name}; "
+            f"expected one of {sorted(CANDLE_TIMEFRAMES)}"
+        )
+    return coin
 
 
 def _empty_output_frame() -> pd.DataFrame:
@@ -168,6 +215,14 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--fills-dir", type=Path, default=DEFAULT_FILLS_DIR)
     parser.add_argument("--candles-dir", type=Path, default=DEFAULT_CANDLES_DIR)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--n-bots-min", type=int, default=DEFAULT_CLUSTER_CONFIG.n_bots_min)
+    parser.add_argument("--window-minutes", type=int, default=DEFAULT_CLUSTER_CONFIG.window_minutes)
+    parser.add_argument(
+        "--bot-score-threshold",
+        type=float,
+        default=DEFAULT_CLUSTER_CONFIG.bot_score_threshold,
+    )
+    parser.add_argument("--hold-hours", type=int, default=DEFAULT_CLUSTER_CONFIG.hold_hours)
     return parser.parse_args()
 
 
@@ -175,8 +230,11 @@ def _print_summary(result: dict[str, Any]) -> None:
     print("bot reverse signal:")
     print(f"  bot wallets: {result['bot_wallets']}")
     print(f"  fills loaded: {result['fills_loaded']}")
+    print(f"  fills missing: {result['fills_missing']}")
     print(f"  price tokens: {result['price_tokens']}")
     print(f"  signal rows: {result['signal_rows']}")
+    if result["signal_rows"] == 0:
+        print("  (no clusters detected)")
     print(f"  entries: {result['entry_rows']}")
     print(f"  exits: {result['exit_rows']}")
     print(f"  wrote: {result['out']}")
@@ -190,6 +248,10 @@ def main() -> int:
             fills_dir=args.fills_dir,
             candles_dir=args.candles_dir,
             out=args.out,
+            n_bots_min=args.n_bots_min,
+            window_minutes=args.window_minutes,
+            bot_score_threshold=args.bot_score_threshold,
+            hold_hours=args.hold_hours,
         )
     )
     _print_summary(result)
