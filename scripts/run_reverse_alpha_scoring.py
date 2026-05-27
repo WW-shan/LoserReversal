@@ -5,10 +5,12 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import sys
 import time
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -22,12 +24,15 @@ DEFAULT_FUNDING_DIR = Path("data/parquet/funding")
 DEFAULT_OUT = Path("data/parquet/reverse_alpha_scores.parquet")
 DEFAULT_REPORT = Path("reports/phase_2_5_slice_2_reverse_scores.md")
 
-OUTPUT_COLUMNS = ["fill_id", "wallet", "token", "score", "components"]
+OUTPUT_COLUMNS = ["fill_id", "wallet", "token", "time", "dir", "reverse_side", "score", "components"]
 OUTPUT_SCHEMA = pa.schema(
     [
         ("fill_id", pa.string()),
         ("wallet", pa.string()),
         ("token", pa.string()),
+        ("time", pa.timestamp("ns", tz="UTC")),
+        ("dir", pa.string()),
+        ("reverse_side", pa.string()),
         ("score", pa.float64()),
         ("components", pa.string()),
     ]
@@ -41,25 +46,43 @@ def run_reverse_alpha_scoring(
     out: Path = DEFAULT_OUT,
     report: Path | None = DEFAULT_REPORT,
     config: ReverseScoreConfig | None = None,
+    allow_missing_fills: bool = False,
+    missing_fills_tolerance: float = 0.0,
 ) -> dict[str, Any]:
     started = time.perf_counter()
     score_config = config or ReverseScoreConfig()
+    _validate_missing_fills_tolerance(missing_fills_tolerance)
     pool = _read_pool(pool_path)
+    pool_wallets = [_wallet_from_metrics(wallet_metrics) for _, wallet_metrics in pool.iterrows()]
+    pool_wallets = [wallet for wallet in pool_wallets if wallet]
+    missing_wallets = [
+        wallet for wallet in pool_wallets if not (fills_dir / f"{wallet}.parquet").exists()
+    ]
+    if missing_wallets:
+        missing_fraction = len(missing_wallets) / len(pool_wallets) if pool_wallets else 0.0
+        message = _missing_fills_message(
+            missing_wallets,
+            total_wallets=len(pool_wallets),
+            missing_fraction=missing_fraction,
+            tolerance=missing_fills_tolerance,
+        )
+        if not allow_missing_fills and missing_fraction > missing_fills_tolerance:
+            raise RuntimeError(message)
+        print(f"warning: {message}", file=sys.stderr)
 
     frames: list[pd.DataFrame] = []
     funding_cache: dict[str, pd.DataFrame] = {}
-    wallets_missing_fills = 0
+    wallets_missing_fills = len(missing_wallets)
     wallets_empty_fills = 0
     wallets_scored = 0
 
     for _, wallet_metrics in pool.iterrows():
-        wallet = str(wallet_metrics.get("wallet", "") or "").lower()
+        wallet = _wallet_from_metrics(wallet_metrics)
         if not wallet:
             continue
 
         fills_path = fills_dir / f"{wallet}.parquet"
         if not fills_path.exists():
-            wallets_missing_fills += 1
             continue
 
         fills = pd.read_parquet(fills_path)
@@ -78,19 +101,21 @@ def run_reverse_alpha_scoring(
         if scored.empty:
             wallets_empty_fills += 1
             continue
-        if len(scored) != len(tokens):
+        expected_rows = _expected_score_rows(fills, score_config)
+        if len(scored) != expected_rows:
             raise RuntimeError(
                 f"score row count mismatch for {wallet}: "
-                f"{len(scored)} score rows for {len(tokens)} fill rows"
+                f"{len(scored)} score rows for {expected_rows} scorable fill rows"
             )
 
         scored["wallet"] = wallet
-        scored["token"] = tokens
         scored["components"] = scored["components"].map(_components_json)
         frames.append(scored[OUTPUT_COLUMNS])
         wallets_scored += 1
 
     scores = pd.concat(frames, ignore_index=True) if frames else _empty_output_frame()
+    if wallets_scored == 0 and len(pool_wallets) > 0:
+        print("warning: no wallet fills were scored for the provided pool", file=sys.stderr)
     _write_scores(scores, out)
 
     result = {
@@ -99,7 +124,7 @@ def run_reverse_alpha_scoring(
         "funding_dir": funding_dir,
         "out": out,
         "report": report,
-        "wallets_total": int(len(pool)),
+        "wallets_total": int(len(pool_wallets)),
         "wallets_scored": wallets_scored,
         "wallets_missing_fills": wallets_missing_fills,
         "wallets_empty_fills": wallets_empty_fills,
@@ -117,14 +142,35 @@ def _read_pool(path: Path) -> pd.DataFrame:
     if "wallet" not in pool.columns:
         return pd.DataFrame(columns=["wallet"])
     pool = pool.copy()
-    pool["wallet"] = pool["wallet"].astype("string").str.lower()
+    pool = pool.dropna(subset=["wallet"])
+    pool["wallet"] = pool["wallet"].astype("string").str.strip().str.lower()
+    pool = pool.loc[pool["wallet"].fillna("").str.len() > 0].copy()
     return pool
+
+
+def _wallet_from_metrics(wallet_metrics: Any) -> str | None:
+    wallet = wallet_metrics.get("wallet", None)
+    if pd.isna(wallet):
+        return None
+    text = str(wallet).strip().lower()
+    return text or None
 
 
 def _fill_tokens(fills: pd.DataFrame) -> list[str]:
     if "coin" not in fills.columns:
         return [""] * len(fills)
     return fills["coin"].astype("string").fillna("").astype(str).tolist()
+
+
+def _expected_score_rows(fills: pd.DataFrame, config: ReverseScoreConfig) -> int:
+    if fills.empty:
+        return 0
+    if not config.score_open_fills_only:
+        return int(len(fills))
+    if "dir" not in fills.columns:
+        return 0
+    directions = fills["dir"].astype("string")
+    return int(directions.isin(["Open Long", "Open Short"]).sum())
 
 
 def _load_funding_history(
@@ -156,6 +202,12 @@ def _json_safe(value: Any) -> Any:
         return {str(key): _json_safe(item) for key, item in value.items()}
     if isinstance(value, list | tuple):
         return [_json_safe(item) for item in value]
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, np.bool_):
+        return bool(value)
+    if isinstance(value, np.floating):
+        value = float(value)
     if isinstance(value, float) and not math.isfinite(value):
         return None
     try:
@@ -169,8 +221,9 @@ def _json_safe(value: Any) -> Any:
 def _write_scores(scores: pd.DataFrame, out: Path) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     frame = scores.copy()[OUTPUT_COLUMNS] if not scores.empty else _empty_output_frame()
-    for column in ("fill_id", "wallet", "token", "components"):
+    for column in ("fill_id", "wallet", "token", "dir", "reverse_side", "components"):
         frame[column] = frame[column].astype("string")
+    frame["time"] = pd.to_datetime(frame["time"], utc=True, errors="coerce")
     frame["score"] = pd.to_numeric(frame["score"], errors="coerce").astype("float64")
 
     table = pa.Table.from_pandas(frame, schema=OUTPUT_SCHEMA, preserve_index=False)
@@ -206,10 +259,32 @@ def _empty_output_frame() -> pd.DataFrame:
             "fill_id": pd.Series(dtype="string"),
             "wallet": pd.Series(dtype="string"),
             "token": pd.Series(dtype="string"),
+            "time": pd.Series(dtype="datetime64[ns, UTC]"),
+            "dir": pd.Series(dtype="string"),
+            "reverse_side": pd.Series(dtype="string"),
             "score": pd.Series(dtype="float64"),
             "components": pd.Series(dtype="string"),
         },
         columns=OUTPUT_COLUMNS,
+    )
+
+
+def _validate_missing_fills_tolerance(value: float) -> None:
+    if not math.isfinite(float(value)) or not 0.0 <= float(value) <= 1.0:
+        raise ValueError("missing_fills_tolerance must be between 0.0 and 1.0")
+
+
+def _missing_fills_message(
+    missing_wallets: list[str],
+    *,
+    total_wallets: int,
+    missing_fraction: float,
+    tolerance: float,
+) -> str:
+    wallets = ", ".join(missing_wallets)
+    return (
+        f"missing fills for {len(missing_wallets)}/{total_wallets} pool wallets "
+        f"({missing_fraction:.1%}; tolerance {tolerance:.1%}): {wallets}"
     )
 
 
@@ -227,25 +302,42 @@ def _print_summary(result: dict[str, Any]) -> None:
     print(f"  runtime seconds: {result['runtime_seconds']:.2f}")
 
 
-def _parse_args() -> argparse.Namespace:
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Score Phase 2.5 academic wallet fills.")
     parser.add_argument("--pool", type=Path, default=DEFAULT_POOL)
     parser.add_argument("--fills-dir", type=Path, default=DEFAULT_FILLS_DIR)
     parser.add_argument("--funding-dir", type=Path, default=DEFAULT_FUNDING_DIR)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
-    return parser.parse_args()
+    parser.add_argument(
+        "--allow-missing-fills",
+        action="store_true",
+        help="Allow scoring the subset of pool wallets that have fills.",
+    )
+    parser.add_argument(
+        "--missing-fills-tolerance",
+        type=float,
+        default=0.0,
+        help="Maximum missing-fill wallet fraction allowed before failing; default 0.0.",
+    )
+    return parser.parse_args(argv)
 
 
 def main() -> int:
     args = _parse_args()
-    result = run_reverse_alpha_scoring(
-        pool_path=args.pool,
-        fills_dir=args.fills_dir,
-        funding_dir=args.funding_dir,
-        out=args.out,
-        report=args.report,
-    )
+    try:
+        result = run_reverse_alpha_scoring(
+            pool_path=args.pool,
+            fills_dir=args.fills_dir,
+            funding_dir=args.funding_dir,
+            out=args.out,
+            report=args.report,
+            allow_missing_fills=args.allow_missing_fills,
+            missing_fills_tolerance=args.missing_fills_tolerance,
+        )
+    except (RuntimeError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
     _print_summary(result)
     return 0
 
