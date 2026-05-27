@@ -48,9 +48,9 @@ def exclude_bots_from_pool(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Split a wallet pool into clean and score-excluded wallets.
 
-    Wallets missing from ``bot_scores`` are left in ``clean_pool``; production
-    pipelines that fail to score a wallet should exclude those failures before
-    treating the pool as clean.
+    Wallets missing from ``bot_scores`` or carrying NaN scores are left in
+    ``clean_pool``; production pipelines that fail to score a wallet should
+    exclude those failures before treating the pool as clean.
     """
 
     if wallet_pool.empty:
@@ -65,7 +65,8 @@ def exclude_bots_from_pool(
 
     merged = frame.merge(scores, on="wallet", how="left")
     threshold = float(config.bot_score_threshold)
-    excluded_mask = merged["bot_score"].fillna(-1.0) >= threshold
+    bot_score = merged["bot_score"]
+    excluded_mask = bot_score.notna() & (bot_score >= threshold)
 
     excluded = merged.loc[excluded_mask, ["wallet", "bot_score"]].copy()
     excluded["reason"] = "bot_score"

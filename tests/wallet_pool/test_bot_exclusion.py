@@ -83,6 +83,39 @@ def test_exclude_bots_from_pool_keeps_wallets_without_bot_scores() -> None:
     assert excluded["wallet"].tolist() == ["0xscored"]
 
 
+def test_exclude_bots_from_pool_keeps_nan_scores_in_clean_pool() -> None:
+    from wallet_pool.bot_exclusion import BotExclusionConfig, exclude_bots_from_pool
+
+    scores = pd.DataFrame(
+        {
+            "wallet": ["0xnan", "0xbot"],
+            "bot_score": [float("nan"), 0.80],
+        }
+    )
+
+    clean_pool, excluded = exclude_bots_from_pool(
+        _pool(["0xnan", "0xbot"]),
+        scores,
+        config=BotExclusionConfig(),
+    )
+
+    assert clean_pool["wallet"].tolist() == ["0xnan"]
+    assert excluded["wallet"].tolist() == ["0xbot"]
+
+
+def test_exclude_bots_from_pool_keeps_nan_scores_at_minimum_threshold() -> None:
+    from wallet_pool.bot_exclusion import BotExclusionConfig, exclude_bots_from_pool
+
+    clean_pool, excluded = exclude_bots_from_pool(
+        _pool(["0xnan"]),
+        {"0xnan": float("nan")},
+        config=BotExclusionConfig(bot_score_threshold=0.0001),
+    )
+
+    assert clean_pool["wallet"].tolist() == ["0xnan"]
+    assert excluded.empty
+
+
 def test_exclude_bots_from_pool_empty_pool_returns_empty_frames() -> None:
     from wallet_pool.bot_exclusion import BotExclusionConfig, exclude_bots_from_pool
 
