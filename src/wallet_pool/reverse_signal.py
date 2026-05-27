@@ -50,7 +50,7 @@ class ReverseScoreConfig:
         if self.leverage_threshold_2 < self.leverage_threshold_1:
             raise ValueError("leverage_threshold_2 must be >= leverage_threshold_1")
         _validate_positive("funding_z_threshold", self.funding_z_threshold)
-        _validate_positive("funding_lookback_days", self.funding_lookback_days)
+        _validate_positive_int("funding_lookback_days", self.funding_lookback_days)
         _validate_session_hours(self.asian_session_hours)
         if self.funding_settle_minutes_before < 0:
             raise ValueError("funding_settle_minutes_before must be >= 0")
@@ -538,6 +538,11 @@ def _context_interval_hours(funding_context: Any, config: ReverseScoreConfig) ->
 def _validate_positive(name: str, value: float) -> None:
     if not math.isfinite(float(value)) or float(value) <= 0:
         raise ValueError(f"{name} must be positive")
+
+
+def _validate_positive_int(name: str, value: int) -> None:
+    if type(value) is not int or value <= 0:
+        raise ValueError(f"{name} must be a positive integer")
 
 
 def _validate_minimum(name: str, value: float, *, minimum: float) -> None:

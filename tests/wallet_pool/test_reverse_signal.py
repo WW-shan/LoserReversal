@@ -590,6 +590,7 @@ def test_score_wallet_fills_derives_non_eight_hour_funding_settle_interval() -> 
         ({"leverage_threshold_1": 20.0, "leverage_threshold_2": 10.0}, "leverage_threshold_2"),
         ({"funding_z_threshold": 0.0}, "funding_z_threshold"),
         ({"funding_lookback_days": 0}, "funding_lookback_days"),
+        ({"funding_lookback_days": 30.5}, "funding_lookback_days"),
         ({"asian_session_hours": (-1, 7)}, "asian_session_hours"),
         ({"asian_session_hours": (23, 24)}, "asian_session_hours"),
         ({"funding_settle_minutes_before": -1}, "funding_settle_minutes_before"),
