@@ -670,6 +670,17 @@ def test_cli_rejects_top_n_zero(mocker, capsys) -> None:
     assert "--top-n must be greater than 0" in capsys.readouterr().err
 
 
+def test_cli_help_does_not_crash(mocker) -> None:
+    import scripts.build_academic_wallet_pool as builder
+
+    mocker.patch("sys.argv", ["build_academic_wallet_pool.py", "-h"])
+
+    with pytest.raises(SystemExit) as exc:
+        builder._parse_args()
+
+    assert exc.value.code == 0
+
+
 def test_cli_parse_args_accepts_rebuild_cache(mocker) -> None:
     import scripts.build_academic_wallet_pool as builder
 
