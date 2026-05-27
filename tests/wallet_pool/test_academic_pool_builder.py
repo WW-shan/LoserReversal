@@ -253,6 +253,51 @@ def test_build_academic_pool_lowercases_wallet_addresses() -> None:
     assert pool["wallet"].tolist() == ["0xmixedcase"]
 
 
+def test_build_academic_pool_dedupes_leaderboard_duplicates() -> None:
+    from wallet_pool.academic_pool import build_academic_pool_with_funnel
+
+    leaderboard = pd.DataFrame(
+        [
+            _leaderboard_row("0xdupe", account_value=25_000.0),
+            _leaderboard_row("0xdupe", account_value=25_000.0),
+        ]
+    )
+    fills_by_wallet = {"0xdupe": _retail_open_close_fills(25_000.0)}
+
+    pool, funnel = build_academic_pool_with_funnel(
+        leaderboard,
+        fills_by_wallet,
+        as_of=pd.Timestamp("2026-05-26T00:00:00Z"),
+    )
+
+    assert pool["wallet"].tolist() == ["0xdupe"]
+    assert funnel["leaderboard"] == 1
+    assert funnel["final"] == 1
+
+
+def test_build_academic_pool_dedupes_normalized_leaderboard_duplicates() -> None:
+    from wallet_pool.academic_pool import build_academic_pool_with_funnel
+
+    leaderboard = pd.DataFrame(
+        [
+            _leaderboard_row("0xAbc", account_value=25_000.0),
+            _leaderboard_row("0xABC", account_value=25_000.0),
+            _leaderboard_row("0xabc ", account_value=25_000.0),
+        ]
+    )
+    fills_by_wallet = {"0xabc": _retail_open_close_fills(25_000.0)}
+
+    pool, funnel = build_academic_pool_with_funnel(
+        leaderboard,
+        fills_by_wallet,
+        as_of=pd.Timestamp("2026-05-26T00:00:00Z"),
+    )
+
+    assert pool["wallet"].tolist() == ["0xabc"]
+    assert funnel["leaderboard"] == 1
+    assert funnel["final"] == 1
+
+
 def test_build_academic_pool_handles_empty_leaderboard() -> None:
     from wallet_pool.academic_pool import POOL_COLUMNS, build_academic_pool
 
@@ -268,6 +313,43 @@ def test_build_academic_pool_handles_empty_leaderboard() -> None:
 
     assert pool.empty
     assert list(pool.columns) == POOL_COLUMNS
+
+
+def test_funnel_records_pre_filter_attrition() -> None:
+    from wallet_pool.academic_pool import build_academic_pool_with_funnel
+
+    missing_address = _leaderboard_row("0xmissing", account_value=25_000.0)
+    missing_address["eth_address"] = None
+    leaderboard = pd.DataFrame(
+        [
+            missing_address,
+            _leaderboard_row("0xzero", account_value=0.0),
+            _leaderboard_row("0xempty", account_value=25_000.0),
+            _leaderboard_row("0xpass", account_value=25_000.0),
+        ]
+    )
+    fills_by_wallet = {
+        "0xempty": _fills_df([]),
+        "0xpass": _retail_open_close_fills(25_000.0),
+    }
+
+    pool, funnel = build_academic_pool_with_funnel(
+        leaderboard,
+        fills_by_wallet,
+        as_of=pd.Timestamp("2026-05-26T00:00:00Z"),
+    )
+
+    assert pool["wallet"].tolist() == ["0xpass"]
+    assert funnel["leaderboard"] == 4
+    assert funnel["valid_address"] == 3
+    assert funnel["positive_account_value"] == 2
+    assert funnel["fills_available"] == 1
+    assert funnel["account_value"] == 1
+    assert funnel["realized_loss_rate"] == 1
+    assert funnel["leverage"] == 1
+    assert funnel["n_trades"] == 1
+    assert funnel["size_cv"] == 1
+    assert funnel["final"] == 1
 
 
 def test_build_academic_pool_skips_wallets_with_non_positive_account_value() -> None:
@@ -319,9 +401,85 @@ def test_build_academic_pool_funnel_records_per_axis_attrition() -> None:
 
     assert pool["wallet"].tolist() == ["0xpass"]
     assert funnel["leaderboard"] == 3
+    assert funnel["valid_address"] == 3
+    assert funnel["positive_account_value"] == 3
+    assert funnel["fills_available"] == 3
     assert funnel["account_value"] == 1
     assert funnel["realized_loss_rate"] == 1
     assert funnel["leverage"] == 1
     assert funnel["n_trades"] == 1
     assert funnel["size_cv"] == 1
     assert funnel["final"] == 1
+
+
+@pytest.mark.parametrize(
+    ("wallet", "account_value", "fills", "metric_overrides"),
+    [
+        ("0xpass", 25_000.0, _retail_open_close_fills(25_000.0), {}),
+        ("0xdust", 500.0, _retail_open_close_fills(500.0), {}),
+        ("0xwhale", 500_000.0, _retail_open_close_fills(500_000.0), {}),
+        ("0xempty", 25_000.0, _fills_df([]), {}),
+        (
+            "0xnan_account",
+            float("nan"),
+            _retail_open_close_fills(25_000.0),
+            {"account_value": float("nan")},
+        ),
+        (
+            "0xnan_loss",
+            25_000.0,
+            _retail_open_close_fills(25_000.0),
+            {"realized_loss_rate_90d": float("nan")},
+        ),
+        (
+            "0xinf_leverage",
+            25_000.0,
+            _retail_open_close_fills(25_000.0),
+            {"leverage_avg_90d": float("inf")},
+        ),
+        (
+            "0xinf_trades",
+            25_000.0,
+            _retail_open_close_fills(25_000.0),
+            {"n_trades_90d": float("inf")},
+        ),
+        (
+            "0xnan_size",
+            25_000.0,
+            _retail_open_close_fills(25_000.0),
+            {"size_cv_90d": float("nan")},
+        ),
+    ],
+)
+def test_build_academic_pool_decision_matches_predicate(
+    monkeypatch: pytest.MonkeyPatch,
+    wallet: str,
+    account_value: float,
+    fills: pd.DataFrame,
+    metric_overrides: dict[str, float],
+) -> None:
+    from wallet_pool import academic_pool
+
+    as_of = pd.Timestamp("2026-05-26T00:00:00Z")
+    leaderboard = pd.DataFrame([_leaderboard_row(wallet, account_value=account_value)])
+    metrics = academic_pool.compute_wallet_metrics(
+        fills,
+        account_value=account_value,
+        as_of=as_of,
+    )
+    if metric_overrides:
+        metrics = {**metrics, **metric_overrides}
+        monkeypatch.setattr(
+            academic_pool,
+            "compute_wallet_metrics",
+            lambda *args, **kwargs: metrics,
+        )
+
+    pool, funnel = academic_pool.build_academic_pool_with_funnel(
+        leaderboard,
+        {wallet: fills},
+        as_of=as_of,
+    )
+
+    assert (len(pool) == 1) is academic_pool.is_academic_anti_alpha(metrics)
+    assert funnel["final"] == len(pool)

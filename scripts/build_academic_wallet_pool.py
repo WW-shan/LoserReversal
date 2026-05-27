@@ -13,29 +13,38 @@ Replaces the Phase 2 v1 ``scripts/build_wallet_pool.py`` selection logic
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import requests
+import tenacity
 
 from infra.fetchers.leaderboard import fetch_leaderboard
 from infra.fetchers.user_fills import fetch_user_fills
 from wallet_pool.academic_pool import (
     LOOKBACK_DAYS,
+    MAX_ACCOUNT_VALUE,
+    MIN_ACCOUNT_VALUE,
     POOL_COLUMNS,
+    REQUIRED_FILL_COLUMNS,
     build_academic_pool_with_funnel,
 )
 
 
 DEFAULT_OUT = Path("data/parquet/academic_wallet_pool.parquet")
 DEFAULT_REPORT = Path("reports/phase_2_5_slice_1_wallet_pool.md")
-DEFAULT_TOP_N = 500
+DEFAULT_TOP_N = 2000  # Targets ROADMAP 200-500 final pool; assumes ~30-50%
+# of worst-PnL top-2000 land in $1k-$100k band per Phase 1 v1 funnel.
 DEFAULT_THROTTLE_MS = 200
+CACHE_DIR = Path("data/cache/user_fills")
+HEX40_RE = re.compile(r"^0x[0-9a-f]{40}$")
 
 POOL_SCHEMA = pa.schema(
     [
@@ -53,13 +62,19 @@ POOL_SCHEMA = pa.schema(
 def build_academic_wallet_pool(
     out: Path = DEFAULT_OUT,
     report: Path | None = None,
-    top_n: int | None = None,
+    top_n: int | None = DEFAULT_TOP_N,
     throttle_ms: int = DEFAULT_THROTTLE_MS,
     lookback_days: int = LOOKBACK_DAYS,
     as_of: pd.Timestamp | None = None,
     leaderboard: pd.DataFrame | None = None,
+    rebuild_cache: bool = False,
 ) -> dict[str, Any]:
-    """Run the full pipeline and write the resulting pool parquet."""
+    """Run the full pipeline and write the resulting pool parquet.
+
+    The leaderboard is pre-filtered to the academic account-value band before
+    applying ``top_n``. The default ``DEFAULT_TOP_N`` is 2000 to sample enough
+    in-band wallets from a worst-PnL ordered leaderboard.
+    """
 
     started = time.perf_counter()
     as_of_ts = _coerce_as_of(as_of)
@@ -67,22 +82,51 @@ def build_academic_wallet_pool(
     lookback_end = as_of_ts.to_pydatetime()
 
     source = leaderboard if leaderboard is not None else fetch_leaderboard()
-    selected = source.head(top_n).copy() if top_n is not None else source.copy()
+    leaderboard_pre_filter = int(len(source))
+    source = source.copy()
+    source["eth_address"] = source["eth_address"].astype("string").str.strip().str.lower()
+    source = source.drop_duplicates(subset="eth_address", keep="first")
+    source["account_value"] = pd.to_numeric(source["account_value"], errors="coerce")
+    in_band = source.loc[
+        (source["account_value"] >= MIN_ACCOUNT_VALUE)
+        & (source["account_value"] <= MAX_ACCOUNT_VALUE)
+    ].copy()
+    pre_filtered_band = int(len(in_band))
+    selected = in_band.head(top_n).copy() if top_n is not None else in_band.copy()
 
     fills_by_wallet: dict[str, pd.DataFrame] = {}
     fetched = 0
     failed = 0
     total = len(selected)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
     for position, record in enumerate(selected.itertuples(index=False), start=1):
-        wallet = str(getattr(record, "eth_address", "") or "").lower()
+        raw_address = getattr(record, "eth_address", None)
+        if raw_address is None or pd.isna(raw_address):
+            continue
+        wallet = str(raw_address).strip().lower()
         if not wallet:
             continue
 
         wallet_started = time.perf_counter()
         try:
-            fills = fetch_user_fills(wallet, lookback_start, lookback_end)
-        except Exception as error:  # noqa: BLE001
+            cache_path = _cache_path(wallet, lookback_start, lookback_end)
+            fills = None
+            if cache_path is not None and cache_path.exists() and not rebuild_cache:
+                fills = _read_cached_fills(cache_path)
+            if fills is None:
+                fills = fetch_user_fills(wallet, lookback_start, lookback_end)
+                if cache_path is not None and not fills.empty:
+                    _write_cached_fills(cache_path, fills)
+                source_label = "fetched"
+            else:
+                source_label = "cache"
+        except (
+            requests.HTTPError,
+            requests.ConnectionError,
+            requests.Timeout,
+            tenacity.RetryError,
+        ) as error:
             failed += 1
             _log(
                 position,
@@ -101,7 +145,7 @@ def build_academic_wallet_pool(
             position,
             total,
             wallet,
-            f"fetched {int(len(fills))} fills",
+            f"{source_label} {int(len(fills))} fills",
             wallet_started,
             started,
         )
@@ -113,6 +157,11 @@ def build_academic_wallet_pool(
         as_of=as_of_ts,
         lookback_days=lookback_days,
     )
+    funnel = {
+        "leaderboard_pre_filter": leaderboard_pre_filter,
+        "pre_filtered_band": pre_filtered_band,
+        **funnel,
+    }
 
     _write_pool(pool, out)
 
@@ -150,6 +199,64 @@ def _write_pool(pool: pd.DataFrame, out: Path) -> None:
     pq.write_table(table, out, compression=None, use_dictionary=False, row_group_size=64)
 
 
+def _cache_path(
+    wallet: str,
+    lookback_start: datetime,
+    lookback_end: datetime,
+) -> Path | None:
+    """Return cache path for wallet+window, or None if wallet is malformed.
+
+    Default ``as_of`` uses current time, so cross-minute CLI reruns create new
+    entries; pass ``--as-of`` explicitly for reproducible cache reuse.
+    """
+
+    if not HEX40_RE.fullmatch(wallet):
+        return None
+    key = (
+        f"{wallet}_"
+        f"{lookback_start.strftime('%Y%m%dT%H%M')}_"
+        f"{lookback_end.strftime('%Y%m%dT%H%M')}"
+    )
+    return CACHE_DIR / f"{key}.parquet"
+
+
+def _read_cached_fills(cache_path: Path) -> pd.DataFrame | None:
+    try:
+        cached = pd.read_parquet(cache_path)
+    except (OSError, pa.lib.ArrowInvalid, pa.lib.ArrowIOError) as error:
+        print(
+            f"warning: cached fills at {cache_path} unreadable ({error}); refetching",
+            file=sys.stderr,
+        )
+        cache_path.unlink(missing_ok=True)
+        return None
+    missing = REQUIRED_FILL_COLUMNS - set(cached.columns)
+    if missing:
+        print(
+            f"warning: cached fills at {cache_path} missing columns "
+            f"{sorted(missing)}; refetching",
+            file=sys.stderr,
+        )
+        cache_path.unlink(missing_ok=True)
+        return None
+    if "time" not in cached.columns and not isinstance(cached.index, pd.DatetimeIndex):
+        print(
+            f"warning: cached fills at {cache_path} missing time axis; refetching",
+            file=sys.stderr,
+        )
+        cache_path.unlink(missing_ok=True)
+        return None
+    if "time" in cached.columns:
+        cached["time"] = pd.to_datetime(cached["time"], utc=True, errors="coerce")
+    return cached
+
+
+def _write_cached_fills(cache_path: Path, fills: pd.DataFrame) -> None:
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    frame = fills.reset_index() if "time" not in fills.columns else fills.copy()
+    frame.to_parquet(cache_path, index=False)
+
+
 def _write_report(report: Path, result: dict[str, Any]) -> None:
     funnel = result["funnel"]
     report.parent.mkdir(parents=True, exist_ok=True)
@@ -160,7 +267,12 @@ def _write_report(report: Path, result: dict[str, Any]) -> None:
                 "",
                 "## Summary",
                 f"- As of: {result['as_of'].isoformat()}",
+                f"- Leaderboard rows before script pre-filter: {funnel['leaderboard_pre_filter']}",
+                f"- After script account-value band pre-filter: {funnel['pre_filtered_band']}",
                 f"- Leaderboard rows fetched: {funnel['leaderboard']}",
+                f"- After valid address filter: {funnel['valid_address']}",
+                f"- After positive account value filter: {funnel['positive_account_value']}",
+                f"- After fills available filter: {funnel['fills_available']}",
                 f"- After account_value filter: {funnel['account_value']}",
                 f"- After realized_loss_rate filter: {funnel['realized_loss_rate']}",
                 f"- After leverage filter: {funnel['leverage']}",
@@ -211,7 +323,12 @@ def _sleep(throttle_ms: int, position: int, total: int) -> None:
 def _print_summary(result: dict[str, Any]) -> None:
     funnel = result["funnel"]
     print("academic pool funnel:")
+    print(f"  leaderboard rows before script pre-filter: {funnel['leaderboard_pre_filter']}")
+    print(f"  after script account-value band pre-filter: {funnel['pre_filtered_band']}")
     print(f"  leaderboard rows fetched: {funnel['leaderboard']}")
+    print(f"  after valid address filter: {funnel['valid_address']}")
+    print(f"  after positive account value filter: {funnel['positive_account_value']}")
+    print(f"  after fills available filter: {funnel['fills_available']}")
     print(f"  after account_value filter: {funnel['account_value']}")
     print(f"  after realized_loss_rate filter: {funnel['realized_loss_rate']}")
     print(f"  after leverage filter: {funnel['leverage']}")
@@ -235,6 +352,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--throttle-ms", type=int, default=DEFAULT_THROTTLE_MS)
     parser.add_argument("--lookback-days", type=int, default=LOOKBACK_DAYS)
     parser.add_argument("--as-of", type=_parse_timestamp, default=None)
+    parser.add_argument("--rebuild-cache", action="store_true")
     args = parser.parse_args()
     _validate_args(parser, args)
     return args
@@ -265,6 +383,7 @@ def main() -> int:
         throttle_ms=args.throttle_ms,
         lookback_days=args.lookback_days,
         as_of=args.as_of,
+        rebuild_cache=args.rebuild_cache,
     )
     _print_summary(result)
     return 0

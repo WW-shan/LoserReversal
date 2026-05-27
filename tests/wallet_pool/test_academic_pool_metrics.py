@@ -92,6 +92,84 @@ def test_compute_wallet_metrics_excludes_fills_older_than_90_days() -> None:
     assert metrics["n_trades_90d"] == 2
 
 
+def test_filter_window_excludes_future_fills_after_as_of() -> None:
+    from wallet_pool.academic_pool import compute_wallet_metrics
+
+    fills = _fills_df(
+        [
+            _fill_row("2026-01-01T00:00:00Z", direction="Open Long"),
+            _fill_row("2026-04-01T00:00:00Z", direction="Open Long"),
+            _fill_row("2026-05-15T00:00:00Z", direction="Open Short"),
+            _fill_row("2026-06-15T00:00:00Z", direction="Open Long"),
+        ]
+    )
+
+    metrics = compute_wallet_metrics(
+        fills,
+        account_value=10_000.0,
+        as_of=pd.Timestamp("2026-05-26T00:00:00Z"),
+    )
+
+    assert metrics["n_trades_90d"] == 2
+
+
+def test_filter_window_excludes_fills_at_exactly_as_of() -> None:
+    from wallet_pool.academic_pool import compute_wallet_metrics
+
+    fills = _fills_df(
+        [
+            _fill_row("2026-05-25T23:59:59Z", direction="Open Long"),
+            _fill_row("2026-05-26T00:00:00Z", direction="Open Long"),
+        ]
+    )
+
+    metrics = compute_wallet_metrics(
+        fills,
+        account_value=10_000.0,
+        as_of=pd.Timestamp("2026-05-26T00:00:00Z"),
+    )
+
+    assert metrics["n_trades_90d"] == 1
+
+
+def test_compute_wallet_metrics_rejects_missing_required_fill_columns() -> None:
+    from wallet_pool.academic_pool import compute_wallet_metrics
+
+    fills = _fills_df([_fill_row("2026-04-01T00:00:00Z")]).drop(columns=["dir"])
+
+    with pytest.raises(ValueError, match="fills missing required columns: \\['dir'\\]"):
+        compute_wallet_metrics(
+            fills,
+            account_value=10_000.0,
+            as_of=pd.Timestamp("2026-05-26T00:00:00Z"),
+        )
+
+
+def test_compute_wallet_metrics_handles_time_as_column() -> None:
+    from wallet_pool.academic_pool import compute_wallet_metrics
+
+    fills = _fills_df(
+        [
+            _fill_row("2026-04-01T00:00:00Z", direction="Open Long", px=100.0, sz=50.0),
+            _fill_row("2026-04-15T00:00:00Z", direction="Open Short", px=100.0, sz=100.0),
+            _fill_row("2026-05-01T00:00:00Z", direction="Close Long", closed_pnl=-10.0),
+            _fill_row("2026-05-02T00:00:00Z", direction="Close Long", closed_pnl=10.0),
+        ]
+    )
+    indexed_metrics = compute_wallet_metrics(
+        fills,
+        account_value=1_000.0,
+        as_of=pd.Timestamp("2026-05-26T00:00:00Z"),
+    )
+    column_metrics = compute_wallet_metrics(
+        fills.reset_index(),
+        account_value=1_000.0,
+        as_of=pd.Timestamp("2026-05-26T00:00:00Z"),
+    )
+
+    assert column_metrics == indexed_metrics
+
+
 def test_compute_wallet_metrics_realized_loss_rate_uses_close_fills() -> None:
     from wallet_pool.academic_pool import compute_wallet_metrics
 
@@ -244,6 +322,45 @@ def test_is_academic_anti_alpha_accepts_canonical_passing_wallet() -> None:
     }
 
     assert is_academic_anti_alpha(metrics) is True
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "account_value",
+        "realized_loss_rate_90d",
+        "leverage_avg_90d",
+        "n_trades_90d",
+        "size_cv_90d",
+    ],
+)
+def test_is_academic_anti_alpha_rejects_nan_metrics(field: str) -> None:
+    from wallet_pool.academic_pool import is_academic_anti_alpha
+
+    metrics = {
+        "account_value": 25_000.0,
+        "realized_loss_rate_90d": 0.65,
+        "leverage_avg_90d": 8.0,
+        "n_trades_90d": 120,
+        "size_cv_90d": 0.45,
+    }
+    metrics[field] = float("nan")
+
+    assert is_academic_anti_alpha(metrics) is False
+
+
+def test_is_academic_anti_alpha_rejects_inf_n_trades() -> None:
+    from wallet_pool.academic_pool import is_academic_anti_alpha
+
+    metrics = {
+        "account_value": 25_000.0,
+        "realized_loss_rate_90d": 0.65,
+        "leverage_avg_90d": 8.0,
+        "n_trades_90d": float("inf"),
+        "size_cv_90d": 0.45,
+    }
+
+    assert is_academic_anti_alpha(metrics) is False
 
 
 def test_is_academic_anti_alpha_rejects_whales_above_account_band() -> None:
