@@ -79,6 +79,14 @@ def compute_reverse_alpha_score(
     *,
     config: ReverseScoreConfig,
 ) -> float:
+    """Per-fill reverse alpha score (product of 4 component multipliers).
+
+    Neutral fills (no oversized / leverage / funding / time-bucket signal) score
+    slightly above 1.0 by design (~1.022) because the smooth-zero sigmoid does
+    not return exactly 1.0 at signal=0. See :class:`ReverseScoreConfig` docstring
+    for the rank-vs-absolute usage note: downstream consumers should rank these
+    scores, not threshold on absolute values.
+    """
     score = 1.0
     components = _score_components(fill, wallet_account_value, funding_context, config)
     for multiplier in components.values():
