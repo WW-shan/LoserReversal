@@ -124,8 +124,10 @@ def exclude_funding_source_clusters(
 ) -> pd.DataFrame:
     """Return pool rows belonging to funding-source clusters.
 
-    ``max_shared`` is a legacy keyword; pass ``config=BotExclusionConfig(...)``
-    instead.
+    A wallet is excluded when its connected component in ``funding_graph`` has
+    size >= ``config.funding_source_graph_max_shared`` (default 3). Pass
+    ``config=BotExclusionConfig(...)``. The legacy ``max_shared`` keyword is
+    deprecated; it is still validated against the same int >= 2 rule.
     """
 
     if config is not None:
