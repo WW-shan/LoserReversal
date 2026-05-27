@@ -329,6 +329,7 @@ def _print_summary(result: dict[str, Any]) -> None:
     print(f"  bot scores computed: {funnel['bot_scores_computed']}")
     print(f"  bot score excluded: {funnel['bot_score_excluded']}")
     print(f"  fetch failed excluded: {funnel['fetch_failed_excluded']}")
+    print(f"  funding source missing: {funnel['funding_source_missing']}")
     print(f"  funding source excluded: {funnel['funding_source_excluded']}")
     print(f"  clean retail pool rows: {funnel['clean_retail_pool']}")
     print(f"  excluded bot pool rows: {funnel['excluded_bot_pool']}")

@@ -314,6 +314,7 @@ def test_build_clean_wallet_pool_main_entrypoint_prints_summary(
     stdout = captured.out
     stderr = captured.err
     assert "clean wallet pool funnel" in stdout.lower()
+    assert "funding source missing: 0" in stdout.lower()
     assert "funding sources file not found" in stderr.lower()
     assert clean_path.exists()
     assert excluded_path.exists()
