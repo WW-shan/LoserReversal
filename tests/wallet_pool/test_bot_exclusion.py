@@ -354,6 +354,16 @@ def test_exclude_funding_source_clusters_emits_deprecation_for_max_shared_kwarg(
     assert excluded["wallet"].tolist() == ["0xa", "0xb"]
 
 
+@pytest.mark.parametrize("max_shared", [1, 0, 1.5])
+def test_exclude_funding_source_clusters_legacy_max_shared_validates_value(
+    max_shared: object,
+) -> None:
+    from wallet_pool.bot_exclusion import exclude_funding_source_clusters
+
+    with pytest.raises(ValueError):
+        exclude_funding_source_clusters(_pool(["0xa"]), {"0xa": set()}, max_shared=max_shared)
+
+
 @pytest.mark.parametrize(
     "kwargs",
     [

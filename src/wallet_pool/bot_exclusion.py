@@ -137,12 +137,13 @@ def exclude_funding_source_clusters(
                 stacklevel=2,
             )
     elif max_shared is not None:
+        legacy_config = BotExclusionConfig(funding_source_graph_max_shared=max_shared)
         warnings.warn(
             "max_shared is deprecated; pass config=BotExclusionConfig(...) instead",
             DeprecationWarning,
             stacklevel=2,
         )
-        threshold = max_shared
+        threshold = legacy_config.funding_source_graph_max_shared
     else:
         raise TypeError("exclude_funding_source_clusters requires config or max_shared")
 
