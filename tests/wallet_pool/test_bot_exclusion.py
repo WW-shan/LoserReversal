@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import warnings
+
 import pandas as pd
 import pytest
 
@@ -163,6 +165,64 @@ def test_funding_source_graph_ignores_missing_sources() -> None:
 
     assert graph["0xsolo"] == set()
     assert graph["0xother"] == set()
+
+
+def test_funding_source_graph_strict_less_than_as_of() -> None:
+    from wallet_pool.bot_exclusion import funding_source_graph
+
+    as_of = pd.Timestamp("2026-05-26T00:00:00Z")
+    sources = pd.DataFrame(
+        {
+            "wallet": ["0xa", "0xb", "0xc"],
+            "from_address": ["src-1", "src-1", "src-2"],
+            "first_funded_at": [
+                as_of - pd.Timedelta(seconds=1),
+                as_of,
+                as_of - pd.Timedelta(days=1),
+            ],
+        }
+    )
+
+    graph = funding_source_graph(sources, as_of=as_of)
+
+    assert graph["0xa"] == set()
+    assert "0xb" not in graph
+    assert graph["0xc"] == set()
+
+
+def test_funding_source_graph_warns_on_snapshot_mode_with_timestamps() -> None:
+    from wallet_pool.bot_exclusion import funding_source_graph
+
+    sources = pd.DataFrame(
+        {
+            "wallet": ["0xa", "0xb"],
+            "from_address": ["src-1", "src-1"],
+            "funded_at": [
+                pd.Timestamp("2026-05-25T00:00:00Z"),
+                pd.Timestamp("2026-05-26T00:00:00Z"),
+            ],
+        }
+    )
+
+    with pytest.warns(RuntimeWarning, match="snapshot mode is walkforward-unsafe"):
+        funding_source_graph(sources)
+
+
+def test_funding_source_graph_silent_without_timestamp_column() -> None:
+    from wallet_pool.bot_exclusion import funding_source_graph
+
+    sources = pd.DataFrame(
+        {
+            "wallet": ["0xa", "0xb"],
+            "from_address": ["src-1", "src-1"],
+        }
+    )
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        funding_source_graph(sources)
+
+    assert caught == []
 
 
 def test_exclude_funding_source_clusters_excludes_sybil_cluster_at_boundary() -> None:

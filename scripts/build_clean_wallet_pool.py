@@ -72,7 +72,7 @@ def build_clean_wallet_pool(
     score_clean_pool = _remove_wallets(score_clean_pool, fetch_failed_excluded["wallet"])
 
     funding_sources = _read_funding_sources(funding_sources_path)
-    funding_graph = funding_source_graph(funding_sources)
+    funding_graph = funding_source_graph(funding_sources, as_of=as_of_ts)
     cluster_excluded = exclude_funding_source_clusters(
         score_clean_pool,
         funding_graph,

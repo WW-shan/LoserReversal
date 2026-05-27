@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Mapping
+import warnings
 
 import pandas as pd
 
@@ -77,8 +78,38 @@ def exclude_bots_from_pool(
 
 def funding_source_graph(
     wallet_funding_sources: Mapping[str, object] | pd.DataFrame,
+    *,
+    as_of: pd.Timestamp | None = None,
 ) -> dict[str, set[str]]:
-    """Build wallet adjacency sets from shared first-funding-source addresses."""
+    """Build wallet adjacency sets from shared first-funding-source addresses.
+
+    DataFrame inputs with a ``first_funded_at``, ``funded_at``, or ``timestamp``
+    column are filtered to rows strictly before ``as_of`` for point-in-time
+    queries. Passing ``as_of=None`` keeps current snapshot behavior and warns
+    when timestamp data is available because that mode is walkforward-unsafe.
+    """
+
+    if isinstance(wallet_funding_sources, pd.DataFrame):
+        timestamp_column = _find_first_column(
+            wallet_funding_sources.columns,
+            ("first_funded_at", "funded_at", "timestamp"),
+        )
+        if timestamp_column is not None:
+            if as_of is None:
+                warnings.warn(
+                    "funding_source_graph in snapshot mode is walkforward-unsafe; "
+                    "pass as_of for point-in-time queries",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+            else:
+                as_of_ts = _coerce_as_of_timestamp(as_of)
+                timestamps = pd.to_datetime(
+                    wallet_funding_sources[timestamp_column],
+                    utc=True,
+                    errors="coerce",
+                )
+                wallet_funding_sources = wallet_funding_sources.loc[timestamps < as_of_ts].copy()
 
     records = _coerce_funding_sources(wallet_funding_sources)
     wallets = sorted({wallet for wallet, _ in records})
@@ -208,6 +239,13 @@ def _find_first_column(columns: pd.Index, candidates: tuple[str, ...]) -> str | 
         if column is not None:
             return column
     return None
+
+
+def _coerce_as_of_timestamp(value: pd.Timestamp) -> pd.Timestamp:
+    ts = pd.Timestamp(value)
+    if ts.tzinfo is None:
+        return ts.tz_localize("UTC")
+    return ts.tz_convert("UTC")
 
 
 def _normalize_wallet(value: object) -> str:
