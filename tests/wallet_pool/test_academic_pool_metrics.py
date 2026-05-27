@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import pandas as pd
 import pytest
 
@@ -130,6 +132,39 @@ def test_filter_window_excludes_fills_at_exactly_as_of() -> None:
     )
 
     assert metrics["n_trades_90d"] == 1
+
+
+def test_filter_window_finite_check_matches_legacy_corner_cases() -> None:
+    from wallet_pool.academic_pool import _filter_window
+
+    rows = [
+        _fill_row("2026-05-25T00:00:00Z", px=100.0, sz=1.0),
+        _fill_row("2026-05-25T01:00:00Z", px=float("nan"), sz=1.0),
+        _fill_row("2026-05-25T02:00:00Z", px=float("inf"), sz=1.0),
+        _fill_row("2026-05-25T03:00:00Z", px=100.0, sz=float("-inf")),
+        _fill_row("2026-05-25T04:00:00Z", px="not-a-price", sz=1.0),
+        _fill_row("2026-05-25T05:00:00Z", px=100.0, sz="not-a-size"),
+        _fill_row("2026-05-25T06:00:00Z", px="101.5", sz="2.0"),
+    ]
+    for tid, row in enumerate(rows, start=1):
+        row["tid"] = tid
+    fills = _fills_df(rows)
+    horizon = pd.Timestamp("2026-05-24T00:00:00Z")
+    as_of = pd.Timestamp("2026-05-26T00:00:00Z")
+
+    filtered = _filter_window(fills, horizon, as_of)
+
+    legacy = fills.copy()
+    legacy["px"] = pd.to_numeric(legacy["px"], errors="coerce")
+    legacy["sz"] = pd.to_numeric(legacy["sz"], errors="coerce")
+    legacy_mask = legacy[["px", "sz"]].apply(
+        lambda col: col.map(
+            lambda value: False if value is None else math.isfinite(float(value))
+        )
+    )
+    expected = legacy.loc[legacy_mask.all(axis=1)]
+    assert filtered["tid"].tolist() == expected["tid"].tolist()
+    assert filtered["tid"].tolist() == [1, 7]
 
 
 def test_compute_wallet_metrics_rejects_missing_required_fill_columns() -> None:

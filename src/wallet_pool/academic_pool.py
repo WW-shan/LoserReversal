@@ -24,6 +24,7 @@ from __future__ import annotations
 import math
 from typing import Any, Mapping
 
+import numpy as np
 import pandas as pd
 
 
@@ -360,8 +361,7 @@ def _filter_window(
     ).fillna(0.0)
     filtered["dir"] = filtered["dir"].astype("string")
 
-    finite_mask = filtered[["px", "sz"]].apply(lambda col: col.map(_is_finite))
-    keep = finite_mask.all(axis=1)
+    keep = np.isfinite(filtered[["px", "sz"]].to_numpy(dtype=float)).all(axis=1)
     return filtered.loc[keep]
 
 
