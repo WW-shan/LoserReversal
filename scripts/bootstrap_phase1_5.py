@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -100,7 +101,6 @@ def run_bootstrap(config: BootstrapConfig) -> dict[str, Any]:
         "median_50": median,
         "upper_97_5": upper,
         "decision": decision,
-        "samples": samples,
     }
 
     _write_report(config.report, result)
@@ -122,6 +122,11 @@ def _load_returns(config: BootstrapConfig) -> np.ndarray:
         mask &= frame["signal"].astype("string").eq(config.signal)
     if "phase" in frame.columns:
         mask &= frame["phase"].astype("string").eq(config.phase)
+    else:
+        print(
+            f"[WARN] input {config.input} has no 'phase' column; using all rows",
+            file=sys.stderr,
+        )
     selected = frame.loc[mask, "return"]
     values = pd.to_numeric(selected, errors="coerce").dropna().to_numpy(dtype="float64")
     return values
@@ -272,7 +277,7 @@ def _write_report(path: Path, result: dict[str, Any]) -> None:
         "- Decision rule: lower > 0 = robust; upper < 0 = lucky-fold; else inconclusive.",
         f"- **Verdict: {result['decision']}**",
         "",
-        *_verdict_implications(result["decision"]),
+        *_verdict_implications(result["decision"], result),
         "",
     ]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -292,28 +297,30 @@ def _method_description(method: str, result: dict[str, Any]) -> list[str]:
     ]
 
 
-def _verdict_implications(decision: str) -> list[str]:
+def _verdict_implications(decision: str, result: dict[str, Any]) -> list[str]:
+    signal = result.get("signal", "<signal>")
+    method = result.get("method", DEFAULT_METHOD)
     if decision == "robust":
         return [
             "## Implications",
             "",
-            "- v2 signal Sharpe is statistically distinguishable from zero at 95% confidence.",
-            "- Worth proceeding to Ablations B (fix cohort=team), C (BTC<200d filter),"
-            " and D (-10% stop) to attempt GREEN.",
+            f"- {signal} signal Sharpe is statistically distinguishable from zero at "
+            f"95% confidence ({method} bootstrap).",
+            f"- Phase 5 portfolio sizing should use the lower CI bound "
+            f"({result['lower_2_5']:.4f}) with fractional Kelly.",
         ]
     if decision == "lucky-fold":
         return [
             "## Implications",
             "",
             "- Upper CI sits below zero — single-fold Sharpe likely a sampling artifact.",
-            "- Recommend accepting YELLOW (or downgrading to RED) and deferring further tuning.",
+            f"- Treat {signal} as RED and defer further tuning.",
         ]
     return [
         "## Implications",
         "",
         "- CI straddles zero — signal direction is ambiguous on bootstrap evidence.",
-        "- Ablations B/C/D may still help, but expect modest gains; treat YELLOW as upper bound"
-        " until cross-thesis diversification is available.",
+        f"- Treat {signal} as YELLOW upper-bound until cross-thesis diversification.",
     ]
 
 

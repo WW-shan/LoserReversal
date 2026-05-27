@@ -7,7 +7,9 @@ from typing import Any
 
 import pandas as pd
 
+from signals.regime_filter import apply_btc_regime_filter
 from signals.unlock_grid import GridCell, iter_grid, run_cell
+from signals.unlock_grid import SIGNAL_REGISTRY
 
 
 DEFAULT_INIT_CASH = 10_000.0
@@ -35,6 +37,8 @@ def select_best_config(
     train_coverage: pd.DataFrame,
     min_n_trades: int = 5,
     *,
+    highs: dict[str, pd.Series] | None = None,
+    lows: dict[str, pd.Series] | None = None,
     init_cash: float = DEFAULT_INIT_CASH,
     fees: float = DEFAULT_FEES,
     slippage: float = DEFAULT_SLIPPAGE,
@@ -57,6 +61,7 @@ def select_best_config(
         stop_loss_floor=stop_loss_floor,
         stop_loss_cap=stop_loss_cap,
     )
+    price_kwargs = _price_context_kwargs(highs=highs, lows=lows)
     for cell in _candidate_cells(grid_df, signal_code, fix_cohort=fix_cohort):
         row = run_cell(
             train_events,
@@ -66,6 +71,7 @@ def select_best_config(
             init_cash=init_cash,
             fees=fees,
             slippage=slippage,
+            **price_kwargs,
             **stop_kwargs,
         )
         n_trades = int(row["n_trades"])
@@ -85,6 +91,9 @@ def run_per_signal_walkforward(
     signals_to_run: Sequence[str],
     *,
     grid_df: pd.DataFrame | None = None,
+    highs: dict[str, pd.Series] | None = None,
+    lows: dict[str, pd.Series] | None = None,
+    regime_btc_close: pd.Series | None = None,
     min_n_trades: int = 5,
     init_cash: float = DEFAULT_INIT_CASH,
     fees: float = DEFAULT_FEES,
@@ -111,6 +120,7 @@ def run_per_signal_walkforward(
         stop_loss_floor=stop_loss_floor,
         stop_loss_cap=stop_loss_cap,
     )
+    price_kwargs = _price_context_kwargs(highs=highs, lows=lows)
 
     for split_idx, ((train_start, train_end), (test_start, test_end)) in enumerate(splits):
         train_window_start = _utc_timestamp(train_start)
@@ -127,13 +137,25 @@ def run_per_signal_walkforward(
         test_coverage = _filter_coverage_by_window(coverage, test_window_start, test_window_end)
 
         for signal_code in signals_to_run:
+            signal_train_events = _filter_events_for_signal_regime(
+                train_events,
+                signal_code,
+                regime_btc_close,
+            )
+            signal_test_events = _filter_events_for_signal_regime(
+                test_events,
+                signal_code,
+                regime_btc_close,
+            )
             selected = select_best_config(
                 grid,
                 signal_code,
-                train_events,
+                signal_train_events,
                 prices,
                 train_coverage,
                 min_n_trades=min_n_trades,
+                highs=highs,
+                lows=lows,
                 init_cash=init_cash,
                 fees=fees,
                 slippage=slippage,
@@ -150,9 +172,11 @@ def run_per_signal_walkforward(
                 selected = _fallback_config_for_signal(
                     grid,
                     signal_code,
-                    train_events,
+                    signal_train_events,
                     prices,
                     train_coverage,
+                    highs=highs,
+                    lows=lows,
                     init_cash=init_cash,
                     fees=fees,
                     slippage=slippage,
@@ -176,8 +200,9 @@ def run_per_signal_walkforward(
                 }
                 if record_trades:
                     run_kwargs["record_trades"] = True
+                run_kwargs.update(price_kwargs)
                 run_kwargs.update(stop_kwargs)
-                stats = run_cell(test_events, prices, test_coverage, selected, **run_kwargs)
+                stats = run_cell(signal_test_events, prices, test_coverage, selected, **run_kwargs)
                 if record_trades:
                     trade_rows.extend(
                         _walkforward_trade_rows(
@@ -217,6 +242,9 @@ def compose_portfolio(
     splits: Sequence[tuple[tuple[pd.Timestamp, pd.Timestamp], tuple[pd.Timestamp, pd.Timestamp]]],
     top_k: int = 2,
     *,
+    highs: dict[str, pd.Series] | None = None,
+    lows: dict[str, pd.Series] | None = None,
+    regime_btc_close: pd.Series | None = None,
     init_cash: float = DEFAULT_INIT_CASH,
     fees: float = DEFAULT_FEES,
     slippage: float = DEFAULT_SLIPPAGE,
@@ -238,6 +266,7 @@ def compose_portfolio(
         stop_loss_floor=stop_loss_floor,
         stop_loss_cap=stop_loss_cap,
     )
+    price_kwargs = _price_context_kwargs(highs=highs, lows=lows)
 
     for split_idx, ((train_start, train_end), (test_start, test_end)) in enumerate(splits):
         train_window_start = _utc_timestamp(train_start)
@@ -256,15 +285,21 @@ def compose_portfolio(
             cell = _cell_from_selection(selection)
             if cell is None:
                 continue
+            signal_test_events = _filter_events_for_signal_regime(
+                test_events,
+                signal_code,
+                regime_btc_close,
+            )
             components.append(
                 run_cell(
-                    test_events,
+                    signal_test_events,
                     prices,
                     test_coverage,
                     cell,
                     init_cash=init_cash,
                     fees=fees,
                     slippage=slippage,
+                    **price_kwargs,
                     **stop_kwargs,
                 )
             )
@@ -421,6 +456,8 @@ def _fallback_config_for_signal(
     train_prices: dict[str, pd.Series],
     train_coverage: pd.DataFrame,
     *,
+    highs: dict[str, pd.Series] | None = None,
+    lows: dict[str, pd.Series] | None = None,
     init_cash: float,
     fees: float,
     slippage: float,
@@ -444,6 +481,7 @@ def _fallback_config_for_signal(
         stop_loss_floor=stop_loss_floor,
         stop_loss_cap=stop_loss_cap,
     )
+    price_kwargs = _price_context_kwargs(highs=highs, lows=lows)
     rows: list[tuple[GridCell, dict[str, Any]]] = []
     for cell in candidate_cells:
         row = run_cell(
@@ -454,6 +492,7 @@ def _fallback_config_for_signal(
             init_cash=init_cash,
             fees=fees,
             slippage=slippage,
+            **price_kwargs,
             **stop_kwargs,
         )
         rows.append((cell, row))
@@ -470,6 +509,22 @@ def _fallback_sort_key(row: dict[str, Any]) -> tuple[float, int]:
     n_trades = int(row["n_trades"])
     sharpe = _finite_sharpe(row["sharpe"])
     return (sharpe, n_trades)
+
+
+def _filter_events_for_signal_regime(
+    events: pd.DataFrame,
+    signal_code: str,
+    btc_close: pd.Series | None,
+) -> pd.DataFrame:
+    if btc_close is None:
+        return events
+    signal = SIGNAL_REGISTRY[signal_code]
+    return apply_btc_regime_filter(
+        events,
+        btc_close=btc_close,
+        signal_offset_days=signal.entry_offset_days,
+        direction=signal.direction,
+    )
 
 
 def _filter_events_by_window(
@@ -699,4 +754,17 @@ def _stop_loss_kwargs(
             kwargs["stop_loss_floor"] = float(stop_loss_floor)
         if stop_loss_cap is not None:
             kwargs["stop_loss_cap"] = float(stop_loss_cap)
+    return kwargs
+
+
+def _price_context_kwargs(
+    *,
+    highs: dict[str, pd.Series] | None,
+    lows: dict[str, pd.Series] | None,
+) -> dict[str, Any]:
+    kwargs: dict[str, Any] = {}
+    if highs:
+        kwargs["highs"] = highs
+    if lows:
+        kwargs["lows"] = lows
     return kwargs

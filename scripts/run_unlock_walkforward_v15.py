@@ -16,7 +16,7 @@ import pyarrow.parquet as pq
 
 from infra.backtest.walkforward import walk_forward_splits
 from infra.storage import PARQUET_DIR, read_unlocks
-from signals.regime_filter import compute_btc_regime, filter_events_by_regime
+from signals.regime_filter import apply_btc_regime_filter as _apply_btc_regime_filter
 from signals.unlock_grid import SIGNAL_REGISTRY
 from signals.unlock_walkforward import compose_portfolio, run_per_signal_walkforward
 
@@ -141,16 +141,13 @@ def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
     if events.empty:
         raise RuntimeError("no has_hl_perp unlock events available")
 
+    regime_btc_close = None
     if config.regime_filter == "btc-200ma":
-        events = apply_btc_regime_filter(events, config)
-        if events.empty:
-            raise RuntimeError(
-                "no events remain after btc-200ma regime filter "
-                "(check BTC candle history covers events)"
-            )
+        regime_btc_close = _load_btc_close_for_regime(config)
 
     coverage = load_coverage(config.coverage_path)
     prices = load_prices(events, config.candles_dir)
+    highs, lows = _load_high_low_prices(events, config.candles_dir)
     grid_df = pd.read_parquet(config.grid_path)
     start = events["unlock_date"].min().to_pydatetime()
     end = events["unlock_date"].max().to_pydatetime()
@@ -171,6 +168,9 @@ def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
         splits,
         list(SIGNAL_REGISTRY),
         grid_df=grid_df,
+        highs=highs,
+        lows=lows,
+        regime_btc_close=regime_btc_close,
         init_cash=config.init_cash,
         fees=config.fees,
         slippage=config.slippage,
@@ -196,6 +196,9 @@ def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
         coverage,
         splits,
         top_k=config.top_k,
+        highs=highs,
+        lows=lows,
+        regime_btc_close=regime_btc_close,
         init_cash=config.init_cash,
         fees=config.fees,
         slippage=config.slippage,
@@ -227,16 +230,8 @@ def run_walkforward(config: WalkForwardV15Config) -> dict[str, Any]:
     }
 
 
-def apply_btc_regime_filter(
-    events: pd.DataFrame,
-    config: "WalkForwardV15Config",
-) -> pd.DataFrame:
-    """Filter events to only those landing in BTC bear regime (< 200d SMA).
-
-    Reads BTC 1d closes from config.btc_candles_path (defaults to
-    `data/parquet/candles/BTC_1d.parquet`), computes the 200d-SMA bear flag,
-    and drops events whose unlock_date is in bull regime or pre-warmup.
-    """
+def _load_btc_close_for_regime(config: WalkForwardV15Config) -> pd.Series:
+    """Load BTC closes used by the signal-specific regime filter."""
     btc_path = config.btc_candles_path or DEFAULT_BTC_CANDLES_PATH
     if not btc_path.exists():
         raise RuntimeError(
@@ -258,9 +253,28 @@ def apply_btc_regime_filter(
         dtype="float64",
         name="close",
     ).dropna()
-    regime = compute_btc_regime(btc_close, window=200)
-    return filter_events_by_regime(
-        events, regime, direction="short", pass_through_when_unknown=False
+    return btc_close
+
+
+def apply_btc_regime_filter(
+    events: pd.DataFrame,
+    *,
+    btc_close: pd.Series,
+    signal_offset_days: int,
+    direction: str = "short",
+) -> pd.DataFrame:
+    """Apply BTC regime filter at each signal-specific entry date.
+
+    Drops events whose signal-specific entry date
+    (unlock_date + signal_offset_days) is in a non-target BTC regime, or in
+    the SMA warmup period. Uses daily BTC closes available at or before that
+    entry date, avoiding look-ahead bias.
+    """
+    return _apply_btc_regime_filter(
+        events,
+        btc_close=btc_close,
+        signal_offset_days=signal_offset_days,
+        direction=direction,
     )
 
 
@@ -274,6 +288,46 @@ def _load_candidate_events(path: Path) -> pd.DataFrame:
     frame["unlock_date"] = pd.to_datetime(frame["unlock_date"], utc=True, errors="coerce")
     frame = frame.dropna(subset=["unlock_date"])
     return frame.sort_values("unlock_date").reset_index(drop=True)
+
+
+def _load_high_low_prices(
+    events: pd.DataFrame,
+    candles_dir: Path,
+) -> tuple[dict[str, pd.Series], dict[str, pd.Series]]:
+    if events.empty or "token" not in events.columns:
+        return {}, {}
+
+    highs: dict[str, pd.Series] = {}
+    lows: dict[str, pd.Series] = {}
+    tokens = sorted(str(token) for token in events["token"].dropna().unique())
+    for token in tokens:
+        path = candles_dir / f"{token}_1d.parquet"
+        if not path.exists():
+            continue
+        frame = pd.read_parquet(path)
+        if frame.empty or not {"timestamp", "high", "low"}.issubset(frame.columns):
+            continue
+        timestamps = pd.to_datetime(frame["timestamp"], utc=True, errors="coerce")
+        high = _numeric_price_series(frame["high"], timestamps, "high")
+        low = _numeric_price_series(frame["low"], timestamps, "low")
+        if not high.empty and not low.empty:
+            highs[token] = high
+            lows[token] = low
+    return highs, lows
+
+
+def _numeric_price_series(
+    values: pd.Series,
+    index: pd.Series,
+    name: str,
+) -> pd.Series:
+    series = pd.Series(
+        pd.to_numeric(values, errors="coerce").to_numpy(),
+        index=index,
+        name=name,
+        dtype="float64",
+    ).dropna()
+    return series.sort_index()
 
 
 def _walk_forward_splits_with_test_day_fallback(
@@ -656,7 +710,7 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         default=None,
         help=(
             "Per-trade fixed stop loss as a fraction in (0, 1). e.g. --stop-loss 0.10 "
-            "exits a trade once price moves 10% against entry. Used only when "
+            "exits a trade once price moves 10%% against entry. Used only when "
             "--stop-loss-mode=fixed (the default). Default None disables the stop."
         ),
     )
@@ -669,7 +723,7 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
             "--stop-loss scalar. 'atr' replaces the scalar with a per-bar "
             "fraction-of-close stop = multiplier x ATR(period) / close, clipped to "
             "[floor, cap]. ATR mode addresses the Ablation D failure where a fixed "
-            "10% stop killed v2 by ejecting T-30 mean-reversion winners mid-hold."
+            "10%% stop killed v2 by ejecting T-30 mean-reversion winners mid-hold."
         ),
     )
     parser.add_argument(
@@ -689,7 +743,7 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         type=float,
         default=0.08,
         help=(
-            "Lower bound on the ATR-derived stop fraction (default 0.08 = 8%). "
+            "Lower bound on the ATR-derived stop fraction (default 0.08 = 8%%). "
             "Prevents micro-volatility from triggering immediate exits."
         ),
     )
@@ -698,7 +752,7 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         type=float,
         default=0.25,
         help=(
-            "Upper bound on the ATR-derived stop fraction (default 0.25 = 25%). "
+            "Upper bound on the ATR-derived stop fraction (default 0.25 = 25%%). "
             "Prevents runaway volatility from blowing up risk budget."
         ),
     )
@@ -707,9 +761,11 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
         choices=list(REGIME_FILTER_CHOICES),
         default="none",
         help=(
-            "Pre-filter events by macro regime. 'btc-200ma' keeps only events "
-            "landing while BTC < 200d SMA (bear regime favoring contrarian shorts). "
-            "Requires BTC 1d candles back to 2023-01. Default 'none' keeps all events."
+            "Per-signal BTC trend regime filter. 'btc-200ma' gates each signal's "
+            "entry timestamp (unlock_date + entry_offset_days) on BTC's 200d SMA "
+            "trend: short-favorable signals (v1-v4) keep BTC<SMA bear events; "
+            "long-favorable signals (v5) keep BTC>=SMA bull events. Direction is "
+            "read from SIGNAL_REGISTRY. Default 'none' keeps all events."
         ),
     )
     parser.add_argument(
@@ -740,6 +796,11 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
         parser.error("--slippage must be non-negative")
     if args.stop_loss is not None and (args.stop_loss <= 0.0 or args.stop_loss >= 1.0):
         parser.error("--stop-loss must be in the open interval (0, 1)")
+    if args.stop_loss is not None and args.stop_loss_mode == "atr":
+        parser.error(
+            "--stop-loss is incompatible with --stop-loss-mode atr; the scalar is ignored "
+            "in ATR mode. Pick one or the other."
+        )
     if args.stop_loss_atr_period < 1:
         parser.error("--stop-loss-atr-period must be at least 1")
     if args.stop_loss_atr_multiplier <= 0:
@@ -752,6 +813,12 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
         parser.error(
             "--stop-loss-atr-floor must be <= --stop-loss-atr-cap "
             f"(got floor={args.stop_loss_atr_floor}, cap={args.stop_loss_atr_cap})"
+        )
+    if args.stop_loss_mode == "atr":
+        print(
+            "[WARN] ATR mode re-runs IS selection per stop variant; comparison is "
+            "best-IS-per-variant (no remediation in this round).",
+            file=sys.stderr,
         )
 
 

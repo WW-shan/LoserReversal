@@ -22,17 +22,24 @@ SignalFn = Callable[..., dict[str, tuple[pd.Series, pd.Series]]]
 class SignalSpec:
     signal_fn: SignalFn
     direction: str
-    default_kwargs: dict[str, object]
+    entry_offset_days: int
 
 
 @dataclass(frozen=True)
 class GridCell:
+    """Unlock grid search cell.
+
+    entry_offset_days mirrors SIGNAL_REGISTRY[signal_code].entry_offset_days
+    for cell metadata; functional reads use the registry directly.
+    """
+
     code: str
     min_unlock_pct: float
     cohort_name: str
     signal_fn: SignalFn
     direction: str
     category_filter: set[str] | None
+    entry_offset_days: int = 0
 
 
 @dataclass(frozen=True)
@@ -49,11 +56,11 @@ class PortfolioStats:
 
 
 SIGNAL_REGISTRY: dict[str, SignalSpec] = {
-    "v1": SignalSpec(unlock_short_signal, "short", {}),
-    "v2": SignalSpec(unlock_short_30d, "short", {}),
-    "v3": SignalSpec(unlock_short_tactical, "short", {}),
-    "v4": SignalSpec(unlock_short_72h, "short", {}),
-    "v5": SignalSpec(unlock_reversal_long, "long", {}),
+    "v1": SignalSpec(unlock_short_signal, "short", -7),
+    "v2": SignalSpec(unlock_short_30d, "short", -30),
+    "v3": SignalSpec(unlock_short_tactical, "short", -2),
+    "v4": SignalSpec(unlock_short_72h, "short", -3),
+    "v5": SignalSpec(unlock_reversal_long, "long", 3),
 }
 CATEGORY_COHORTS: dict[str, set[str] | None] = {
     "team": {"insiders"},
@@ -81,6 +88,7 @@ def iter_grid() -> Iterator[GridCell]:
                     cohort_name=cohort_name,
                     signal_fn=spec.signal_fn,
                     direction=spec.direction,
+                    entry_offset_days=spec.entry_offset_days,
                     category_filter=category_filter,
                 )
 
@@ -101,6 +109,8 @@ def run_cell(
     stop_loss_atr_multiplier: float = 2.0,
     stop_loss_floor: float = 0.08,
     stop_loss_cap: float = 0.25,
+    highs: dict[str, pd.Series] | None = None,
+    lows: dict[str, pd.Series] | None = None,
 ) -> dict[str, Any]:
     filtered = apply_category_filter(events, cell.category_filter)
     signal_result = cell.signal_fn(
@@ -117,6 +127,8 @@ def run_cell(
         fees=fees,
         slippage=slippage,
         record_trades=record_trades,
+        highs=highs,
+        lows=lows,
         stop_loss=stop_loss,
         stop_loss_mode=stop_loss_mode,
         stop_loss_atr_period=stop_loss_atr_period,
@@ -151,6 +163,8 @@ def backtest_signals(
     fees: float,
     slippage: float,
     record_trades: bool = False,
+    highs: dict[str, pd.Series] | None = None,
+    lows: dict[str, pd.Series] | None = None,
     stop_loss: float | None = None,
     stop_loss_mode: str = "fixed",
     stop_loss_atr_period: int = 14,
@@ -182,7 +196,27 @@ def backtest_signals(
         if close is None:
             continue
 
-        result = run_backtest(close, entries, exits, config)
+        token_config = config
+        high = highs.get(token) if highs is not None else None
+        low = lows.get(token) if lows is not None else None
+        if high is not None and low is not None:
+            token_config = BacktestConfig(
+                init_cash=config.init_cash,
+                fees=config.fees,
+                slippage=config.slippage,
+                freq=config.freq,
+                direction=config.direction,
+                stop_loss=config.stop_loss,
+                stop_loss_mode=config.stop_loss_mode,
+                stop_loss_atr_period=config.stop_loss_atr_period,
+                stop_loss_atr_multiplier=config.stop_loss_atr_multiplier,
+                stop_loss_floor=config.stop_loss_floor,
+                stop_loss_cap=config.stop_loss_cap,
+                high=high,
+                low=low,
+            )
+
+        result = run_backtest(close, entries, exits, token_config)
         token_trades = int(result.stats.get("n_trades", 0))
         token_win_rate = float(result.stats.get("win_rate", 0.0))
         n_trades += token_trades

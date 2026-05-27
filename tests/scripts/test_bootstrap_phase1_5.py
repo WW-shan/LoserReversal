@@ -314,6 +314,70 @@ def test_cli_method_flag_selects_bayesian(tmp_path: Path, capsys) -> None:
     assert "bayesian" in captured.out.lower()
 
 
+def test_implications_substitute_signal_name() -> None:
+    base_result = {
+        "method": "bayesian",
+        "lower_2_5": 0.5035,
+    }
+
+    v1_lines = bootstrap._verdict_implications("robust", {**base_result, "signal": "v1"})
+    v2_lines = bootstrap._verdict_implications("robust", {**base_result, "signal": "v2"})
+
+    assert any("v1 signal Sharpe" in line for line in v1_lines)
+    assert any("v2 signal Sharpe" in line for line in v2_lines)
+    assert not any("Ablations B" in line for line in v1_lines)
+
+
+def test_report_implications_use_result_signal_name(tmp_path: Path) -> None:
+    report = tmp_path / "report.md"
+    bootstrap._write_report(
+        report,
+        {
+            "input": "trades.parquet",
+            "signal": "v1",
+            "phase": "OOS",
+            "iterations": 1000,
+            "seed": 1,
+            "trades_per_year": 14.4,
+            "method": "bayesian",
+            "n_trades": 29,
+            "point_sharpe": 1.0,
+            "mean": 1.1,
+            "lower_2_5": 0.5,
+            "median_50": 1.0,
+            "upper_97_5": 1.5,
+            "decision": "robust",
+        },
+    )
+
+    text = report.read_text(encoding="utf-8")
+    assert "v1 signal Sharpe" in text
+    assert "v2 signal Sharpe" not in text
+
+
+def test_load_returns_warns_when_phase_column_missing(tmp_path: Path, capsys) -> None:
+    frame = pd.DataFrame(
+        {
+            "signal": pd.array(["v2", "v2"], dtype="string"),
+            "return": pd.array([0.10, -0.05], dtype="float64"),
+        }
+    )
+    parquet = tmp_path / "phase_less.parquet"
+    frame.to_parquet(parquet, index=False)
+
+    returns = bootstrap._load_returns(
+        bootstrap.BootstrapConfig(
+            input=parquet,
+            signal="v2",
+            phase="OOS",
+            report=tmp_path / "report.md",
+        )
+    )
+
+    assert returns.tolist() == [0.10, -0.05]
+    assert "has no 'phase' column" in capsys.readouterr().err
+
+
 def _write_trades(tmp_path: Path, *, returns: np.ndarray) -> Path:
     frame = pd.DataFrame(
         {

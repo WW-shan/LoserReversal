@@ -92,6 +92,27 @@ def test_filter_events_by_regime_keeps_only_bear_period_shorts():
     assert set(filtered["token"]) == {"A", "C"}  # B and D landed in bull
 
 
+def test_filter_events_by_regime_uses_entry_date_column_when_provided():
+    days = pd.to_datetime(["2025-09-01", "2025-10-01"], utc=True)
+    bear = pd.Series([True, False], index=days, dtype="boolean", name="bear")
+    events = pd.DataFrame({
+        "token": ["A"],
+        "unlock_date": pd.to_datetime(["2025-10-01"], utc=True),
+        "entry_date": pd.to_datetime(["2025-09-01"], utc=True),
+    })
+
+    by_entry = rf.filter_events_by_regime(
+        events,
+        bear,
+        direction="short",
+        entry_date_column="entry_date",
+    )
+    by_unlock = rf.filter_events_by_regime(events, bear, direction="short")
+
+    assert by_entry["token"].tolist() == ["A"]
+    assert by_unlock.empty
+
+
 def test_filter_events_by_regime_keeps_only_bull_period_longs():
     days = pd.date_range("2024-01-01T00:00:00Z", periods=10, freq="1D", tz="UTC")
     bear = pd.Series(

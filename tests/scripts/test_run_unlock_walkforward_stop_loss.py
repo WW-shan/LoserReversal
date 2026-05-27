@@ -50,6 +50,18 @@ def test_cli_rejects_stop_loss_greater_than_one(monkeypatch, capsys):
     assert "stop-loss" in err or "--stop-loss" in err
 
 
+def test_cli_rejects_stop_loss_scalar_with_atr_mode(monkeypatch, capsys):
+    monkeypatch.setattr(runner, "run_walkforward", lambda config: {})
+
+    with pytest.raises(SystemExit) as exc:
+        runner.main(["--stop-loss", "0.10", "--stop-loss-mode", "atr"])
+
+    assert exc.value.code != 0
+    err = capsys.readouterr().err
+    assert "incompatible" in err
+    assert "stop-loss-mode atr" in err
+
+
 def test_cli_without_stop_loss_keeps_none(monkeypatch):
     captured_configs: list[runner.WalkForwardV15Config] = []
     monkeypatch.setattr(

@@ -1,8 +1,20 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from scripts import run_unlock_walkforward_v15 as runner
+
+
+def test_cli_help_does_not_crash(capsys):
+    with pytest.raises(SystemExit) as excinfo:
+        runner._parse_args(["-h"])
+
+    assert excinfo.value.code == 0
+    captured = capsys.readouterr()
+    assert "10%" in captured.out
+    assert "8%" in captured.out
+    assert "25%" in captured.out
 
 
 def test_config_defaults_traverse_full_data_span():

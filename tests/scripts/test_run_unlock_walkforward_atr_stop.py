@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import pytest
 
+from infra.backtest import engine
 from scripts import run_unlock_walkforward_v15 as runner
 
 
@@ -35,6 +37,22 @@ def test_cli_parses_atr_mode_with_defaults(monkeypatch):
     assert captured[0].stop_loss_atr_multiplier == 2.0
     assert captured[0].stop_loss_atr_floor == 0.08
     assert captured[0].stop_loss_atr_cap == 0.25
+
+
+def test_cli_atr_mode_emits_best_is_per_variant_warning(monkeypatch, capsys):
+    monkeypatch.setattr(runner, "run_walkforward", lambda config: {})
+
+    exit_code = runner.main(["--stop-loss-mode", "atr"])
+
+    assert exit_code == 0
+    err = capsys.readouterr().err
+    assert "best-IS-per-variant" in err
+    assert "lock-is-cell" not in err
+
+
+def test_cli_rejects_lock_is_cell_flag():
+    with pytest.raises(SystemExit):
+        runner._parse_args(["--lock-is-cell", "v2,0.02,team"])
 
 
 def test_cli_parses_atr_mode_with_custom_knobs(monkeypatch):
@@ -119,6 +137,12 @@ def test_run_walkforward_forwards_atr_kwargs(monkeypatch, tmp_path):
     monkeypatch.setattr(runner, "read_unlocks", lambda path=None: _events(), raising=False)
     monkeypatch.setattr(runner, "load_coverage", lambda path: _coverage(), raising=False)
     monkeypatch.setattr(runner, "load_prices", lambda events, candles_dir: {"ARB": _prices()})
+    monkeypatch.setattr(
+        runner,
+        "_load_high_low_prices",
+        lambda events, candles_dir: ({"ARB": _highs()}, {"ARB": _lows()}),
+        raising=False,
+    )
     monkeypatch.setattr(runner, "walk_forward_splits", lambda *args, **kwargs: [split])
     monkeypatch.setattr(
         runner,
@@ -150,8 +174,12 @@ def test_run_walkforward_forwards_atr_kwargs(monkeypatch, tmp_path):
     assert captured_per_signal[0]["stop_loss_atr_multiplier"] == pytest.approx(2.0)
     assert captured_per_signal[0]["stop_loss_floor"] == pytest.approx(0.08)
     assert captured_per_signal[0]["stop_loss_cap"] == pytest.approx(0.25)
+    assert captured_per_signal[0]["highs"]["ARB"].equals(_highs())
+    assert captured_per_signal[0]["lows"]["ARB"].equals(_lows())
     assert captured_portfolio[0]["stop_loss_mode"] == "atr"
     assert captured_portfolio[0]["stop_loss_atr_period"] == 14
+    assert captured_portfolio[0]["highs"]["ARB"].equals(_highs())
+    assert captured_portfolio[0]["lows"]["ARB"].equals(_lows())
 
 
 def test_report_methodology_describes_atr_mode(tmp_path):
@@ -177,6 +205,33 @@ def test_report_methodology_describes_atr_mode(tmp_path):
     text = report.read_text(encoding="utf-8")
     assert "atr" in text.lower() or "ATR" in text
     assert "multiplier" in text.lower() or "2.0" in text
+
+
+def test_atr_with_high_low_uses_wilder_rma():
+    close = np.array([10.0, 11.0, 10.0, 12.0], dtype="float64")
+    high = np.array([12.0, 12.0, 11.0, 13.0], dtype="float64")
+    low = np.array([9.0, 10.0, 9.0, 10.0], dtype="float64")
+
+    atr = engine._compute_atr(close, 3, high=high, low=low)
+
+    np.testing.assert_allclose(
+        atr,
+        np.array([3.0, 2.6666666667, 2.4444444444, 2.6296296296]),
+        rtol=1e-9,
+    )
+
+
+def test_atr_close_only_emits_warning():
+    close = np.array([10.0, 12.0, 11.0, 15.0], dtype="float64")
+
+    with pytest.warns(UserWarning, match="close-only proxy"):
+        atr = engine._compute_atr(close, 3)
+
+    np.testing.assert_allclose(
+        atr,
+        np.array([0.0, 0.6666666667, 0.7777777778, 1.8518518519]),
+        rtol=1e-9,
+    )
 
 
 def _events() -> pd.DataFrame:
@@ -213,6 +268,16 @@ def _coverage() -> pd.DataFrame:
 def _prices() -> pd.Series:
     index = pd.date_range("2026-01-01", periods=300, freq="1D", tz="UTC")
     return pd.Series(range(300), index=index, name="close", dtype="float64")
+
+
+def _highs() -> pd.Series:
+    prices = _prices()
+    return (prices + 2.0).rename("high")
+
+
+def _lows() -> pd.Series:
+    prices = _prices()
+    return (prices - 2.0).rename("low")
 
 
 def _split(

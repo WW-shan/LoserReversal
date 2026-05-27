@@ -5,6 +5,7 @@ import pytest
 
 from datetime import datetime, timezone
 
+from infra.backtest import engine
 from infra.backtest.engine import BacktestConfig, periods_per_year, run_backtest
 from infra.pipeline import PipelineConfig, candles_cover_range
 from scripts.run_btc_sma_e2e import _last_completed_candle_end
@@ -264,20 +265,30 @@ def test_atr_stop_loss_widens_on_volatile_bar():
     )
     entries = pd.Series([False] * 9 + [True] + [False] * 5, index=index)
     exits = pd.Series(False, index=index)
-    atr_config = BacktestConfig(
-        init_cash=10_000.0,
-        fees=0.0,
-        slippage=0.0,
-        direction="shortonly",
-        stop_loss_mode="atr",
-        stop_loss_atr_period=3,
-        stop_loss_atr_multiplier=2.0,
-        stop_loss_floor=0.0,
-        stop_loss_cap=1.0,
+    atr_config_kwargs = {
+        "init_cash": 10_000.0,
+        "fees": 0.0,
+        "slippage": 0.0,
+        "direction": "shortonly",
+        "stop_loss_mode": "atr",
+        "stop_loss_atr_period": 3,
+        "stop_loss_atr_multiplier": 2.0,
+        "stop_loss_floor": 0.0,
+        "stop_loss_cap": 1.0,
+    }
+    calm_config = BacktestConfig(
+        **atr_config_kwargs,
+        high=calm_prices,
+        low=calm_prices,
+    )
+    volatile_config = BacktestConfig(
+        **atr_config_kwargs,
+        high=volatile_prices,
+        low=volatile_prices,
     )
 
-    calm = run_backtest(calm_prices, entries, exits, atr_config)
-    volatile = run_backtest(volatile_prices, entries, exits, atr_config)
+    calm = run_backtest(calm_prices, entries, exits, calm_config)
+    volatile = run_backtest(volatile_prices, entries, exits, volatile_config)
 
     # Calm path: tight ATR stop fires on the +5% squeeze, locking the loss.
     # Volatile path: wider ATR stop survives the squeeze, trade closes flat.
@@ -287,6 +298,60 @@ def test_atr_stop_loss_widens_on_volatile_bar():
     # its stop did not clip the recoverable squeeze. This is the headline
     # property: ATR widens for the volatility regime that fires contrarian shorts.
     assert volatile.equity.iloc[-1] > calm.equity.iloc[-1]
+
+
+def test_atr_stop_uses_wilder_when_ohlc_provided():
+    index = pd.date_range("2026-01-01", periods=4, freq="1D", tz="UTC")
+    close = pd.Series([10.0, 11.0, 10.0, 12.0], index=index, name="close")
+    high = pd.Series([12.0, 12.0, 11.0, 13.0], index=index, name="high")
+    low = pd.Series([9.0, 10.0, 9.0, 10.0], index=index, name="low")
+    config = BacktestConfig(
+        init_cash=10_000.0,
+        fees=0.0,
+        slippage=0.0,
+        stop_loss_mode="atr",
+        stop_loss_atr_period=3,
+        stop_loss_atr_multiplier=1.0,
+        stop_loss_floor=0.0,
+        stop_loss_cap=1.0,
+        high=high,
+        low=low,
+    )
+
+    stop = engine._build_stop_loss(close, config)
+
+    expected_atr = pd.Series(
+        [3.0, 2.6666666667, 2.4444444444, 2.6296296296],
+        index=index,
+    )
+    expected = (expected_atr / close).rename("sl_stop")
+    pd.testing.assert_series_equal(stop, expected)
+
+
+def test_atr_stop_falls_back_to_close_only_when_ohlc_incomplete():
+    index = pd.date_range("2026-01-01", periods=4, freq="1D", tz="UTC")
+    close = pd.Series([10.0, 12.0, 11.0, 15.0], index=index, name="close")
+    high = pd.Series([11.0, 13.0, 16.0], index=index.delete(2), name="high")
+    low = pd.Series([9.0, 11.0, 14.0], index=index.delete(2), name="low")
+    config = BacktestConfig(
+        stop_loss_mode="atr",
+        stop_loss_atr_period=3,
+        stop_loss_atr_multiplier=1.0,
+        stop_loss_floor=0.0,
+        stop_loss_cap=1.0,
+        high=high,
+        low=low,
+    )
+
+    with pytest.warns(UserWarning, match="close-only proxy"):
+        stop = engine._build_stop_loss(close, config)
+
+    expected_atr = pd.Series(
+        [0.0, 0.6666666667, 0.7777777778, 1.8518518519],
+        index=index,
+    )
+    expected = (expected_atr / close).replace(0.0, 0.0).rename("sl_stop")
+    pd.testing.assert_series_equal(stop, expected)
 
 
 def test_atr_stop_loss_caps_at_max():
@@ -313,6 +378,8 @@ def test_atr_stop_loss_caps_at_max():
         stop_loss_atr_multiplier=5.0,
         stop_loss_floor=0.05,
         stop_loss_cap=0.25,
+        high=prices,
+        low=prices,
     )
     uncapped_config = BacktestConfig(
         init_cash=10_000.0,
@@ -324,6 +391,8 @@ def test_atr_stop_loss_caps_at_max():
         stop_loss_atr_multiplier=5.0,
         stop_loss_floor=0.05,
         stop_loss_cap=1.0,
+        high=prices,
+        low=prices,
     )
 
     capped = run_backtest(prices, entries, exits, capped_config)
@@ -361,6 +430,8 @@ def test_atr_stop_loss_floors_at_min():
         stop_loss_atr_multiplier=2.0,
         stop_loss_floor=0.10,
         stop_loss_cap=0.25,
+        high=prices,
+        low=prices,
     )
     no_floor_config = BacktestConfig(
         init_cash=10_000.0,
@@ -372,6 +443,8 @@ def test_atr_stop_loss_floors_at_min():
         stop_loss_atr_multiplier=2.0,
         stop_loss_floor=0.0,
         stop_loss_cap=0.25,
+        high=prices,
+        low=prices,
     )
 
     floored = run_backtest(prices, entries, exits, floored_config)
@@ -404,6 +477,8 @@ def test_atr_stop_loss_does_not_change_no_entry_behavior():
         stop_loss_atr_multiplier=2.0,
         stop_loss_floor=0.08,
         stop_loss_cap=0.25,
+        high=prices,
+        low=prices,
     )
 
     fixed = run_backtest(prices, entries, exits, fixed_config)

@@ -1,9 +1,14 @@
-"""BTC trend-regime filter for contrarian short signals.
+"""Per-signal BTC trend-regime filter.
 
-Phase 1.5 diagnostic (Q2/Q5 deep research) flagged Split 4 (2025-09 to
-2026-03) as a bear period that punished naive unlock shorts. The
-academic mitigation is to gate short entries on BTC trending below its
-200-day SMA — i.e., short only when the macro regime supports it.
+Each signal in SIGNAL_REGISTRY has its own entry_offset_days and direction
+("short" or "long"). This filter gates events at each signal's entry
+timestamp (unlock_date + entry_offset_days) against BTC's 200d SMA trend:
+- direction="short": keep events landing in bear regime (BTC < SMA)
+- direction="long": keep events landing in bull regime (BTC >= SMA)
+
+Phase 1.5 diagnostic identified Split 4 (bear period 2025-09 to 2026-03)
+as punishing naive unlock shorts; this filter excludes events outside
+the trend favoring the signal's direction.
 """
 
 from __future__ import annotations
@@ -65,28 +70,30 @@ def filter_events_by_regime(
     *,
     direction: str = "short",
     pass_through_when_unknown: bool = False,
+    entry_date_column: str = "unlock_date",
 ) -> pd.DataFrame:
-    """Drop events whose unlock_date lands outside the regime favouring `direction`.
+    """Drop events whose entry timestamp lands outside the regime favouring `direction`.
 
     direction="short" keeps events landing in bear regime (BTC < SMA).
     direction="long" keeps events landing in bull regime (BTC >= SMA).
     direction="both" returns events unchanged.
 
-    When the regime is unknown at an event's unlock_date (lookback not yet
+    When the regime is unknown at an event's entry timestamp (lookback not yet
     warmed), the event is dropped unless pass_through_when_unknown=True.
     """
     if direction not in {"short", "long", "both"}:
         raise ValueError(f"unsupported direction: {direction}")
     if events.empty or direction == "both":
         return events.copy()
-    if "unlock_date" not in events.columns:
+    if entry_date_column not in events.columns:
         return events.copy()
 
     target = True if direction == "short" else False
     keep_mask = pd.Series(False, index=events.index, dtype=bool)
-    for idx, unlock_ts in events["unlock_date"].items():
+    # O(n log m); current Phase 1.5 scale is ~1.8k events over ~1k regime days.
+    for idx, entry_ts in events[entry_date_column].items():
         try:
-            ts = pd.Timestamp(unlock_ts)
+            ts = pd.Timestamp(entry_ts)
         except (TypeError, ValueError):
             continue
         bear = is_bear_at(regime, ts)
@@ -98,6 +105,40 @@ def filter_events_by_regime(
 
     filtered = events.loc[keep_mask].copy()
     return filtered.reset_index(drop=True)
+
+
+def apply_btc_regime_filter(
+    events: pd.DataFrame,
+    *,
+    btc_close: pd.Series,
+    signal_offset_days: int,
+    direction: str = "short",
+) -> pd.DataFrame:
+    """Filter by BTC regime at each event's signal-specific entry date.
+
+    Drops events whose signal-specific entry date
+    (unlock_date + signal_offset_days) is in a non-target BTC regime, or in
+    the SMA warmup period. Uses prior closes only through the entry date.
+    """
+    if events.empty or "unlock_date" not in events.columns:
+        return events.copy()
+
+    events_with_entry = events.copy()
+    unlock_date = pd.to_datetime(events_with_entry["unlock_date"], utc=True, errors="coerce")
+    entry_date_column = "__regime_entry_date"
+    events_with_entry[entry_date_column] = unlock_date + pd.to_timedelta(
+        signal_offset_days,
+        unit="D",
+    )
+    regime = compute_btc_regime(btc_close, window=DEFAULT_WINDOW)
+    filtered = filter_events_by_regime(
+        events_with_entry,
+        regime,
+        direction=direction,
+        pass_through_when_unknown=False,
+        entry_date_column=entry_date_column,
+    )
+    return filtered.drop(columns=[entry_date_column], errors="ignore")
 
 
 def _to_daily(series: pd.Series) -> pd.Series:

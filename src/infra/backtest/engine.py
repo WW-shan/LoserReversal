@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 
 import numpy as np
@@ -42,6 +43,8 @@ class BacktestConfig:
     stop_loss_atr_multiplier: float = 2.0
     stop_loss_floor: float = 0.08
     stop_loss_cap: float = 0.25
+    high: pd.Series | None = None
+    low: pd.Series | None = None
 
 
 @dataclass
@@ -102,9 +105,10 @@ def _build_stop_loss(close: pd.Series, config: BacktestConfig) -> float | pd.Ser
     """Materialise the stop-loss argument passed to vbt.
 
     Returns a scalar (legacy fixed mode) or a per-bar Series (ATR mode), or
-    ``None`` when no stop should apply. ATR mode uses a close-only True Range
-    proxy because OHLC data is not threaded through the engine; the resulting
-    per-bar sl_stop is clipped to ``[stop_loss_floor, stop_loss_cap]``.
+    ``None`` when no stop should apply. ATR mode uses OHLC true range when
+    high/low series are available, otherwise it falls back to a close-only
+    proxy. The resulting per-bar sl_stop is clipped to
+    ``[stop_loss_floor, stop_loss_cap]``.
     """
     if config.stop_loss_mode == "fixed":
         if config.stop_loss is None:
@@ -114,6 +118,8 @@ def _build_stop_loss(close: pd.Series, config: BacktestConfig) -> float | pd.Ser
     # ATR mode: build a per-bar fraction-of-close stop array.
     sl_stop = _atr_stop_series(
         close,
+        high=config.high,
+        low=config.low,
         period=int(config.stop_loss_atr_period),
         multiplier=float(config.stop_loss_atr_multiplier),
         floor=float(config.stop_loss_floor),
@@ -125,6 +131,8 @@ def _build_stop_loss(close: pd.Series, config: BacktestConfig) -> float | pd.Ser
 def _atr_stop_series(
     close: pd.Series,
     *,
+    high: pd.Series | None = None,
+    low: pd.Series | None = None,
     period: int,
     multiplier: float,
     floor: float,
@@ -132,10 +140,9 @@ def _atr_stop_series(
 ) -> pd.Series:
     """Compute the per-bar ATR-fraction stop loss series.
 
-    True Range is approximated with a close-only proxy ``|close.diff()|``
-    because OHLC is not threaded through the engine signature. The resulting
-    fraction-of-close stop is the rolling mean of TR over ``period`` bars
-    divided by close, scaled by ``multiplier`` and clipped to ``[floor, cap]``.
+    True Range uses high/low/previous-close when high and low series are
+    provided. If OHLC is unavailable, a close-only ``|close.diff()|`` proxy is
+    used. ATR is Wilder's RMA in both paths.
     """
     if period < 1:
         raise ValueError(f"stop_loss_atr_period must be >= 1, got {period}")
@@ -152,14 +159,69 @@ def _atr_stop_series(
     if close_arr.size == 0:
         return pd.Series(dtype="float64", index=close.index, name="sl_stop")
 
-    true_range = np.abs(np.diff(close_arr, prepend=close_arr[0]))
-    tr_series = pd.Series(true_range, index=close.index, dtype="float64")
-    atr = tr_series.rolling(window=period, min_periods=1).mean()
+    high_arr: np.ndarray | None = None
+    low_arr: np.ndarray | None = None
+    if high is not None and low is not None:
+        high_aligned = high.astype("float64").reindex(close.index)
+        low_aligned = low.astype("float64").reindex(close.index)
+        if not high_aligned.isna().any() and not low_aligned.isna().any():
+            high_arr = high_aligned.to_numpy()
+            low_arr = low_aligned.to_numpy()
+
+    atr = pd.Series(
+        _compute_atr(close_arr, period, high=high_arr, low=low_arr),
+        index=close.index,
+        dtype="float64",
+    )
     # fraction-of-close stop; guard against zero close before division.
     safe_close = pd.Series(close_arr, index=close.index, dtype="float64").replace(0.0, np.nan)
     fraction = (multiplier * atr / safe_close).bfill().ffill().fillna(floor)
     clipped = fraction.clip(lower=floor, upper=cap)
     return clipped.rename("sl_stop")
+
+
+def _compute_atr(
+    close: np.ndarray,
+    period: int,
+    *,
+    high: np.ndarray | None = None,
+    low: np.ndarray | None = None,
+) -> np.ndarray:
+    if period < 1:
+        raise ValueError(f"period must be >= 1, got {period}")
+    close_arr = np.asarray(close, dtype="float64")
+    if close_arr.size == 0:
+        return np.array([], dtype="float64")
+    if high is not None and low is not None and len(high) == len(close_arr) == len(low):
+        high_arr = np.asarray(high, dtype="float64")
+        low_arr = np.asarray(low, dtype="float64")
+        prev_close = np.concatenate(([close_arr[0]], close_arr[:-1]))
+        true_range = np.maximum.reduce(
+            [
+                high_arr - low_arr,
+                np.abs(high_arr - prev_close),
+                np.abs(low_arr - prev_close),
+            ]
+        )
+        return (
+            pd.Series(true_range, dtype="float64")
+            .ewm(alpha=1.0 / period, adjust=False)
+            .mean()
+            .to_numpy()
+        )
+
+    warnings.warn(
+        "ATR using close-only proxy (no high/low provided); systematic underestimate of true range",
+        UserWarning,
+        stacklevel=2,
+    )
+    true_range = np.abs(np.diff(close_arr, prepend=close_arr[0]))
+    return (
+        pd.Series(true_range, dtype="float64")
+        .ewm(alpha=1.0 / period, adjust=False)
+        .mean()
+        .to_numpy()
+    )
 
 
 def _align_bool_signals(signals: pd.Series, index: pd.Index) -> pd.Series:

@@ -1,6 +1,6 @@
 # Phase 1.5 Bootstrap CI (Bayesian) on v1 OOS
 
-_Generated 2026-05-26 00:42 UTC_
+_Generated 2026-05-26 17:46 UTC_
 
 ## Methodology
 
@@ -43,6 +43,6 @@ _Generated 2026-05-26 00:42 UTC_
 
 ## Implications
 
-- v2 signal Sharpe is statistically distinguishable from zero at 95% confidence.
-- Worth proceeding to Ablations B (fix cohort=team), C (BTC<200d filter), and D (-10% stop) to attempt GREEN.
+- v1 signal Sharpe is statistically distinguishable from zero at 95% confidence (bayesian bootstrap).
+- Phase 5 portfolio sizing should use the lower CI bound (0.5035) with fractional Kelly.
 
