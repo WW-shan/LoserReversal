@@ -14,6 +14,7 @@
 | Phase 2 (v1) | ✅ archived | RED (misread) → re-classified **FILTER MISDESIGN** | IR=-4.83 because vlm-based filter selected 86%-profitable whale cohort |
 | **Phase 1.5** | ✅ done | 🟡 **YELLOW (v1+D recommended)** | Switched: v1 (T-7) + stop=10% + cohort=team: Sharpe 0.59 / MaxDD -7.8% / 29 trades. Was v2 (T-30): Sharpe 0.61 / MaxDD -29% / 36 trades. |
 | Phase 1.5 Ablations A/B/D | ✅ done | mixed | A robust [0.84,4.09] / B team-is-driver (Δ-0.02) / D mixed (v1 up, v2 collapse) |
+| **Phase 1.5 D-ATR sweep** | ✅ done 2026-05-28 | 🟡 v2 rescued | v2+ATR(mult=1.5) Sharpe 0.521 / MaxDD -21.7% / n=34 — bootstrap CI [0.61, 3.40] robust. Same thesis as v1+D so doesn't unlock Phase 5 gate (gate needs cross-thesis). |
 | Phase 1.5 Ablation C | ✅ done | 🔴 **REJECT** (bear-filter unusable) | Bear-only filter collapses sample to 1 trade/signal across 5 splits — `reports/phase-1-5-ablation-c.md`. BTC <200d windows too sparse layered with cohort=team. |
 | **Phase 3 (reframed)** | ✅ done | 🔴 **RED (data_gap)** | Aggregate OOS Sharpe 0.42 / ann 5.23% / 45 trades — but 1h candle backfill only 90 days; re-run needed after backfill |
 | Phase 2.5 Slice 1 | ✅ archived 2026-05-27 | 🟢 **GREEN with spec deviation** | academic wallet pool n=21 (target 200-500 unattainable on HL — see backend spec rule). 10-round 3-way review converged. |
