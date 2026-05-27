@@ -42,8 +42,8 @@ def _fills(rows: list[dict[str, object]]) -> pd.DataFrame:
     return frame.set_index("time").sort_index()
 
 
-def _prices(*coins: str, periods: int = 49) -> dict[str, pd.Series]:
-    index = pd.date_range("2026-01-01T00:00:00Z", periods=periods, freq="1h")
+def _prices(*coins: str, periods: int = 49, freq: str = "1h") -> dict[str, pd.Series]:
+    index = pd.date_range("2026-01-01T00:00:00Z", periods=periods, freq=freq)
     return {coin: pd.Series(100.0, index=index, name="close") for coin in coins}
 
 
@@ -354,6 +354,54 @@ def test_hold_expiry_opposite_direction_at_exact_boundary_allows_same_bar_swap()
     assert entries.loc[pd.Timestamp("2026-01-01T00:00:00Z"), "short"]
     assert exits.loc[pd.Timestamp("2026-01-02T00:00:00Z"), "short"]
     assert entries.loc[pd.Timestamp("2026-01-02T00:00:00Z"), "long"]
+
+
+def test_hold_expiry_same_direction_aligned_to_same_bar_defers_reentry() -> None:
+    fills_by_wallet = {
+        wallet: _fills(
+            [
+                _fill("2026-01-01T00:00:00Z", direction="Open Long"),
+                _fill("2026-01-01T01:30:00Z", direction="Open Long"),
+            ]
+        )
+        for wallet in ("0x1", "0x2", "0x3")
+    }
+
+    entries, exits = cluster_bot_signal(
+        fills_by_wallet,
+        _high_scores("0x1", "0x2", "0x3"),
+        _prices("BTC", periods=4, freq="2h"),
+        config=BotClusterConfig(hold_hours=1),
+    )["BTC"]
+
+    assert entries.loc[pd.Timestamp("2026-01-01T00:00:00Z"), "short"]
+    assert exits.loc[pd.Timestamp("2026-01-01T02:00:00Z"), "short"]
+    assert not entries.loc[pd.Timestamp("2026-01-01T02:00:00Z"), "short"]
+    assert entries.loc[pd.Timestamp("2026-01-01T04:00:00Z"), "short"]
+
+
+def test_hold_expiry_opposite_direction_aligned_to_same_bar_allows_same_bar_swap() -> None:
+    fills_by_wallet = {
+        wallet: _fills(
+            [
+                _fill("2026-01-01T00:00:00Z", direction="Open Long"),
+                _fill("2026-01-01T01:30:00Z", direction="Open Short"),
+            ]
+        )
+        for wallet in ("0x1", "0x2", "0x3")
+    }
+
+    entries, exits = cluster_bot_signal(
+        fills_by_wallet,
+        _high_scores("0x1", "0x2", "0x3"),
+        _prices("BTC", periods=4, freq="2h"),
+        config=BotClusterConfig(hold_hours=1),
+    )["BTC"]
+
+    assert entries.loc[pd.Timestamp("2026-01-01T00:00:00Z"), "short"]
+    assert exits.loc[pd.Timestamp("2026-01-01T02:00:00Z"), "short"]
+    assert entries.loc[pd.Timestamp("2026-01-01T02:00:00Z"), "long"]
+    assert not entries.loc[pd.Timestamp("2026-01-01T02:00:00Z"), "short"]
 
 
 def test_cluster_bot_signal_warns_on_dangling_trailing_exit() -> None:

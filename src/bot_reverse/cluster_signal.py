@@ -228,6 +228,7 @@ def _apply_candidates(
     for row in candidates.itertuples(index=False):
         candidate_time = pd.Timestamp(row.time)
         reverse_dir = str(row.reverse_dir)
+        candidate_bar = _align_to_price_index(entries.index, candidate_time)
         if hold_exit_at is not None and hold_exit_at <= candidate_time:
             expired_dir = active_dir
             exit_bar = _align_to_price_index(entries.index, hold_exit_at)
@@ -236,20 +237,18 @@ def _apply_candidates(
             defer_same_direction = (
                 expired_dir is not None
                 and reverse_dir == expired_dir
-                and candidate_time == hold_exit_at
+                and candidate_bar is not None
+                and exit_bar is not None
+                and candidate_bar == exit_bar
             )
             active_dir = None
             hold_exit_at = None
             if defer_same_direction:
-                next_bar = _next_price_bar_after(
-                    entries.index,
-                    exit_bar if exit_bar is not None else candidate_time,
-                )
-                if next_bar is None:
+                candidate_bar = _next_price_bar_after(entries.index, exit_bar)
+                if candidate_bar is None:
                     continue
-                candidate_time = next_bar
 
-        entry_bar = _align_to_price_index(entries.index, candidate_time)
+        entry_bar = candidate_bar
         if entry_bar is None:
             continue
         if active_dir is None:
