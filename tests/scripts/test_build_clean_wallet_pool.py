@@ -310,3 +310,27 @@ def test_build_clean_wallet_pool_rejects_invalid_min_trades(mocker, capsys) -> N
         builder._parse_args()
 
     assert "--min-trades must be greater than 0" in capsys.readouterr().err
+
+
+def test_build_clean_wallet_pool_rejects_zero_bot_score_threshold(mocker, capsys) -> None:
+    import scripts.build_clean_wallet_pool as builder
+
+    mocker.patch("sys.argv", ["build_clean_wallet_pool.py", "--bot-score-threshold", "0"])
+
+    with pytest.raises(SystemExit) as error:
+        builder._parse_args()
+
+    assert error.value.code != 0
+    assert "--bot-score-threshold must be greater than 0 and at most 1" in capsys.readouterr().err
+
+
+def test_build_clean_wallet_pool_rejects_singleton_funding_source_threshold(mocker, capsys) -> None:
+    import scripts.build_clean_wallet_pool as builder
+
+    mocker.patch("sys.argv", ["build_clean_wallet_pool.py", "--funding-source-max-shared", "1"])
+
+    with pytest.raises(SystemExit) as error:
+        builder._parse_args()
+
+    assert error.value.code != 0
+    assert "--funding-source-max-shared must be greater than 1" in capsys.readouterr().err

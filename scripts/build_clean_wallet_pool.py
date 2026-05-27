@@ -351,10 +351,10 @@ def _parse_timestamp(value: str) -> pd.Timestamp:
 
 
 def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
-    if not 0.0 <= args.bot_score_threshold <= 1.0:
-        parser.error("--bot-score-threshold must be between 0 and 1")
-    if args.funding_source_max_shared <= 0:
-        parser.error("--funding-source-max-shared must be greater than 0")
+    if not 0.0 < args.bot_score_threshold <= 1.0:
+        parser.error("--bot-score-threshold must be greater than 0 and at most 1")
+    if args.funding_source_max_shared <= 1:
+        parser.error("--funding-source-max-shared must be greater than 1")
     if args.throttle_ms < 0:
         parser.error("--throttle-ms must be non-negative")
     if args.min_trades <= 0:
