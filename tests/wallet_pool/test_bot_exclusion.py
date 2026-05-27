@@ -311,3 +311,33 @@ def test_bot_exclusion_config_accepts_inclusive_upper_bound() -> None:
 
     assert config.bot_score_threshold == 1.0
     assert config.funding_source_graph_max_shared == 2
+
+
+def test_coerce_bot_scores_raises_on_conflicting_scores() -> None:
+    from wallet_pool.bot_exclusion import _coerce_bot_scores
+
+    scores = pd.DataFrame(
+        {
+            "wallet": ["0xA", "0xa", "0xb"],
+            "bot_score": [0.20, 0.80, 0.50],
+        }
+    )
+
+    with pytest.raises(ValueError, match="conflicting values"):
+        _coerce_bot_scores(scores)
+
+
+def test_coerce_bot_scores_collapses_identical_duplicates() -> None:
+    from wallet_pool.bot_exclusion import _coerce_bot_scores
+
+    scores = pd.DataFrame(
+        {
+            "wallet": ["0xA", "0xa", "0xb"],
+            "bot_score": [0.20, 0.20, 0.50],
+        }
+    )
+
+    coerced = _coerce_bot_scores(scores)
+
+    assert coerced["wallet"].tolist() == ["0xa", "0xb"]
+    assert coerced["bot_score"].tolist() == [0.20, 0.50]

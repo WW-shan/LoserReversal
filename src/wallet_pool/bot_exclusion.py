@@ -195,6 +195,10 @@ def _coerce_bot_scores(bot_scores: Mapping[str, float] | pd.DataFrame) -> pd.Dat
     frame["wallet"] = frame["wallet"].astype("string").str.lower()
     frame["bot_score"] = pd.to_numeric(frame["bot_score"], errors="coerce").astype("float64")
     frame = frame.dropna(subset=["wallet"])
+    conflicting_scores = frame.groupby("wallet")["bot_score"].nunique(dropna=True)
+    conflicts = sorted(conflicting_scores[conflicting_scores > 1].index.tolist())
+    if conflicts:
+        raise ValueError(f"bot_scores contains conflicting values for wallets: {conflicts}")
     frame = frame.drop_duplicates(subset=["wallet"], keep="last")
     return frame.reset_index(drop=True)
 
