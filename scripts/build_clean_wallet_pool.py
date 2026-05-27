@@ -26,6 +26,7 @@ DEFAULT_CLEAN_OUT = Path("data/parquet/clean_retail_pool.parquet")
 DEFAULT_EXCLUDED_OUT = Path("data/parquet/excluded_bot_pool.parquet")
 DEFAULT_FUNDING_SOURCES = Path("data/parquet/wallet_funding_sources.parquet")
 DEFAULT_THROTTLE_MS = 200
+DEFAULT_MIN_TRADES = 10
 LOOKBACK_DAYS = 90
 EXCLUDED_COLUMNS = ["wallet", "bot_score", "reason"]
 
@@ -38,6 +39,7 @@ def build_clean_wallet_pool(
     bot_score_threshold: float = 0.5,
     funding_source_graph_max_shared: int = 3,
     throttle_ms: int = DEFAULT_THROTTLE_MS,
+    min_trades_for_scoring: int = DEFAULT_MIN_TRADES,
     fetch_attempts: int = 3,
     retry_backoff_seconds: float = 0.25,
     lookback_days: int = LOOKBACK_DAYS,
@@ -51,6 +53,7 @@ def build_clean_wallet_pool(
         as_of=as_of_ts,
         lookback_days=lookback_days,
         throttle_ms=throttle_ms,
+        min_trades_for_scoring=min_trades_for_scoring,
         fetch_attempts=fetch_attempts,
         retry_backoff_seconds=retry_backoff_seconds,
         started=started,
@@ -122,6 +125,7 @@ def _score_wallets(
     as_of: pd.Timestamp,
     lookback_days: int,
     throttle_ms: int,
+    min_trades_for_scoring: int,
     fetch_attempts: int,
     retry_backoff_seconds: float,
     started: float,
@@ -159,9 +163,11 @@ def _score_wallets(
             continue
 
         fetched += 1
-        account_value = float(getattr(record, "account_value", 0.0) or 0.0)
-        features = compute_bot_features(fills, account_value=account_value)
-        bot_score = score_bot_likelihood(features)
+        features = compute_bot_features(fills)
+        bot_score = score_bot_likelihood(
+            features,
+            min_trades_for_scoring=min_trades_for_scoring,
+        )
         rows.append({"wallet": wallet, "bot_score": bot_score})
         _log(position, total, wallet, f"scored {bot_score:.3f}", wallet_started, started)
         _sleep(throttle_ms, position, total)
@@ -327,6 +333,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--bot-score-threshold", type=float, default=0.5)
     parser.add_argument("--funding-source-max-shared", type=int, default=3)
     parser.add_argument("--throttle-ms", type=int, default=DEFAULT_THROTTLE_MS)
+    parser.add_argument("--min-trades", type=int, default=DEFAULT_MIN_TRADES)
     parser.add_argument("--fetch-attempts", type=int, default=3)
     parser.add_argument("--retry-backoff-seconds", type=float, default=0.25)
     parser.add_argument("--lookback-days", type=int, default=LOOKBACK_DAYS)
@@ -350,6 +357,8 @@ def _validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) ->
         parser.error("--funding-source-max-shared must be greater than 0")
     if args.throttle_ms < 0:
         parser.error("--throttle-ms must be non-negative")
+    if args.min_trades <= 0:
+        parser.error("--min-trades must be greater than 0")
     if args.fetch_attempts <= 0:
         parser.error("--fetch-attempts must be greater than 0")
     if args.retry_backoff_seconds < 0:
@@ -368,6 +377,7 @@ def main() -> int:
         bot_score_threshold=args.bot_score_threshold,
         funding_source_graph_max_shared=args.funding_source_max_shared,
         throttle_ms=args.throttle_ms,
+        min_trades_for_scoring=args.min_trades,
         fetch_attempts=args.fetch_attempts,
         retry_backoff_seconds=args.retry_backoff_seconds,
         lookback_days=args.lookback_days,

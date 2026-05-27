@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 
 def _fill_row(
@@ -219,6 +220,34 @@ def test_build_clean_wallet_pool_retries_transient_fetch_failure(
     assert excluded["reason"].tolist() == ["bot_score"]
 
 
+def test_build_clean_wallet_pool_respects_min_trades(mocker, tmp_path: Path) -> None:
+    import scripts.build_clean_wallet_pool as builder
+
+    academic_path = tmp_path / "academic_wallet_pool.parquet"
+    clean_path = tmp_path / "clean.parquet"
+    excluded_path = tmp_path / "excluded.parquet"
+    _academic_pool(["0xthinbot"]).to_parquet(academic_path, index=False)
+    mocker.patch.object(builder, "fetch_user_fills", return_value=_bot_fills())
+
+    result = builder.build_clean_wallet_pool(
+        academic_pool_path=academic_path,
+        clean_out=clean_path,
+        excluded_out=excluded_path,
+        funding_sources_path=tmp_path / "missing_funding_sources.parquet",
+        throttle_ms=0,
+        min_trades_for_scoring=50,
+        as_of=pd.Timestamp("2026-05-26T00:00:00Z"),
+    )
+
+    clean = pd.read_parquet(clean_path)
+    excluded = pd.read_parquet(excluded_path)
+
+    assert clean["wallet"].tolist() == ["0xthinbot"]
+    assert excluded.empty
+    assert result["funnel"]["bot_score_excluded"] == 0
+    assert result["funnel"]["clean_retail_pool"] == 1
+
+
 def test_build_clean_wallet_pool_main_entrypoint_prints_summary(
     mocker,
     tmp_path: Path,
@@ -260,3 +289,24 @@ def test_build_clean_wallet_pool_main_entrypoint_prints_summary(
     assert "funding sources file not found" in stderr.lower()
     assert clean_path.exists()
     assert excluded_path.exists()
+
+
+def test_build_clean_wallet_pool_parse_args_accepts_min_trades(mocker) -> None:
+    import scripts.build_clean_wallet_pool as builder
+
+    mocker.patch("sys.argv", ["build_clean_wallet_pool.py", "--min-trades", "25"])
+
+    args = builder._parse_args()
+
+    assert args.min_trades == 25
+
+
+def test_build_clean_wallet_pool_rejects_invalid_min_trades(mocker, capsys) -> None:
+    import scripts.build_clean_wallet_pool as builder
+
+    mocker.patch("sys.argv", ["build_clean_wallet_pool.py", "--min-trades", "0"])
+
+    with pytest.raises(SystemExit):
+        builder._parse_args()
+
+    assert "--min-trades must be greater than 0" in capsys.readouterr().err
