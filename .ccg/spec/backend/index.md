@@ -216,3 +216,55 @@ spans >2 orders of magnitude, use log-scale. Verify on real data:
 component values across the actual cohort should span >0.3 wide, not
 cluster at one extreme. Source: phase-2.5-slice-2 R1 I3.
 
+
+### Legacy keyword paths must route through the dataclass constructor
+**Rule**: when a public API supports both a `config: SomeConfig` keyword
+and a legacy individual-parameter keyword (kept under
+`DeprecationWarning`), the legacy path MUST construct the config dataclass
+via `SomeConfig(field=legacy_value)` rather than duplicating the
+validation inline or skipping it. Validation lives only in
+`__post_init__`; legacy paths must not bypass it.
+
+**Why**: phase-2.5-slice-3 R2-I1: after R1 added `BotExclusionConfig.__post_init__`
+validation (rejecting `funding_source_graph_max_shared < 2`), the legacy
+`exclude_funding_source_clusters(..., max_shared=1)` keyword path still
+emitted only a `DeprecationWarning` then proceeded to exclude singletons.
+Codex repro: `max_shared=1` on a graph of `{"0xsolo": set()}` returned
+`['0xsolo']`. Fix: legacy branch calls `BotExclusionConfig(funding_source_graph_max_shared=max_shared)`,
+which raises `ValueError` for invalid values before the `warnings.warn`
+call, then uses the validated value for valid cases.
+
+**How to apply**: when introducing a `config=`/legacy-keyword pair, make the
+legacy branch a thin adapter that constructs the config and reads back
+the validated field. ValueError fires for invalid input (no
+DeprecationWarning needed — the call was malformed); DeprecationWarning
+fires only for valid input (nudging migration). Add tests
+parameterized over both invalid (`pytest.raises(ValueError)`) and valid
+(`pytest.warns(DeprecationWarning)`) legacy values. Source:
+phase-2.5-slice-3 R2-I1.
+
+### Mixed valid/NaN duplicate row collapse must prefer valid deterministically
+**Rule**: when deduplicating rows keyed by some column where values may be
+NaN, plain `drop_duplicates(keep="last")` is order-dependent and can
+silently overwrite a valid value with NaN. Use a 2-step pattern:
+`frame.sort_values(value_col, na_position="first")` (or equivalent
+factorize trick) then `drop_duplicates(subset=[key_col], keep="last")` so
+NaN rows are always dropped first.
+
+**Why**: phase-2.5-slice-3 R2-I2: `_coerce_bot_scores` used
+`nunique(dropna=True)` to check conflicts then `drop_duplicates(keep="last")`.
+Input `[(0xA, 0.9), (0xa, NaN)]` passed the conflict check (nunique=1) and
+then NaN won via "last", erasing the real bot score. Production path
+emits one row per wallet so the bug was latent, but the API silently lost
+data — same class as spec rule "Threshold parameter validation" (never
+silently clamp at public API).
+
+**How to apply**: for any DataFrame-coercion helper that ingests user-supplied
+rows where the value column can be NaN, choose the pattern that fails
+closed for absent data and succeeds for present data: sort so NaN comes
+first, drop_duplicates keep last. Add 2 regression tests with the input
+in both row orders to catch order-dependent regressions. Source:
+phase-2.5-slice-3 R2-I2 (Codex Important; subagent Minor — combined
+strictest = Important).
+
+

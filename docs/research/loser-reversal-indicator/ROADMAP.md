@@ -485,10 +485,11 @@ Configuration to lock if Phase 5 picks this up:
 - Code: `src/wallet_pool/reverse_signal.py` + `scripts/run_reverse_alpha_scoring.py` + 64 tests
 - 4 spec rules added: strict-less-than slicing, prior-only cadence detection, smooth normalization, log-scale confidence weights
 
-**Slice 3 — Bot exclusion filter** 🟡 **implemented 2026-05-26, retro CCG review NOT started**
+**Slice 3 — Bot exclusion filter** ✅ **archived 2026-05-27, 3-round CCG retro closure**
 - 检测 wallet 行为：funding source graph + 时序同步 + size CV + round numbers
 - 从 pool 中 filter out bots（保留供 Phase 4 单独研究）
-- Code: `src/wallet_pool/bot_exclusion.py` (251 LOC) + 11 tests pass. NOT archived.
+- Code: `src/wallet_pool/bot_exclusion.py` + `scripts/build_clean_wallet_pool.py` + 49 tests pass
+- 3 spec rules added: legacy kwarg validation routing, mixed valid/NaN dedup preference, Codex hang fallback
 
 **Slice 4 — Cluster signal v2 + Cascade reversal** ❌ **not started**
 - Cluster N/W grid，confidence-weighted
