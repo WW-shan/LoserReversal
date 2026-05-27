@@ -15,7 +15,12 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from wallet_pool.reverse_signal import ReverseScoreConfig, score_wallet_fills
+from wallet_pool.reverse_signal import (
+    ACTIONABLE_DIRECTIONS,
+    OPEN_DIRECTIONS,
+    ReverseScoreConfig,
+    score_wallet_fills,
+)
 
 
 DEFAULT_POOL = Path("data/parquet/academic_wallet_pool.parquet")
@@ -165,12 +170,11 @@ def _fill_tokens(fills: pd.DataFrame) -> list[str]:
 def _expected_score_rows(fills: pd.DataFrame, config: ReverseScoreConfig) -> int:
     if fills.empty:
         return 0
-    if not config.score_open_fills_only:
-        return int(len(fills))
     if "dir" not in fills.columns:
         return 0
     directions = fills["dir"].astype("string")
-    return int(directions.isin(["Open Long", "Open Short"]).sum())
+    scorable_directions = OPEN_DIRECTIONS if config.score_open_fills_only else ACTIONABLE_DIRECTIONS
+    return int(directions.isin(scorable_directions).sum())
 
 
 def _load_funding_history(

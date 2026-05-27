@@ -324,6 +324,69 @@ def test_run_reverse_alpha_scoring_rejects_score_token_count_mismatch(
         )
 
 
+def test_run_reverse_alpha_scoring_counts_actionable_rows_when_scoring_non_open_fills(
+    tmp_path: Path,
+) -> None:
+    import scripts.run_reverse_alpha_scoring as runner
+    from wallet_pool.reverse_signal import ReverseScoreConfig, score_wallet_fills
+
+    pool_path, fills_dir, funding_dir = _write_inputs(tmp_path)
+    fills = pd.DataFrame(
+        [
+            {
+                "fill_id": "fill-1",
+                "time": pd.Timestamp("2026-05-26T12:00:00Z"),
+                "coin": "BTC",
+                "dir": "Open Long",
+                "px": 100.0,
+                "sz": 5.0,
+                "leverage": 10.0,
+            },
+            {
+                "fill_id": "fill-2",
+                "time": pd.Timestamp("2026-05-26T13:00:00Z"),
+                "coin": "BTC",
+                "dir": "Close Long",
+                "px": 100.0,
+                "sz": 1.0,
+                "leverage": 1.0,
+            },
+            {
+                "fill_id": "fill-3",
+                "time": pd.Timestamp("2026-05-26T14:00:00Z"),
+                "coin": "BTC",
+                "dir": "Liquidation Long",
+                "px": 100.0,
+                "sz": 1.0,
+                "leverage": 1.0,
+            },
+        ]
+    )
+    fills.to_parquet(fills_dir / "0xpass.parquet", index=False)
+    config = ReverseScoreConfig(score_open_fills_only=False)
+    expected = score_wallet_fills(
+        fills,
+        _pool_row(),
+        {"BTC": _funding_frame()},
+        config=config,
+    )
+    out = tmp_path / "reverse_alpha_scores.parquet"
+
+    result = runner.run_reverse_alpha_scoring(
+        pool_path=pool_path,
+        fills_dir=fills_dir,
+        funding_dir=funding_dir,
+        out=out,
+        report=None,
+        config=config,
+    )
+
+    written = pd.read_parquet(out)
+    assert result["written_count"] == len(expected) == 2
+    assert len(written) == len(expected)
+    assert written["dir"].tolist() == expected["dir"].tolist()
+
+
 def test_run_reverse_alpha_scoring_skips_na_wallet_rows(tmp_path: Path) -> None:
     import scripts.run_reverse_alpha_scoring as runner
 
