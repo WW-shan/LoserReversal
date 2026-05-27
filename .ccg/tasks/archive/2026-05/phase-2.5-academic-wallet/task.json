@@ -1,0 +1,40 @@
+{
+  "name": "phase-2.5-academic-wallet",
+  "phase": "2.5",
+  "strategy": "guided-develop",
+  "complexity": "M",
+  "status": "archived",
+  "currentSlice": 1,
+  "currentPhase": "archived",
+  "nextAction": "Slice 1 converged across R7+R8+R9+R10 three-way review (Codex + Claude + subagent all 0/0/0). Pool rebuilt to n=21 with spec deviation documented (HL population leverage 5.14x median per gwrx2005 + NYU Stern). Downstream slices reference delivered n=21, not original target 200-500.",
+  "verdict": "GREEN-with-spec-deviation",
+  "blocker": null,
+  "gate": null,
+  "executionMode": "1-按职责分流-codex-backend",
+  "createdAt": "2026-05-26",
+  "completedAt": "2026-05-27T13:10:00Z",
+  "reviewArtifact": ".ccg/tasks/phase-2.5-academic-wallet/review.md",
+  "spec": "docs/research/loser-reversal-indicator/ROADMAP.md#phase-25-学术-rebuilt-wallet-contrarian-重做新增",
+  "specEvolution": [
+    {
+      "rule": "Deliverable target vs. empirical population — Hyperliquid leverage cohort",
+      "file": ".ccg/spec/backend/index.md",
+      "source": "phase-2.5-academic-wallet Slice 1 R6 + R7 deep-research"
+    }
+  ],
+  "sliceCompleted": {
+    "1": {
+      "commits": [
+        "d229ee9",
+        "aa56a83",
+        "2c60afb",
+        "5172c98",
+        "83b38e1",
+        "6128a99",
+        "3b7c299",
+        "d8f54fa"
+      ],
+      "acceptance": "academic_pool.py + academic_wallet_pool.parquet (n=21, rebuilt with top_n=2000 over 54-min API run) + 689 tests pass + ruff clean. 10 review rounds (R1 initial review then R2-R10 fix→review). Final 3-way verdict at R10: Codex 0/0/0, Subagent 0/0/0, Claude 0/0/0."
+    }
+  }
+}

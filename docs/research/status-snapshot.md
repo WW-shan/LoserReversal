@@ -16,7 +16,8 @@
 | Phase 1.5 Ablations A/B/D | ✅ done | mixed | A robust [0.84,4.09] / B team-is-driver (Δ-0.02) / D mixed (v1 up, v2 collapse) |
 | Phase 1.5 Ablation C | ⏸ deferred | data_gap | regime_filter module ready (`8d2d80b`); needs BTC 1d backfill to 2023-05 |
 | **Phase 3 (reframed)** | ✅ done | 🔴 **RED (data_gap)** | Aggregate OOS Sharpe 0.42 / ann 5.23% / 45 trades — but 1h candle backfill only 90 days; re-run needed after backfill |
-| Phase 2.5 | not started | — | academic-rebuilt wallet contrarian (5 slices spec) |
+| Phase 2.5 Slice 1 | ✅ archived 2026-05-27 | 🟢 **GREEN with spec deviation** | academic wallet pool n=21 (target 200-500 unattainable on HL — see backend spec rule). 10-round 3-way review converged. |
+| Phase 2.5 Slices 2-5 | not started | — | reverse signal / bot exclusion / cluster v2 / walkforward verdict |
 | Phase 4 | not started | — | bot reverse (independent thesis after Phase 2.5 bot exclusion) |
 | Phase 5 | not started | — | portfolio composer + paper trading (1 YELLOW signal in inventory: v1+D unlock) |
 

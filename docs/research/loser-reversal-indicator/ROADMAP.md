@@ -466,14 +466,18 @@ Configuration to lock if Phase 5 picks this up:
 
 ### 5 个 Slice
 
-**Slice 1 — Academic wallet pool builder**
+**Slice 1 — Academic wallet pool builder** ✅ **GREEN (archived 2026-05-27, n=21 with spec deviation)**
 - 替换 vlm-based filter 为：
   - `account_value ∈ [$1k, $100k]`（85% loss cohort）
   - `realized_loss_rate_90d ≥ 50%`
   - `leverage_avg_90d ≥ 5x`
   - `n_trades_90d ≥ 50`
   - `size_cv_90d ≥ 0.3`（排除 market makers）
-- Pool 扩到 ROADMAP 原设 200-500 wallets
+- ~~Pool 扩到 ROADMAP 原设 200-500 wallets~~ → **delivered n=21**, spec deviation
+  documented at `.ccg/spec/backend/index.md` ("Deliverable target vs. empirical
+  population — Hyperliquid leverage cohort"). HL whale avg leverage 5.14x per
+  gwrx2005 makes ≥5x near-universal; multi-factor intersection (lev∧loss∧size∧trades)
+  correctly isolates panic-FOMO cohort at n=21. Downstream slices reference n=21.
 
 **Slice 2 — Multi-feature reverse signal**
 - Per-fill `reverse_alpha_score` = oversized × leverage × funding_extreme × time_bucket
