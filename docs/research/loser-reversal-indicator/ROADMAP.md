@@ -479,11 +479,11 @@ Configuration to lock if Phase 5 picks this up:
   gwrx2005 makes ≥5x near-universal; multi-factor intersection (lev∧loss∧size∧trades)
   correctly isolates panic-FOMO cohort at n=21. Downstream slices reference n=21.
 
-**Slice 2 — Multi-feature reverse signal** 🟡 **implemented 2026-05-26, retro CCG review in progress (R1 done 2026-05-27: 2C + 4I + 7M)**
-- Per-fill `reverse_alpha_score` = oversized × leverage × funding_extreme × time_bucket
-- Wallet-level confidence weight
-- Code: `src/wallet_pool/reverse_signal.py` (358 LOC) + `scripts/run_reverse_alpha_scoring.py` (254 LOC) + 24 tests pass
-- R1 findings recorded at `.ccg/tasks/phase-2-5-slice-2-multi-feature-reverse-signal/review.md`. NOT archived.
+**Slice 2 — Multi-feature reverse signal** ✅ **archived 2026-05-27, 5-round CCG retro closure**
+- Per-fill `reverse_alpha_score` = oversized × leverage × funding_extreme × time_bucket (smooth sigmoid normalization)
+- Wallet-level confidence weight (log-scale on n_trades)
+- Code: `src/wallet_pool/reverse_signal.py` + `scripts/run_reverse_alpha_scoring.py` + 64 tests
+- 4 spec rules added: strict-less-than slicing, prior-only cadence detection, smooth normalization, log-scale confidence weights
 
 **Slice 3 — Bot exclusion filter** 🟡 **implemented 2026-05-26, retro CCG review NOT started**
 - 检测 wallet 行为：funding source graph + 时序同步 + size CV + round numbers

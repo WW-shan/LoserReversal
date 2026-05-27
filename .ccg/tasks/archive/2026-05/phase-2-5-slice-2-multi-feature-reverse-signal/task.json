@@ -1,0 +1,27 @@
+{
+  "id": "phase-2-5-slice-2-multi-feature-reverse-signal",
+  "title": "phase-2.5-slice-2 retro CCG closure",
+  "status": "archived",
+  "complexity": "L",
+  "risk": "high",
+  "domain": "backend",
+  "currentPhase": "archived",
+  "currentRound": 5,
+  "nextAction": "Slice 2 converged across R1-R5 three-way review (Codex + Claude + subagent all 0/0/0 at R5). 4 spec rules added.",
+  "createdAt": "2026-05-27T00:00:00Z",
+  "archivedAt": "2026-05-27T16:30:00Z",
+  "branch": "main",
+  "specEvolution": [
+    {"rule": "Time-series boundary slicing must be strict-less-than for point-in-time queries", "source": "R1 C1"},
+    {"rule": "Derive cadence/anchor from prior data only, not full frame", "source": "R2 I-R2.1"},
+    {"rule": "Multi-feature score product needs smooth normalization, not step thresholds", "source": "R1 I7 + R2 M-R2.2"},
+    {"rule": "Confidence weight features must use log-scale on long-tail metrics", "source": "R1 I3"}
+  ],
+  "history": [
+    {"round": 1, "findings": "3C+7I+9M (subagent+codex union)", "fix_commit": "8be2980"},
+    {"round": 2, "findings": "1I+3M", "fix_commits": ["f4fe834", "d56a4be", "396d69a", "2d5fb37"]},
+    {"round": 3, "findings": "1I+1M+2 suggestion", "fix_commits": ["3a9e78f", "a611e18", "403d500", "20fcf7c"]},
+    {"round": 4, "findings": "1M (docstring)", "fix_commit": "3afc7c7"},
+    {"round": 5, "verdict": "ALL 3 reviewers READY YES 0/0/0", "tests": 733}
+  ]
+}

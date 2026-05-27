@@ -17,7 +17,7 @@
 | Phase 1.5 Ablation C | ✅ done | 🔴 **REJECT** (bear-filter unusable) | Bear-only filter collapses sample to 1 trade/signal across 5 splits — `reports/phase-1-5-ablation-c.md`. BTC <200d windows too sparse layered with cohort=team. |
 | **Phase 3 (reframed)** | ✅ done | 🔴 **RED (data_gap)** | Aggregate OOS Sharpe 0.42 / ann 5.23% / 45 trades — but 1h candle backfill only 90 days; re-run needed after backfill |
 | Phase 2.5 Slice 1 | ✅ archived 2026-05-27 | 🟢 **GREEN with spec deviation** | academic wallet pool n=21 (target 200-500 unattainable on HL — see backend spec rule). 10-round 3-way review converged. |
-| Phase 2.5 Slice 2 | 🟡 implemented, retro CCG review NOT run | — | `src/wallet_pool/reverse_signal.py` (358 LOC) + CLI + 24 tests pass. task.json status=completed but archive skipped per "anti-monitor" note. Needs retro 3-way review per CCG `guides/index.md` rule before archive. |
+| Phase 2.5 Slice 2 | ✅ archived 2026-05-27 | 🟢 5-round CCG retro converged | reverse_alpha_score = oversized × leverage × funding × time_bucket (smooth sigmoid + log-scale confidence). 64 tests. 4 spec rules added. |
 | Phase 2.5 Slice 3 | 🟡 implemented, retro CCG review NOT run | — | `src/wallet_pool/bot_exclusion.py` (251 LOC) + 11 tests pass. Same archive-skipped state as Slice 2. |
 | Phase 2.5 Slice 4 (cluster v2 + cascade reversal) | not started | — | depends on Slice 2/3 archive |
 | Phase 2.5 Slice 5 (walkforward verdict) | not started | — | depends on Slice 2/3/4 archive |
@@ -73,7 +73,7 @@ Verdict thresholds (single-venue directional, not cross-exchange neutral):
 | Slice | Code | Tests | CCG retro closure | Archived |
 |---|---|---|---|---|
 | 1 — Academic wallet pool builder | ✅ | ✅ 49 tests | ✅ 10-round 3-way converged 2026-05-27 | ✅ |
-| 2 — Multi-feature reverse signal | ✅ 358 LOC | ✅ 24 tests | 🟡 Codex R1 done 2026-05-27; subagent R1 running; Claude pending | ❌ |
+| 2 — Multi-feature reverse signal | ✅ 358 LOC + 254 LOC CLI | ✅ 64 tests | ✅ 5-round 3-way converged 2026-05-27 | ✅ |
 | 3 — Bot exclusion filter | ✅ 251 LOC | ✅ 11 tests | ❌ not started | ❌ |
 | 4 — Cluster v2 + cascade reversal | ❌ not started | — | — | ❌ |
 | 5 — Walkforward + verdict | ❌ not started | — | — | ❌ |

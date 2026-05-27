@@ -144,3 +144,75 @@ section. If under target, choose (a)/(b)/(c) and record reason in the
 report + this spec file. Downstream slices reference the delivered n,
 not the target. Source: phase-2.5-academic-wallet Slice 1 R6 + R7
 deep-research investigation (smart-search 2026-05-27).
+
+### Time-series boundary slicing must be strict-less-than for point-in-time queries
+**Rule**: when looking up a feature value "as of" some timestamp `T` from
+a time-indexed frame, slice with `frame.loc[frame.index < T]` (strict
+less-than), NOT `frame.loc[:T]` (inclusive). pandas inclusive label
+slicing INCLUDES the row at exactly `T`.
+
+**Why**: phase-2.5-slice-2 R1 caught lookahead leak: `_funding_context_for_fill`
+used `normalized.loc[:timestamp]`. A fill at exactly `T==funding_settle_time`
+included that settle row's funding zscore — information not yet known at
+fill execution. Contrarian alpha is exquisitely sensitive to point-in-time
+hygiene; HL retail clusters around funding-settle in anticipation, so this
+boundary matters in practice.
+
+**How to apply**: any "as-of" lookup against time-indexed data must use
+`< T` not `<= T` unless there's an explicit reason the boundary row is
+already settled. Add a boundary test: query at exact tick timestamp must
+NOT see that tick's value. Source: phase-2.5-slice-2 R1 C1.
+
+### Derive cadence/anchor from prior data only, not full frame
+**Rule**: when auto-detecting periodic cadence (funding interval, candle
+spacing, settle anchor) from time-indexed data for use at a specific
+timestamp `T`, derive cadence and anchor from rows where `index < T` only,
+not the full frame.
+
+**Why**: phase-2.5-slice-2 R2 caught second-order leak: `_funding_settle_signal`
+derived interval from `np.median(np.diff(full_funding_frame))` and assumed
+UTC-midnight anchor. A fill BEFORE the first funding row received a "settle
+window" boost from future-detected cadence. Non-midnight phases (some venues,
+historical 03/11/19 UTC schedules) were misclassified.
+
+**How to apply**: when computing time-aware features, slice the prior data
+first, then derive cadence/anchor/baseline from that slice. Carry anchor
+timestamp (e.g., last prior settle) into downstream context; do not assume
+fixed phase. Burn-in (<2 prior samples) → return None, fail-closed.
+Source: phase-2.5-slice-2 R2 I-R2.1.
+
+### Multi-feature score product needs smooth normalization, not step thresholds
+**Rule**: per-feature multipliers combined via product must use smooth
+0-1/logistic functions, NOT discrete step-function thresholds. Step
+functions create discontinuities at signal=threshold and a single dead
+zone before threshold contributes nothing.
+
+**Why**: phase-2.5-slice-2 R1 found `funding_extreme_multiplier` returned
+literal 1.0 when `|z|<2.0` then jumped to 1.4 — step at z=2. Production
+funding signal under 30-day rolling never hit |z|≥2 (0/15884 fills), so
+1/4 design axes was identically dead. Switching to smooth sigmoid:
+`1 + (max-1) * sigmoid((signal-pivot)/temp)` gave continuous boost,
+restored signal contribution.
+
+**How to apply**: when designing multi-feature interaction scores, use
+sigmoid/logistic normalization with documented pivot and temperature.
+Verify on real production data: each component's distribution should
+span a non-trivial range, not collapse to constant. Source:
+phase-2.5-slice-2 R1 I7 + R2 M-R2.2.
+
+### Confidence weight features must use log-scale on long-tail metrics
+**Rule**: when constructing wallet-level / item-level confidence weights
+from cumulative counts (n_trades, n_orders, volume), use log-scale
+transformation `_bounded_linear(math.log1p(value), low=log1p(lo), high=log1p(hi))`
+not linear. Linear scaling saturates for long-tail distributions.
+
+**Why**: phase-2.5-slice-2 R1 found `trade_component = _bounded_linear(n_trades, 50, 200)`
+saturated at 1.0 for 19/21 production wallets (n_trades ∈ [103, 8175]).
+Confidence weight lost 1/3 discriminative power. Log-scale `low=log1p(50),
+high=log1p(5000)` restored spread to 0.598 on the same n=21 pool.
+
+**How to apply**: for any feature where the empirical distribution
+spans >2 orders of magnitude, use log-scale. Verify on real data:
+component values across the actual cohort should span >0.3 wide, not
+cluster at one extreme. Source: phase-2.5-slice-2 R1 I3.
+
