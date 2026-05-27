@@ -89,29 +89,12 @@ def funding_source_graph(
     when timestamp data is available because that mode is walkforward-unsafe.
     """
 
-    if isinstance(wallet_funding_sources, pd.DataFrame):
-        timestamp_column = _find_first_column(
-            wallet_funding_sources.columns,
-            ("first_funded_at", "funded_at", "timestamp"),
-        )
-        if timestamp_column is not None:
-            if as_of is None:
-                warnings.warn(
-                    "funding_source_graph in snapshot mode is walkforward-unsafe; "
-                    "pass as_of for point-in-time queries",
-                    RuntimeWarning,
-                    stacklevel=2,
-                )
-            else:
-                as_of_ts = _coerce_as_of_timestamp(as_of)
-                timestamps = pd.to_datetime(
-                    wallet_funding_sources[timestamp_column],
-                    utc=True,
-                    errors="coerce",
-                )
-                wallet_funding_sources = wallet_funding_sources.loc[timestamps < as_of_ts].copy()
-
-    records = _coerce_funding_sources(wallet_funding_sources)
+    wallet_funding_sources = _funding_sources_for_as_of(
+        wallet_funding_sources,
+        as_of=as_of,
+        warn_snapshot=True,
+    )
+    records, _ = _coerce_funding_sources(wallet_funding_sources)
     wallets = sorted({wallet for wallet, _ in records})
     parent = _parent_map(wallets)
 
@@ -228,10 +211,10 @@ def _coerce_bot_scores(bot_scores: Mapping[str, float] | pd.DataFrame) -> pd.Dat
 
 def _coerce_funding_sources(
     wallet_funding_sources: Mapping[str, object] | pd.DataFrame,
-) -> list[tuple[str, str | None]]:
+) -> tuple[list[tuple[str, str | None]], int]:
     if isinstance(wallet_funding_sources, pd.DataFrame):
         if wallet_funding_sources.empty:
-            return []
+            return [], 0
         frame = wallet_funding_sources.copy()
         wallet_column = _find_column(frame.columns, "wallet")
         source_column = _find_first_column(
@@ -245,12 +228,16 @@ def _coerce_funding_sources(
         rows = wallet_funding_sources.items()
 
     records: list[tuple[str, str | None]] = []
+    missing_source_count = 0
     for wallet, source in rows:
         wallet_key = _normalize_wallet(wallet)
         if not wallet_key:
             continue
-        records.append((wallet_key, _normalize_source(source)))
-    return records
+        source_key = _normalize_source(source)
+        if source_key is None:
+            missing_source_count += 1
+        records.append((wallet_key, source_key))
+    return records, missing_source_count
 
 
 def _find_column(columns: pd.Index, expected: str) -> str | None:
@@ -266,6 +253,41 @@ def _find_first_column(columns: pd.Index, candidates: tuple[str, ...]) -> str | 
         if column is not None:
             return column
     return None
+
+
+def _funding_sources_for_as_of(
+    wallet_funding_sources: Mapping[str, object] | pd.DataFrame,
+    *,
+    as_of: pd.Timestamp | None,
+    warn_snapshot: bool,
+) -> Mapping[str, object] | pd.DataFrame:
+    if not isinstance(wallet_funding_sources, pd.DataFrame):
+        return wallet_funding_sources
+
+    timestamp_column = _find_first_column(
+        wallet_funding_sources.columns,
+        ("first_funded_at", "funded_at", "timestamp"),
+    )
+    if timestamp_column is None:
+        return wallet_funding_sources
+
+    if as_of is None:
+        if warn_snapshot:
+            warnings.warn(
+                "funding_source_graph in snapshot mode is walkforward-unsafe; "
+                "pass as_of for point-in-time queries",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+        return wallet_funding_sources
+
+    as_of_ts = _coerce_as_of_timestamp(as_of)
+    timestamps = pd.to_datetime(
+        wallet_funding_sources[timestamp_column],
+        utc=True,
+        errors="coerce",
+    )
+    return wallet_funding_sources.loc[timestamps < as_of_ts].copy()
 
 
 def _coerce_as_of_timestamp(value: pd.Timestamp) -> pd.Timestamp:

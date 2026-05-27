@@ -411,3 +411,19 @@ def test_coerce_bot_scores_collapses_identical_duplicates() -> None:
 
     assert coerced["wallet"].tolist() == ["0xa", "0xb"]
     assert coerced["bot_score"].tolist() == [0.20, 0.50]
+
+
+def test_coerce_funding_sources_counts_empty_sources() -> None:
+    from wallet_pool.bot_exclusion import _coerce_funding_sources
+
+    sources = pd.DataFrame(
+        {
+            "wallet": ["0xa", "0xb", None],
+            "from_address": ["src-1", "", ""],
+        }
+    )
+
+    records, missing_source_count = _coerce_funding_sources(sources)
+
+    assert records == [("0xa", "src-1"), ("0xb", None)]
+    assert missing_source_count == 1

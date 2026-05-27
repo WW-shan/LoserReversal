@@ -76,6 +76,7 @@ def _academic_pool(wallets: list[str]) -> pd.DataFrame:
 def test_build_clean_wallet_pool_writes_clean_and_excluded_outputs(
     mocker,
     tmp_path: Path,
+    capsys,
 ) -> None:
     import scripts.build_clean_wallet_pool as builder
 
@@ -91,7 +92,7 @@ def test_build_clean_wallet_pool_writes_clean_and_excluded_outputs(
     pd.DataFrame(
         {
             "wallet": ["0xbot", "0xhuman", "0xs1", "0xs2", "0xs3"],
-            "from_address": ["src-bot", "src-human", "src-sybil", "src-sybil", "src-sybil"],
+            "from_address": ["src-bot", "", "src-sybil", "src-sybil", "src-sybil"],
         }
     ).to_parquet(funding_path, index=False)
 
@@ -124,8 +125,10 @@ def test_build_clean_wallet_pool_writes_clean_and_excluded_outputs(
     }
     assert result["funnel"]["academic_pool"] == 5
     assert result["funnel"]["bot_score_excluded"] == 1
+    assert result["funnel"]["funding_source_missing"] == 1
     assert result["funnel"]["funding_source_excluded"] == 3
     assert result["funnel"]["clean_retail_pool"] == 1
+    assert "funding source rows with empty source: 1" in capsys.readouterr().err
 
 
 def test_build_clean_wallet_pool_handles_empty_academic_pool(mocker, tmp_path: Path) -> None:

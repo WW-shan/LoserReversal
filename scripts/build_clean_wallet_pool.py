@@ -15,6 +15,8 @@ from bot_reverse.bot_detector import compute_bot_features, score_bot_likelihood
 from infra.fetchers.user_fills import fetch_user_fills
 from wallet_pool.bot_exclusion import (
     BotExclusionConfig,
+    _coerce_funding_sources,
+    _funding_sources_for_as_of,
     exclude_bots_from_pool,
     exclude_funding_source_clusters,
     funding_source_graph,
@@ -72,6 +74,17 @@ def build_clean_wallet_pool(
     score_clean_pool = _remove_wallets(score_clean_pool, fetch_failed_excluded["wallet"])
 
     funding_sources = _read_funding_sources(funding_sources_path)
+    funding_sources_for_count = _funding_sources_for_as_of(
+        funding_sources,
+        as_of=as_of_ts,
+        warn_snapshot=False,
+    )
+    _, funding_source_missing = _coerce_funding_sources(funding_sources_for_count)
+    if funding_source_missing > 0:
+        print(
+            f"warning: funding source rows with empty source: {funding_source_missing}",
+            file=sys.stderr,
+        )
     funding_graph = funding_source_graph(funding_sources, as_of=as_of_ts)
     cluster_excluded = exclude_funding_source_clusters(
         score_clean_pool,
@@ -95,6 +108,7 @@ def build_clean_wallet_pool(
         "bot_scores_computed": int(len(bot_scores)),
         "bot_score_excluded": int(len(score_excluded)),
         "fetch_failed_excluded": int(len(fetch_failed_excluded)),
+        "funding_source_missing": int(funding_source_missing),
         "funding_source_excluded": int(len(cluster_excluded)),
         "clean_retail_pool": int(len(clean_pool)),
         "excluded_bot_pool": int(len(excluded_pool)),
