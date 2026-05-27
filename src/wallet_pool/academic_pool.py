@@ -363,12 +363,3 @@ def _filter_window(
 
     keep = np.isfinite(filtered[["px", "sz"]].to_numpy(dtype=float)).all(axis=1)
     return filtered.loc[keep]
-
-
-def _is_finite(value: Any) -> bool:
-    if value is None:
-        return False
-    try:
-        return math.isfinite(float(value))
-    except (TypeError, ValueError):
-        return False
