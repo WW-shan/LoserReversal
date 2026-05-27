@@ -54,11 +54,11 @@ def exclude_bots_from_pool(
     exclude those failures before treating the pool as clean.
     """
 
-    if wallet_pool.empty:
-        return wallet_pool.copy(), _empty_excluded()
-
     frame = wallet_pool.copy()
-    frame["wallet"] = frame["wallet"].astype("string").str.lower()
+    if "wallet" in frame.columns:
+        frame["wallet"] = frame["wallet"].astype("string").str.lower()
+    if frame.empty:
+        return frame.reset_index(drop=True), _empty_excluded()
 
     scores = _coerce_bot_scores(bot_scores)
     if scores.empty:
@@ -136,9 +136,32 @@ def exclude_funding_source_clusters(
     wallet_pool: pd.DataFrame,
     funding_graph: Mapping[str, set[str]],
     *,
-    max_shared: int,
+    config: BotExclusionConfig | None = None,
+    max_shared: int | None = None,
 ) -> pd.DataFrame:
-    """Return pool rows belonging to funding-source clusters of at least ``max_shared``."""
+    """Return pool rows belonging to funding-source clusters.
+
+    ``max_shared`` is a legacy keyword; pass ``config=BotExclusionConfig(...)``
+    instead.
+    """
+
+    if config is not None:
+        threshold = config.funding_source_graph_max_shared
+        if max_shared is not None:
+            warnings.warn(
+                "max_shared is deprecated and ignored when config is provided",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+    elif max_shared is not None:
+        warnings.warn(
+            "max_shared is deprecated; pass config=BotExclusionConfig(...) instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        threshold = max_shared
+    else:
+        raise TypeError("exclude_funding_source_clusters requires config or max_shared")
 
     frame = wallet_pool.copy()
     if "wallet" in frame.columns:
@@ -163,7 +186,7 @@ def exclude_funding_source_clusters(
         wallet_key = _normalize_wallet(wallet)
         if wallet_key not in parent:
             return False
-        return component_sizes[_find(parent, wallet_key)] >= max_shared
+        return component_sizes[_find(parent, wallet_key)] >= threshold
 
     excluded = frame.loc[frame["wallet"].map(_is_cluster_wallet)].copy()
     if excluded.empty:

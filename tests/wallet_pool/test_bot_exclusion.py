@@ -129,6 +129,7 @@ def test_exclude_bots_from_pool_empty_pool_returns_empty_frames() -> None:
 
     assert clean_pool.empty
     assert list(clean_pool.columns) == list(_pool([]).columns)
+    assert str(clean_pool["wallet"].dtype) == "string"
     assert excluded.empty
     assert list(excluded.columns) == ["wallet", "bot_score", "reason"]
 
@@ -226,7 +227,7 @@ def test_funding_source_graph_silent_without_timestamp_column() -> None:
 
 
 def test_exclude_funding_source_clusters_excludes_sybil_cluster_at_boundary() -> None:
-    from wallet_pool.bot_exclusion import exclude_funding_source_clusters
+    from wallet_pool.bot_exclusion import BotExclusionConfig, exclude_funding_source_clusters
 
     wallet_pool = _pool(["0x1", "0x2", "0x3"])
     graph = {
@@ -235,14 +236,18 @@ def test_exclude_funding_source_clusters_excludes_sybil_cluster_at_boundary() ->
         "0x3": {"0x1", "0x2"},
     }
 
-    excluded = exclude_funding_source_clusters(wallet_pool, graph, max_shared=3)
+    excluded = exclude_funding_source_clusters(
+        wallet_pool,
+        graph,
+        config=BotExclusionConfig(funding_source_graph_max_shared=3),
+    )
 
     assert excluded["wallet"].tolist() == ["0x1", "0x2", "0x3"]
     assert excluded["reason"].tolist() == ["funding_source_cluster"] * 3
 
 
 def test_exclude_funding_source_clusters_excludes_five_wallet_sybil_cluster() -> None:
-    from wallet_pool.bot_exclusion import exclude_funding_source_clusters
+    from wallet_pool.bot_exclusion import BotExclusionConfig, exclude_funding_source_clusters
 
     wallet_pool = _pool(["0x1", "0x2", "0x3", "0x4", "0x5"])
     graph = {
@@ -253,14 +258,18 @@ def test_exclude_funding_source_clusters_excludes_five_wallet_sybil_cluster() ->
         "0x5": {"0x1", "0x2", "0x3", "0x4"},
     }
 
-    excluded = exclude_funding_source_clusters(wallet_pool, graph, max_shared=3)
+    excluded = exclude_funding_source_clusters(
+        wallet_pool,
+        graph,
+        config=BotExclusionConfig(funding_source_graph_max_shared=3),
+    )
 
     assert excluded["wallet"].tolist() == ["0x1", "0x2", "0x3", "0x4", "0x5"]
     assert excluded["reason"].tolist() == ["funding_source_cluster"] * 5
 
 
 def test_exclude_funding_source_clusters_keeps_small_clusters_below_threshold() -> None:
-    from wallet_pool.bot_exclusion import exclude_funding_source_clusters
+    from wallet_pool.bot_exclusion import BotExclusionConfig, exclude_funding_source_clusters
 
     wallet_pool = _pool(["0xa", "0xb", "0xc"])
     graph = {
@@ -269,7 +278,11 @@ def test_exclude_funding_source_clusters_keeps_small_clusters_below_threshold() 
         "0xc": set(),
     }
 
-    excluded = exclude_funding_source_clusters(wallet_pool, graph, max_shared=3)
+    excluded = exclude_funding_source_clusters(
+        wallet_pool,
+        graph,
+        config=BotExclusionConfig(funding_source_graph_max_shared=3),
+    )
 
     assert excluded.empty
     assert list(excluded.columns) == [
@@ -282,6 +295,39 @@ def test_exclude_funding_source_clusters_keeps_small_clusters_below_threshold() 
         "eligible_at",
         "reason",
     ]
+
+
+def test_exclude_funding_source_clusters_accepts_config() -> None:
+    from wallet_pool.bot_exclusion import BotExclusionConfig, exclude_funding_source_clusters
+
+    wallet_pool = _pool(["0xa", "0xb"])
+    graph = {
+        "0xa": {"0xb"},
+        "0xb": {"0xa"},
+    }
+
+    excluded = exclude_funding_source_clusters(
+        wallet_pool,
+        graph,
+        config=BotExclusionConfig(funding_source_graph_max_shared=2),
+    )
+
+    assert excluded["wallet"].tolist() == ["0xa", "0xb"]
+
+
+def test_exclude_funding_source_clusters_emits_deprecation_for_max_shared_kwarg() -> None:
+    from wallet_pool.bot_exclusion import exclude_funding_source_clusters
+
+    wallet_pool = _pool(["0xa", "0xb"])
+    graph = {
+        "0xa": {"0xb"},
+        "0xb": {"0xa"},
+    }
+
+    with pytest.warns(DeprecationWarning, match="max_shared"):
+        excluded = exclude_funding_source_clusters(wallet_pool, graph, max_shared=2)
+
+    assert excluded["wallet"].tolist() == ["0xa", "0xb"]
 
 
 @pytest.mark.parametrize(

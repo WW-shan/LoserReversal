@@ -76,7 +76,7 @@ def build_clean_wallet_pool(
     cluster_excluded = exclude_funding_source_clusters(
         score_clean_pool,
         funding_graph,
-        max_shared=config.funding_source_graph_max_shared,
+        config=config,
     )
     clean_pool = _remove_wallets(score_clean_pool, cluster_excluded["wallet"])
     excluded_pool = _combine_excluded(
