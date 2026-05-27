@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import math
+import warnings
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any, Mapping
@@ -16,6 +18,34 @@ class BotClusterConfig:
     bot_score_threshold: float = 0.7
     hold_hours: int = 24
 
+    def __post_init__(self) -> None:
+        if type(self.n_bots_min) is not int or self.n_bots_min < 2:
+            raise ValueError(f"n_bots_min must be an int >= 2; got {self.n_bots_min!r}")
+        if type(self.window_minutes) is not int or self.window_minutes <= 0:
+            raise ValueError(
+                f"window_minutes must be an int > 0; got {self.window_minutes!r}"
+            )
+        if isinstance(self.bot_score_threshold, bool):
+            raise ValueError(
+                "bot_score_threshold must be a finite float-like value in "
+                f"(0.0, 1.0]; got {self.bot_score_threshold!r}"
+            )
+        try:
+            bot_score_threshold = float(self.bot_score_threshold)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError(
+                "bot_score_threshold must be a finite float-like value in "
+                f"(0.0, 1.0]; got {self.bot_score_threshold!r}"
+            ) from exc
+        if not math.isfinite(bot_score_threshold) or not 0.0 < bot_score_threshold <= 1.0:
+            raise ValueError(
+                "bot_score_threshold must be a finite float-like value in "
+                f"(0.0, 1.0]; got {self.bot_score_threshold!r}"
+            )
+        object.__setattr__(self, "bot_score_threshold", bot_score_threshold)
+        if type(self.hold_hours) is not int or self.hold_hours <= 0:
+            raise ValueError(f"hold_hours must be an int > 0; got {self.hold_hours!r}")
+
 
 def cluster_bot_signal(
     fills_by_wallet: Mapping[str, pd.DataFrame],
@@ -24,6 +54,19 @@ def cluster_bot_signal(
     *,
     config: BotClusterConfig,
 ) -> dict[str, tuple[pd.DataFrame, pd.DataFrame]]:
+    """Return reverse entries/exits from bot-wallet fill clusters.
+
+    ``fills_by_wallet`` maps wallet addresses to fill frames with ``coin``, ``dir``,
+    and optional ``time`` columns. ``bot_scores`` maps wallet addresses to numeric
+    bot-likelihood scores; NaN scores fail closed and are excluded. ``prices`` maps
+    coins to close-price series whose index defines the output signal bars.
+
+    The returned dict maps coin to ``(entries, exits)`` boolean frames with
+    ``long`` and ``short`` columns. Bot ``Open Long`` clusters create reverse
+    ``short`` signals; bot ``Open Short`` clusters create reverse ``long`` signals.
+    Cluster windows are inclusive on both sides, ``[T-window_minutes, T]``, at the
+    event-detection timestamp and do not look ahead beyond ``T``.
+    """
     _validate_config(config)
     price_indexes = _price_indexes(prices)
     signals = {
@@ -66,14 +109,7 @@ def _empty_signal(index: pd.Index) -> pd.DataFrame:
 
 
 def _validate_config(config: BotClusterConfig) -> None:
-    if config.n_bots_min < 1:
-        raise ValueError("n_bots_min must be at least 1")
-    if config.window_minutes <= 0:
-        raise ValueError("window_minutes must be greater than 0")
-    if not 0.0 <= config.bot_score_threshold <= 1.0:
-        raise ValueError("bot_score_threshold must be between 0 and 1")
-    if config.hold_hours <= 0:
-        raise ValueError("hold_hours must be greater than 0")
+    config.__post_init__()
 
 
 def _price_indexes(prices: Mapping[str, pd.Series]) -> dict[str, pd.DatetimeIndex]:
@@ -112,11 +148,14 @@ def _wallet_events(wallet: str, fills: pd.DataFrame) -> pd.DataFrame:
     if fills.empty or "coin" not in fills.columns or "dir" not in fills.columns:
         return _empty_events()
 
-    frame = fills.copy()
-    if "time" in frame.columns:
+    columns = ["coin", "dir"]
+    if "time" in fills.columns:
+        columns.append("time")
+    frame = fills.loc[:, columns].copy()
+    if "time" in fills.columns:
         frame["time"] = pd.to_datetime(frame["time"], utc=True, errors="coerce")
     else:
-        frame["time"] = pd.to_datetime(frame.index, utc=True, errors="coerce")
+        frame["time"] = pd.to_datetime(fills.index, utc=True, errors="coerce")
 
     frame["wallet"] = str(wallet).lower()
     frame["coin"] = frame["coin"].astype("string")
@@ -190,11 +229,25 @@ def _apply_candidates(
         candidate_time = pd.Timestamp(row.time)
         reverse_dir = str(row.reverse_dir)
         if hold_exit_at is not None and hold_exit_at <= candidate_time:
+            expired_dir = active_dir
             exit_bar = _align_to_price_index(entries.index, hold_exit_at)
-            if exit_bar is not None and active_dir is not None:
-                exits.at[exit_bar, active_dir] = True
+            if exit_bar is not None and expired_dir is not None:
+                exits.at[exit_bar, expired_dir] = True
+            defer_same_direction = (
+                expired_dir is not None
+                and reverse_dir == expired_dir
+                and candidate_time == hold_exit_at
+            )
             active_dir = None
             hold_exit_at = None
+            if defer_same_direction:
+                next_bar = _next_price_bar_after(
+                    entries.index,
+                    exit_bar if exit_bar is not None else candidate_time,
+                )
+                if next_bar is None:
+                    continue
+                candidate_time = next_bar
 
         entry_bar = _align_to_price_index(entries.index, candidate_time)
         if entry_bar is None:
@@ -213,6 +266,12 @@ def _apply_candidates(
         exit_bar = _align_to_price_index(entries.index, hold_exit_at)
         if exit_bar is not None:
             exits.at[exit_bar, active_dir] = True
+        else:
+            warnings.warn(
+                f"trailing position at {hold_exit_at} has hold_exit_at past end of price index",
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
 
 def _align_to_price_index(index: pd.DatetimeIndex, timestamp: pd.Timestamp) -> pd.Timestamp | None:
@@ -224,6 +283,20 @@ def _align_to_price_index(index: pd.DatetimeIndex, timestamp: pd.Timestamp) -> p
     else:
         ts = ts.tz_convert("UTC")
     position = index.searchsorted(ts, side="left")
+    if position >= len(index):
+        return None
+    return pd.Timestamp(index[position])
+
+
+def _next_price_bar_after(index: pd.DatetimeIndex, timestamp: pd.Timestamp) -> pd.Timestamp | None:
+    if index.empty:
+        return None
+    ts = pd.Timestamp(timestamp)
+    if ts.tzinfo is None:
+        ts = ts.tz_localize("UTC")
+    else:
+        ts = ts.tz_convert("UTC")
+    position = index.searchsorted(ts, side="right")
     if position >= len(index):
         return None
     return pd.Timestamp(index[position])
