@@ -360,12 +360,12 @@ def _filter_window(
     ).fillna(0.0)
     filtered["dir"] = filtered["dir"].astype("string")
 
-    finite_mask = filtered[["px", "sz"]].apply(lambda col: col.map(_is_finite_or_nan))
+    finite_mask = filtered[["px", "sz"]].apply(lambda col: col.map(_is_finite))
     keep = finite_mask.all(axis=1)
     return filtered.loc[keep]
 
 
-def _is_finite_or_nan(value: Any) -> bool:
+def _is_finite(value: Any) -> bool:
     if value is None:
         return False
     try:
