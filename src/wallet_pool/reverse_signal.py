@@ -53,8 +53,10 @@ class ReverseScoreConfig:
         _validate_positive("funding_z_threshold", self.funding_z_threshold)
         _validate_positive_int("funding_lookback_days", self.funding_lookback_days)
         _validate_session_hours(self.asian_session_hours)
-        if self.funding_settle_minutes_before < 0:
-            raise ValueError("funding_settle_minutes_before must be >= 0")
+        _validate_positive_int(
+            "funding_settle_minutes_before",
+            self.funding_settle_minutes_before,
+        )
         if self.funding_settle_interval_hours is not None:
             _validate_positive("funding_settle_interval_hours", self.funding_settle_interval_hours)
         _validate_minimum("funding_extreme_max_boost", self.funding_extreme_max_boost, minimum=1.0)
@@ -450,9 +452,6 @@ def _funding_settle_signal(
     config: ReverseScoreConfig,
     funding_context: Any = None,
 ) -> float:
-    if config.funding_settle_minutes_before <= 0:
-        return 0.0
-
     if timestamp.tzinfo is None:
         timestamp = timestamp.tz_localize("UTC")
     else:
