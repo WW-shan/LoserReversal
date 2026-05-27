@@ -267,4 +267,54 @@ in both row orders to catch order-dependent regressions. Source:
 phase-2.5-slice-3 R2-I2 (Codex Important; subagent Minor — combined
 strictest = Important).
 
+### Signal state machines must compare aligned bars, not raw timestamps
+**Rule**: when a signal state machine (entry/exit, hold-expiry, position
+swap) compares event timestamps against decision bars to decide whether
+two events collide on the same bar, the comparison MUST be on *aligned*
+bars (post `_align_to_price_index` / `searchsorted`), NOT on raw
+timestamps. Raw-timestamp equality fails on coarse-grid markets where
+two distinct event times resolve to the same price bar.
+
+**Why**: phase-4-slice-2 R2-M2: `_apply_candidates` originally checked
+`candidate_time == hold_exit_at` (literal raw-timestamp equality) to
+decide whether to defer same-direction re-entry. On 2h-bar markets with
+`hold_hours=1`: `hold_exit_at=01:00` aligns to `02:00`, candidate at
+`01:30` also aligns to `02:00`, but `01:30 != 01:00` so the deferral
+never fires and `entry=True + exit=True` collide on the same `(02:00,
+short)` slot. Production HL 1h bars with integer `hold_hours` made the
+case unreachable, but the policy gap existed. Fix: compute `candidate_bar`
+and `exit_bar` via `_align_to_price_index`, then compare those bars.
+
+**How to apply**: in any signal state machine, after `searchsorted` /
+`_align_to_price_index` calls return the decision bar, perform boundary
+comparisons on those aligned bars. Add at least one boundary test on a
+COARSER price grid than the production timeframe (e.g., 2h bars when
+prod is 1h) to catch alignment-dependent collisions. Source:
+phase-4-slice-2 R2-M2 (subagent Minor; Codex did not flag — combined
+strictest precedent says trust subagent on alignment-class bugs).
+
+### CCG retro fix-loop commits should be per-finding atomic
+**Rule**: each CCG retro fix-loop commit should address exactly one
+review finding (or one tightly-coupled finding group with documented
+rationale). Aggregating N findings into 1-2 monolithic commits reduces
+retro traceability — the next reviewer cannot easily verify each
+finding's closure, and `git log --oneline` no longer reflects the
+fix-loop's finding sequence.
+
+**Why**: phase-4-slice-2 R1 fix-loop aggregated 13 findings into 2
+commits (`b370a02` lib 6-findings, `4d44da6` script 7-findings). Both
+Codex and subagent R2 reviewers flagged this. By contrast,
+phase-2.5-slice-3 had 8 atomic commits in R1 fix (one per finding) and
+5 in R2; reviewers verified each closure trivially from `git log` +
+`git show <hash>`. Aggregation does not produce technical regressions
+but obscures the audit trail.
+
+**How to apply**: builder prompts should explicitly require atomic
+per-finding commits (with `fix(...)` prefix matching the finding ID
+where possible). Exceptions allowed when findings are tightly coupled
+(e.g., new public API + caller-update in one feature) — must be
+explicitly justified in the commit body. Source: phase-4-slice-2 R1
+fix-loop + R2 process review (Codex + subagent both flagged as Minor).
+
+
 

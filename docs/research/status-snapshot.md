@@ -22,7 +22,7 @@
 | Phase 2.5 Slice 4 (cluster v2 + cascade reversal) | not started | — | depends on Slice 2/3 archive |
 | Phase 2.5 Slice 5 (walkforward verdict) | not started | — | depends on Slice 2/3/4 archive |
 | Phase 4 Slice 1 (bot identification) | ✅ archived | LGTM | bot_detector + bot_pool 5-round CCG retro closure (2026-05-27) |
-| Phase 4 Slice 2 (bot reverse signal) | 🟡 implemented, retro CCG review PARTIAL | — | code + Codex review pass; Claude review attempted 3× via codeagent-wrapper, hung each time. Subagent review not run. Per spec rule "trust strictest reviewer", treat as NOT ready. |
+| Phase 4 Slice 2 (bot reverse signal) | ✅ archived 2026-05-27 | 🟢 3-round CCG retro converged | `src/bot_reverse/cluster_signal.py` + `scripts/run_bot_reverse_signal.py` + 53 tests. 2 spec rules added (aligned-bar state machine, atomic commit discipline). |
 | Phase 4 Slice 3 (walkforward verdict) | not started | — | depends on Phase 4 Slice 2 archive |
 | Phase 5 portfolio composer | 🟡 implemented, gate NOT met | — | `src/portfolio/composer.py` (386 LOC) + signal_loader (129 LOC) + tests. ROADMAP gate: ≥2 GREEN/YELLOW signals — currently only 1 (Phase 1.5 v1+D YELLOW). Phase 2.5 Slice 1 GREEN is for the pool, not a signal yet. |
 | Phase 5 paper signal generator | not started | — | depends on composer archive + gate |
