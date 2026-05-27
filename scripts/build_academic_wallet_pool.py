@@ -13,6 +13,7 @@ Replaces the Phase 2 v1 ``scripts/build_wallet_pool.py`` selection logic
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 import time
@@ -196,7 +197,18 @@ def _write_pool(pool: pd.DataFrame, out: Path) -> None:
     frame["n_trades_90d"] = pd.to_numeric(frame["n_trades_90d"], errors="coerce").astype("int64")
 
     table = pa.Table.from_pandas(frame, schema=POOL_SCHEMA, preserve_index=False)
-    pq.write_table(table, out, compression=None, use_dictionary=False, row_group_size=64)
+    tmp_path = out.with_suffix(out.suffix + ".partial")
+    try:
+        pq.write_table(
+            table,
+            tmp_path,
+            compression=None,
+            use_dictionary=False,
+            row_group_size=64,
+        )
+        os.replace(tmp_path, out)
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def _cache_path(
@@ -254,7 +266,12 @@ def _read_cached_fills(cache_path: Path) -> pd.DataFrame | None:
 def _write_cached_fills(cache_path: Path, fills: pd.DataFrame) -> None:
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     frame = fills.reset_index() if "time" not in fills.columns else fills.copy()
-    frame.to_parquet(cache_path, index=False)
+    tmp_path = cache_path.with_suffix(cache_path.suffix + ".partial")
+    try:
+        frame.to_parquet(tmp_path, index=False)
+        os.replace(tmp_path, cache_path)
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 def _write_report(report: Path, result: dict[str, Any]) -> None:

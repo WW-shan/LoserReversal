@@ -98,6 +98,22 @@ def _leaderboard_frame(rows: list[tuple[str, float]]) -> pd.DataFrame:
     )
 
 
+def _academic_pool_frame() -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            {
+                "wallet": VALID_WALLET,
+                "account_value": 25_000.0,
+                "realized_loss_rate_90d": 0.65,
+                "leverage_avg_90d": 8.0,
+                "n_trades_90d": 60,
+                "size_cv_90d": 0.45,
+                "eligible_at": pd.Timestamp("2026-05-26T00:00:00Z"),
+            }
+        ]
+    )
+
+
 def test_cli_runs_end_to_end_with_mocked_fetchers(mocker, tmp_path: Path) -> None:
     import scripts.build_academic_wallet_pool as builder
 
@@ -346,6 +362,74 @@ def test_cache_path_rejects_trailing_newline_wallet() -> None:
     lookback_end = pd.Timestamp("2026-05-26T12:00:00Z").to_pydatetime()
 
     assert builder._cache_path(f"{VALID_WALLET}\n", lookback_start, lookback_end) is None
+
+
+def test_write_pool_writes_final_without_leftover_partial(tmp_path: Path) -> None:
+    import scripts.build_academic_wallet_pool as builder
+
+    out_path = tmp_path / "academic_wallet_pool.parquet"
+
+    builder._write_pool(_academic_pool_frame(), out_path)
+
+    assert out_path.exists()
+    assert not out_path.with_suffix(out_path.suffix + ".partial").exists()
+    assert pd.read_parquet(out_path)["wallet"].tolist() == [VALID_WALLET]
+
+
+def test_write_pool_failure_removes_partial_and_leaves_no_final(
+    mocker,
+    tmp_path: Path,
+) -> None:
+    import scripts.build_academic_wallet_pool as builder
+
+    out_path = tmp_path / "academic_wallet_pool.parquet"
+    partial_path = out_path.with_suffix(out_path.suffix + ".partial")
+
+    def _raise_after_partial(table, path: Path, **kwargs) -> None:
+        Path(path).write_bytes(b"partial")
+        raise RuntimeError("write failed")
+
+    mocker.patch.object(builder.pq, "write_table", side_effect=_raise_after_partial)
+
+    with pytest.raises(RuntimeError, match="write failed"):
+        builder._write_pool(_academic_pool_frame(), out_path)
+
+    assert not partial_path.exists()
+    assert not out_path.exists()
+
+
+def test_write_cached_fills_writes_final_without_leftover_partial(tmp_path: Path) -> None:
+    import scripts.build_academic_wallet_pool as builder
+
+    cache_path = tmp_path / "fills.parquet"
+
+    builder._write_cached_fills(cache_path, _retail_open_close_fills(25_000.0))
+
+    assert cache_path.exists()
+    assert not cache_path.with_suffix(cache_path.suffix + ".partial").exists()
+    assert not pd.read_parquet(cache_path).empty
+
+
+def test_write_cached_fills_failure_removes_partial_and_leaves_no_final(
+    mocker,
+    tmp_path: Path,
+) -> None:
+    import scripts.build_academic_wallet_pool as builder
+
+    cache_path = tmp_path / "fills.parquet"
+    partial_path = cache_path.with_suffix(cache_path.suffix + ".partial")
+
+    def _raise_after_partial(self, path: Path, *args, **kwargs) -> None:
+        Path(path).write_bytes(b"partial")
+        raise RuntimeError("cache write failed")
+
+    mocker.patch.object(pd.DataFrame, "to_parquet", _raise_after_partial)
+
+    with pytest.raises(RuntimeError, match="cache write failed"):
+        builder._write_cached_fills(cache_path, _retail_open_close_fills(25_000.0))
+
+    assert not partial_path.exists()
+    assert not cache_path.exists()
 
 
 def test_cli_logs_warning_when_fill_fetch_fails(mocker, tmp_path: Path, capsys) -> None:
