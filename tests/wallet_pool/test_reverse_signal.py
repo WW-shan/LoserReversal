@@ -575,6 +575,9 @@ def test_score_wallet_fills_can_score_non_open_fills_when_configured() -> None:
         [
             _fill(time="2026-05-26T12:00:00Z", direction="Open Long"),
             {**_fill(time="2026-05-26T13:00:00Z", direction="Close Long"), "fill_id": "fill-2"},
+            {**_fill(time="2026-05-26T14:00:00Z", direction="Open Short"), "fill_id": "fill-3"},
+            {**_fill(time="2026-05-26T15:00:00Z", direction="Close Short"), "fill_id": "fill-4"},
+            {**_fill(time="2026-05-26T16:00:00Z", direction="Liquidation Long"), "fill_id": "fill-5"},
         ]
     )
 
@@ -585,8 +588,9 @@ def test_score_wallet_fills_can_score_non_open_fills_when_configured() -> None:
         config=ReverseScoreConfig(score_open_fills_only=False),
     )
 
-    assert scores["fill_id"].tolist() == ["fill-1", "fill-2"]
-    assert scores["reverse_side"].tolist() == ["short", None]
+    assert scores["fill_id"].tolist() == ["fill-1", "fill-2", "fill-3", "fill-4"]
+    assert scores["dir"].tolist() == ["Open Long", "Close Long", "Open Short", "Close Short"]
+    assert scores["reverse_side"].tolist() == ["short", "long", "long", "short"]
 
 
 def test_score_wallet_fills_derives_non_eight_hour_funding_settle_interval() -> None:

@@ -10,6 +10,8 @@ import pandas as pd
 
 DEFAULT_FUNDING_SETTLE_INTERVAL_HOURS = 8.0
 OPEN_DIRECTIONS = frozenset({"Open Long", "Open Short"})
+CLOSE_DIRECTIONS = frozenset({"Close Long", "Close Short"})
+ACTIONABLE_DIRECTIONS = OPEN_DIRECTIONS | CLOSE_DIRECTIONS
 
 
 @dataclass(frozen=True)
@@ -131,12 +133,12 @@ def score_wallet_fills(
     if "dir" in frame.columns:
         frame["dir"] = frame["dir"].astype("string")
 
-    if config.score_open_fills_only:
-        if "dir" not in frame.columns:
-            return _empty_score_frame()
-        frame = frame.loc[frame["dir"].isin(OPEN_DIRECTIONS)].copy()
-        if frame.empty:
-            return _empty_score_frame()
+    if "dir" not in frame.columns:
+        return _empty_score_frame()
+    scorable_directions = OPEN_DIRECTIONS if config.score_open_fills_only else ACTIONABLE_DIRECTIONS
+    frame = frame.loc[frame["dir"].isin(scorable_directions)].copy()
+    if frame.empty:
+        return _empty_score_frame()
 
     for position, row in enumerate(frame.itertuples(index=False), start=0):
         fill = row._asdict()
@@ -404,9 +406,9 @@ def _is_funding_settle_window(
 
 
 def _reverse_side(direction: str | None) -> str | None:
-    if direction == "Open Long":
+    if direction in ("Open Long", "Close Short"):
         return "short"
-    if direction == "Open Short":
+    if direction in ("Open Short", "Close Long"):
         return "long"
     return None
 
