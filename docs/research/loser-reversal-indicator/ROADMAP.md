@@ -479,19 +479,26 @@ Configuration to lock if Phase 5 picks this up:
   gwrx2005 makes ≥5x near-universal; multi-factor intersection (lev∧loss∧size∧trades)
   correctly isolates panic-FOMO cohort at n=21. Downstream slices reference n=21.
 
-**Slice 2 — Multi-feature reverse signal**
+**Slice 2 — Multi-feature reverse signal** 🟡 **implemented 2026-05-26, retro CCG review in progress (R1 done 2026-05-27: 2C + 4I + 7M)**
 - Per-fill `reverse_alpha_score` = oversized × leverage × funding_extreme × time_bucket
 - Wallet-level confidence weight
+- Code: `src/wallet_pool/reverse_signal.py` (358 LOC) + `scripts/run_reverse_alpha_scoring.py` (254 LOC) + 24 tests pass
+- R1 findings recorded at `.ccg/tasks/phase-2-5-slice-2-multi-feature-reverse-signal/review.md`. NOT archived.
 
-**Slice 3 — Bot exclusion filter**
+**Slice 3 — Bot exclusion filter** 🟡 **implemented 2026-05-26, retro CCG review NOT started**
 - 检测 wallet 行为：funding source graph + 时序同步 + size CV + round numbers
 - 从 pool 中 filter out bots（保留供 Phase 4 单独研究）
+- Code: `src/wallet_pool/bot_exclusion.py` (251 LOC) + 11 tests pass. NOT archived.
 
-**Slice 4 — Cluster signal v2 + Cascade reversal**
+**Slice 4 — Cluster signal v2 + Cascade reversal** ❌ **not started**
 - Cluster N/W grid，confidence-weighted
 - 加 cascade-reversal signal（OI 减 X% in 1h → mean revert long）
+- Blocked on Slice 2/3 archive.
 
-**Slice 5 — Walk-forward + verdict**
+**Slice 5 — Walk-forward + verdict** ❌ **not started**
+- Note: with n=21 pool, walkforward CI width may force "power-limited" verdict
+  even if alpha is real. Slice 5 must record CI explicitly per
+  `.ccg/spec/backend/index.md` "Deliverable target vs. empirical population" rule.
 
 ### Pass Criteria
 - **绿灯**：Walk-forward OOS IR ≥ 1.2 + n_trades ≥ 100
@@ -603,6 +610,14 @@ Split 0 OOS Sharpe 6.58 是典型 lucky-fold（与 P1.5 split 3 同构），剩�
 
 > **这是 4 周的硬核研究，但如果成功，alpha 最强、最不易被吃掉。前提：Phase 2 通过。**
 
+### Status (2026-05-27 update)
+
+| Slice | Status | Notes |
+|---|---|---|
+| 1 — Bot identification refinement | ✅ archived | 5-round CCG retro closure (`src/bot_reverse/bot_detector.py`, 303 LOC) |
+| 2 — Bot reverse signal | 🟡 implemented, retro review PARTIAL | Codex review pass, Claude review hung 3× via codeagent-wrapper, subagent not run. Treat as NOT ready per spec rule. |
+| 3 — Walkforward + verdict | ❌ not started | depends on Slice 2 archive |
+
 ### 目标
 识别 Hyperliquid 上的 sybil 钱包集群，回测验证反向其同步行为的 alpha。
 
@@ -661,6 +676,13 @@ Split 0 OOS Sharpe 6.58 是典型 lucky-fold（与 P1.5 split 3 同构），剩�
 ## Phase 5: 组合优化 + 纸面交易（Week 15-16）
 
 > **把通过的策略组合起来，先在纸面验证。不投真钱。**
+
+### Status (2026-05-27 update)
+
+| Slice | Status | Notes |
+|---|---|---|
+| 1 — Portfolio composer (risk-parity) | 🟡 implemented, gate NOT met | `src/portfolio/composer.py` (386 LOC) + signal_loader (129 LOC). Gate: ≥2 GREEN/YELLOW signals — currently 1/2 (Phase 1.5 v1+D YELLOW). NOT archived. |
+| 2 — Paper signal generator | ❌ not started | depends on composer archive + gate (≥2 GREEN/YELLOW from {Phase 1.5, Phase 2.5 Slice 5, Phase 3, Phase 4 Slice 3}) |
 
 ### 目标
 - 把 Phase 1-4 通过的策略整合为统一组合

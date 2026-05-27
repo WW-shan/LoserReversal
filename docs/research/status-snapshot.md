@@ -1,7 +1,7 @@
 # Project Status Snapshot — crypto-alpha-portfolio
 
-> Last updated: 2026-05-26
-> Current branch: main, 370 tests passing, ruff clean
+> Last updated: 2026-05-27
+> Current branch: main, 689 tests passing, ruff clean
 
 ## Where we are right now
 
@@ -14,32 +14,43 @@
 | Phase 2 (v1) | ✅ archived | RED (misread) → re-classified **FILTER MISDESIGN** | IR=-4.83 because vlm-based filter selected 86%-profitable whale cohort |
 | **Phase 1.5** | ✅ done | 🟡 **YELLOW (v1+D recommended)** | Switched: v1 (T-7) + stop=10% + cohort=team: Sharpe 0.59 / MaxDD -7.8% / 29 trades. Was v2 (T-30): Sharpe 0.61 / MaxDD -29% / 36 trades. |
 | Phase 1.5 Ablations A/B/D | ✅ done | mixed | A robust [0.84,4.09] / B team-is-driver (Δ-0.02) / D mixed (v1 up, v2 collapse) |
-| Phase 1.5 Ablation C | ⏸ deferred | data_gap | regime_filter module ready (`8d2d80b`); needs BTC 1d backfill to 2023-05 |
+| Phase 1.5 Ablation C | ✅ done | 🔴 **REJECT** (bear-filter unusable) | Bear-only filter collapses sample to 1 trade/signal across 5 splits — `reports/phase-1-5-ablation-c.md`. BTC <200d windows too sparse layered with cohort=team. |
 | **Phase 3 (reframed)** | ✅ done | 🔴 **RED (data_gap)** | Aggregate OOS Sharpe 0.42 / ann 5.23% / 45 trades — but 1h candle backfill only 90 days; re-run needed after backfill |
 | Phase 2.5 Slice 1 | ✅ archived 2026-05-27 | 🟢 **GREEN with spec deviation** | academic wallet pool n=21 (target 200-500 unattainable on HL — see backend spec rule). 10-round 3-way review converged. |
-| Phase 2.5 Slices 2-5 | not started | — | reverse signal / bot exclusion / cluster v2 / walkforward verdict |
-| Phase 4 | not started | — | bot reverse (independent thesis after Phase 2.5 bot exclusion) |
-| Phase 5 | not started | — | portfolio composer + paper trading (1 YELLOW signal in inventory: v1+D unlock) |
+| Phase 2.5 Slice 2 | 🟡 implemented, retro CCG review NOT run | — | `src/wallet_pool/reverse_signal.py` (358 LOC) + CLI + 24 tests pass. task.json status=completed but archive skipped per "anti-monitor" note. Needs retro 3-way review per CCG `guides/index.md` rule before archive. |
+| Phase 2.5 Slice 3 | 🟡 implemented, retro CCG review NOT run | — | `src/wallet_pool/bot_exclusion.py` (251 LOC) + 11 tests pass. Same archive-skipped state as Slice 2. |
+| Phase 2.5 Slice 4 (cluster v2 + cascade reversal) | not started | — | depends on Slice 2/3 archive |
+| Phase 2.5 Slice 5 (walkforward verdict) | not started | — | depends on Slice 2/3/4 archive |
+| Phase 4 Slice 1 (bot identification) | ✅ archived | LGTM | bot_detector + bot_pool 5-round CCG retro closure (2026-05-27) |
+| Phase 4 Slice 2 (bot reverse signal) | 🟡 implemented, retro CCG review PARTIAL | — | code + Codex review pass; Claude review attempted 3× via codeagent-wrapper, hung each time. Subagent review not run. Per spec rule "trust strictest reviewer", treat as NOT ready. |
+| Phase 4 Slice 3 (walkforward verdict) | not started | — | depends on Phase 4 Slice 2 archive |
+| Phase 5 portfolio composer | 🟡 implemented, gate NOT met | — | `src/portfolio/composer.py` (386 LOC) + signal_loader (129 LOC) + tests. ROADMAP gate: ≥2 GREEN/YELLOW signals — currently only 1 (Phase 1.5 v1+D YELLOW). Phase 2.5 Slice 1 GREEN is for the pool, not a signal yet. |
+| Phase 5 paper signal generator | not started | — | depends on composer archive + gate |
 
-### Two open questions blocking progress
+### Open questions blocking progress
 
-1. **Phase 1.5 YELLOW: can we move it to GREEN?** Ablation A done (robust, CI [0.84, 4.09]). B/C/D pending. Combined target: Sharpe ≥ 1.0 AND MaxDD ≤ 20%.
-2. **Phase 3 RED revisit**: needs 1h candle backfill extension to 2023-05 (currently only 2026-02 → 2026-05). With 3-year candle data, walkforward can use proper 270/180 splits.
+1. **Phase 1.5 救援 closed**: A robust (CI [0.84, 4.09]) / B team-is-driver / C REJECT / D mixed.
+   Combined v1+D YELLOW remains best. Path to GREEN: needs cross-thesis portfolio (gated on Phase 2.5/3/4 success).
+2. **Phase 3 RED revisit blocked on 1h candle backfill** (HL `/info` candleSnapshot 5000-cap → paginated rewrite needed; ~50-90 min wall time for full 70-token 3-year backfill). See `.ccg/tasks/phase-3-funding-arbitrage/blocker.md`.
+3. **Phase 2.5 Slices 2/3 + Phase 4 Slice 2: implemented but un-archived** because original task spec used "anti-monitor" directive that blocked archive step. Per CCG retro closure flow, each needs 3-way review + fix loop to converge to 0-issue before archive (estimate ~5-10 rounds per slice based on Phase 2.5 Slice 1 + Phase 4 Slice 1 precedent).
+4. **Phase 5 implemented before gate met** (only 1 YELLOW signal in inventory vs required ≥2). Gate-check happens when Slice 5 walkforward verdict lands.
 
 ## What still needs to be done (priority order)
 
-### Track 1 — Phase 1.5 救援 B/C/D (parallel-safe, no infrastructure changes)
+### Track 1 — Phase 1.5 救援 — ✅ CLOSED 2026-05-27
 
-| # | Ablation | Method | Expected output | Status |
-|---|---|---|---|---|
-| A | Bootstrap CI on v2 OOS Sharpe | 1000× resample 36 trade returns | CI [0.84, 4.09] — robust | ✅ done |
-| **B** | Fix cohort = `team` (delete IS selection) | rerun walk-forward with `--fix-cohort team` | tells if IS-cohort-search is overfitting | 🚧 next |
-| **C** | BTC < 200d MA filter (bear-only short entries) | gate signal on BTC trend | tests Q2/Q5 regime hypothesis | pending |
-| **D** | Per-trade -10% stop loss | wrap `run_backtest` with stop_loss | should cut MaxDD from -29% to ~-12% | pending |
-| E | (defer) Cross-thesis portfolio | requires Phase 3 + Phase 2.5 | true uncorrelated alpha | blocked |
+All 4 ablations done. Final outcome:
 
-After B/C/D run: write `docs/research/phase-1-5-ablation-results.md` with comparison.
-If v2 with B+C+D reaches Sharpe ≥ 1.0 → upgrade to GREEN.
+| # | Ablation | Verdict |
+|---|---|---|
+| A | Bootstrap CI on v2 OOS Sharpe | ✅ robust, CI [0.84, 4.09] |
+| B | Fix cohort = team | ✅ team-is-driver (Δ-0.02 — confirms hypothesis) |
+| C | BTC < 200d MA bear-only filter | 🔴 REJECT — sample collapses to 1 trade/signal |
+| D | Per-trade -10% stop loss | ✅ mixed — v1 improved, v2 collapsed |
+| D-ATR | ATR-adaptive stop | ✅ comparison in `reports/phase-1-5-ablation-d-atr.md` |
+| E | Cross-thesis portfolio | ⏸ blocked, requires Phase 3 + Phase 2.5 GREEN |
+
+Best Phase 1.5 signal: **v1+D (T-7 short + 10% stop + team cohort) → YELLOW** (Sharpe 0.59 / MaxDD -7.8% / 29 trades). Cannot reach GREEN standalone; needs cross-thesis combination (Phase 5).
 
 ### Track 2 — Phase 3 candle backfill + re-validation
 
@@ -48,7 +59,8 @@ If v2 with B+C+D reaches Sharpe ≥ 1.0 → upgrade to GREEN.
 | 1 — funding backfill + `funding_extreme_v1` signal | ✅ done (commits `f983554` → `9521c15`) |
 | 2 — backtest + grid sweep + Fix R1 | ✅ done (commits `b029320` → `c039f1c`) |
 | 3 — walk-forward + verdict | ✅ done (commits `8181193` → `6d70038`) — RED with data_gap caveat |
-| **Follow-up — extend 1h candle backfill to 2023-05** | 🚧 blocked on `scripts/backfill_candles.py` rerun |
+| 4h walkforward revision | ✅ done (`e35260c`) |
+| **Follow-up — extend 1h candle backfill to 2023-05** | 🚧 needs paginated `backfill_candles.py` rewrite per `.ccg/tasks/phase-3-funding-arbitrage/blocker.md` (smart-search 2026-05-27 documented strategy) |
 | **Follow-up — re-run walk-forward on full 3-year data** | pending #1 |
 
 Verdict thresholds (single-venue directional, not cross-exchange neutral):
@@ -58,33 +70,41 @@ Verdict thresholds (single-venue directional, not cross-exchange neutral):
 
 ### Track 3 — Phase 2.5 (academic wallet rebuild)
 
-5 slices from `ROADMAP.md` Phase 2.5 section:
-1. Academic wallet pool builder (account_value $1k-$100k cohort, leverage ≥5x, realized_loss_rate ≥50%)
-2. Multi-feature reverse signal (oversized × leverage × funding × time bucket)
-3. Bot exclusion filter (graph + behavior; save excluded set for Phase 4)
-4. Cluster signal v2 + cascade reversal
-5. Walk-forward + verdict
+| Slice | Code | Tests | CCG retro closure | Archived |
+|---|---|---|---|---|
+| 1 — Academic wallet pool builder | ✅ | ✅ 49 tests | ✅ 10-round 3-way converged 2026-05-27 | ✅ |
+| 2 — Multi-feature reverse signal | ✅ 358 LOC | ✅ 24 tests | 🟡 Codex R1 done 2026-05-27; subagent R1 running; Claude pending | ❌ |
+| 3 — Bot exclusion filter | ✅ 251 LOC | ✅ 11 tests | ❌ not started | ❌ |
+| 4 — Cluster v2 + cascade reversal | ❌ not started | — | — | ❌ |
+| 5 — Walkforward + verdict | ❌ not started | — | — | ❌ |
 
 ### Track 4 — Phase 4 (bot reverse, independent thesis)
 
-Uses Phase 2.5 bot-excluded set. 3 slices:
-1. Bot identification refinement
-2. Bot reverse signal (separate from retail reverse)
-3. Walk-forward + verdict
+| Slice | Code | Tests | CCG retro closure | Archived |
+|---|---|---|---|---|
+| 1 — Bot identification refinement | ✅ 303 LOC | ✅ | ✅ 5-round 3-way converged 2026-05-27 | ✅ |
+| 2 — Bot reverse signal | ✅ | ✅ | 🟡 Codex review pass; Claude review hung 3× via codeagent-wrapper; subagent not run | ❌ |
+| 3 — Walkforward + verdict | ❌ not started | — | — | ❌ |
 
-### Track 5 — Phase 5 (portfolio + paper)
+### Track 5 — Phase 5 (portfolio + paper) — gated on ≥2 GREEN/YELLOW signals
 
-Only meaningful when ≥2 phases reach GREEN/YELLOW (cross-thesis diversification per Q4 literature).
-2 slices:
-1. Risk-parity portfolio composer
-2. Paper signal generator + 24-48h run
+| Slice | Code | Gate met? | CCG retro closure | Archived |
+|---|---|---|---|---|
+| 1 — Portfolio composer | ✅ 386 LOC + 129 LOC loader | ❌ currently 1/2 (v1+D YELLOW) | review exists | ❌ |
+| 2 — Paper signal generator | ❌ not started | — | — | ❌ |
 
-## Decision points awaiting user
+Phase 5 only meaningful when ≥2 phases reach GREEN/YELLOW (cross-thesis diversification per Q4 literature). Slice 1 implementation existed before gate met; archive deferred until cumulative signal inventory satisfies gate.
 
-1. **Run Phase 1.5 救援 ablations first (Track 1)** before Phase 3? — recommended; gives verdict confidence before adding more strategies
-2. **Continue Phase 3 from existing partial work** (Slice 1 done) — recommended; finishes the funding contrarian
-3. **Should A-D ablations be one agent task or 4 separate?** — recommend one agent producing comparison report
-4. **CryptoRank API key for unlock data expansion?** — currently using DefiLlama fork only; could expand to ~5000+ events
+## Recommended next-session order (post-2026-05-27)
+
+1. **Phase 2.5 Slice 2 retro closure** — finish R1 review (Codex done, subagent running) → fix loop → archive. ~50-100k tokens / 1 session.
+2. **Phase 2.5 Slice 3 retro closure** — same pattern. ~50-100k tokens.
+3. **Phase 4 Slice 2 retro closure** — fill missing Claude + subagent reviews → fix loop → archive.
+4. **Phase 2.5 Slice 4 implement** — cluster v2 + cascade reversal (new code).
+5. **Phase 2.5 Slice 5 implement + walkforward verdict** — Pass criteria check on n=21 pool.
+6. **Phase 4 Slice 3 walkforward verdict** — independent bot reverse thesis.
+7. **Phase 3 1h backfill + walkforward re-run** — script rewrite + ~50-90 min API run + walkforward.
+8. **Phase 5 gate-check + paper signal** — only if cumulative ≥2 GREEN/YELLOW.
 
 ## Reference documents
 
