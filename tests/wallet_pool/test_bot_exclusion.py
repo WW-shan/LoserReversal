@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 
 def _pool(wallets: list[str]) -> pd.DataFrame:
@@ -188,3 +189,32 @@ def test_exclude_funding_source_clusters_keeps_small_clusters_below_threshold() 
         "eligible_at",
         "reason",
     ]
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"bot_score_threshold": -0.01},
+        {"bot_score_threshold": 0.0},
+        {"bot_score_threshold": 1.01},
+        {"bot_score_threshold": True},
+        {"funding_source_graph_max_shared": 1},
+        {"funding_source_graph_max_shared": 0},
+        {"funding_source_graph_max_shared": -1},
+        {"funding_source_graph_max_shared": 1.5},
+    ],
+)
+def test_bot_exclusion_config_rejects_invalid_inputs(kwargs: dict) -> None:
+    from wallet_pool.bot_exclusion import BotExclusionConfig
+
+    with pytest.raises(ValueError):
+        BotExclusionConfig(**kwargs)
+
+
+def test_bot_exclusion_config_accepts_inclusive_upper_bound() -> None:
+    from wallet_pool.bot_exclusion import BotExclusionConfig
+
+    config = BotExclusionConfig(bot_score_threshold=1.0, funding_source_graph_max_shared=2)
+
+    assert config.bot_score_threshold == 1.0
+    assert config.funding_source_graph_max_shared == 2

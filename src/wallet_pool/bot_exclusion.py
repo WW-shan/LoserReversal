@@ -11,10 +11,33 @@ import pandas as pd
 
 @dataclass(frozen=True, slots=True)
 class BotExclusionConfig:
-    """Inclusive bot and sybil-cluster thresholds for pool exclusion."""
+    """Inclusive bot and sybil-cluster thresholds for pool exclusion.
+
+    Validation is intentionally strict (raise rather than clamp) so library
+    callers cannot bypass the bounds enforced by the CLI in
+    ``scripts/build_clean_wallet_pool.py``. See ``.ccg/spec/backend/index.md``
+    rule "Threshold parameter validation".
+    """
 
     bot_score_threshold: float = 0.5
     funding_source_graph_max_shared: int = 3
+
+    def __post_init__(self) -> None:
+        threshold = self.bot_score_threshold
+        if not isinstance(threshold, (int, float)) or isinstance(threshold, bool):
+            raise ValueError(
+                f"bot_score_threshold must be a float in (0.0, 1.0]; got {threshold!r}"
+            )
+        if not 0.0 < float(threshold) <= 1.0:
+            raise ValueError(
+                f"bot_score_threshold must be in (0.0, 1.0]; got {threshold!r}"
+            )
+        max_shared = self.funding_source_graph_max_shared
+        if type(max_shared) is not int or max_shared < 2:
+            raise ValueError(
+                "funding_source_graph_max_shared must be an int >= 2 "
+                f"(cluster size of 1 trivially excludes every wallet); got {max_shared!r}"
+            )
 
 
 def exclude_bots_from_pool(
