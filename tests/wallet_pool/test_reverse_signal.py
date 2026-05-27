@@ -6,8 +6,10 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+import wallet_pool.reverse_signal as reverse_signal_module
 from wallet_pool.reverse_signal import (
     ReverseScoreConfig,
+    _funding_extreme_multiplier,
     compute_reverse_alpha_score,
     score_wallet_fills,
     wallet_confidence_weight,
@@ -28,13 +30,15 @@ def _funding_multiplier(zscore: float) -> float:
     if math.isinf(zscore):
         return FUNDING_MAX_BOOST
     magnitude = abs(zscore)
-    if magnitude == 0:
-        return 1.0
     return 1.0 + (FUNDING_MAX_BOOST - 1.0) * _sigmoid((magnitude - 2.0) / FUNDING_TEMP)
 
 
 def _time_multiplier(signal: float = 1.0) -> float:
     return 1.0 + (TIME_MAX_BOOST - 1.0) * _sigmoid((signal - TIME_PIVOT) / TIME_TEMP)
+
+
+def _base_multiplier() -> float:
+    return _funding_multiplier(0.0) * _time_multiplier(0.0)
 
 
 def _trade_component(n_trades: int) -> float:
@@ -68,7 +72,7 @@ def test_compute_reverse_alpha_score_returns_base_when_no_axis_matches() -> None
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(1.0)
+    assert score == pytest.approx(_base_multiplier())
 
 
 def test_compute_reverse_alpha_score_applies_oversized_first_threshold() -> None:
@@ -79,7 +83,7 @@ def test_compute_reverse_alpha_score_applies_oversized_first_threshold() -> None
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(1.5)
+    assert score == pytest.approx(1.5 * _base_multiplier())
 
 
 def test_compute_reverse_alpha_score_applies_oversized_second_threshold_cumulatively() -> None:
@@ -90,7 +94,7 @@ def test_compute_reverse_alpha_score_applies_oversized_second_threshold_cumulati
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(3.0)
+    assert score == pytest.approx(3.0 * _base_multiplier())
 
 
 def test_compute_reverse_alpha_score_applies_leverage_first_threshold() -> None:
@@ -101,7 +105,7 @@ def test_compute_reverse_alpha_score_applies_leverage_first_threshold() -> None:
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(1.3)
+    assert score == pytest.approx(1.3 * _base_multiplier())
 
 
 def test_compute_reverse_alpha_score_applies_leverage_second_threshold_cumulatively() -> None:
@@ -112,7 +116,7 @@ def test_compute_reverse_alpha_score_applies_leverage_second_threshold_cumulativ
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(1.3 * 1.6)
+    assert score == pytest.approx(1.3 * 1.6 * _base_multiplier())
 
 
 def test_compute_reverse_alpha_score_applies_positive_funding_extreme() -> None:
@@ -123,7 +127,7 @@ def test_compute_reverse_alpha_score_applies_positive_funding_extreme() -> None:
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(_funding_multiplier(2.0))
+    assert score == pytest.approx(_funding_multiplier(2.0) * _time_multiplier(0.0))
 
 
 def test_compute_reverse_alpha_score_applies_negative_funding_extreme() -> None:
@@ -134,7 +138,7 @@ def test_compute_reverse_alpha_score_applies_negative_funding_extreme() -> None:
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(_funding_multiplier(-2.1))
+    assert score == pytest.approx(_funding_multiplier(-2.1) * _time_multiplier(0.0))
 
 
 def test_compute_reverse_alpha_score_applies_infinite_funding_extreme() -> None:
@@ -145,7 +149,30 @@ def test_compute_reverse_alpha_score_applies_infinite_funding_extreme() -> None:
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(FUNDING_MAX_BOOST)
+    assert score == pytest.approx(FUNDING_MAX_BOOST * _time_multiplier(0.0))
+
+
+def test_funding_extreme_multiplier_is_continuous_at_zero_signal() -> None:
+    config = ReverseScoreConfig()
+
+    assert _funding_extreme_multiplier(0.0, config) == pytest.approx(
+        _funding_extreme_multiplier(1e-9, config),
+        abs=1e-5,
+    )
+
+
+def test_time_bucket_multiplier_is_continuous_at_zero_signal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = ReverseScoreConfig()
+    timestamp = pd.Timestamp("2026-05-26T12:00:00Z")
+
+    monkeypatch.setattr(reverse_signal_module, "_funding_settle_signal", lambda *_: 0.0)
+    zero_signal = reverse_signal_module._time_bucket_multiplier(timestamp, None, config)
+    monkeypatch.setattr(reverse_signal_module, "_funding_settle_signal", lambda *_: 1e-9)
+    epsilon_signal = reverse_signal_module._time_bucket_multiplier(timestamp, None, config)
+
+    assert zero_signal == pytest.approx(epsilon_signal, abs=1e-5)
 
 
 def test_compute_reverse_alpha_score_derives_leverage_from_notional_when_missing() -> None:
@@ -164,7 +191,7 @@ def test_compute_reverse_alpha_score_derives_leverage_from_notional_when_missing
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(3.0 * 1.3)
+    assert score == pytest.approx(3.0 * 1.3 * _base_multiplier())
 
 
 def test_compute_reverse_alpha_score_applies_asian_session_start() -> None:
@@ -175,7 +202,7 @@ def test_compute_reverse_alpha_score_applies_asian_session_start() -> None:
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(_time_multiplier())
+    assert score == pytest.approx(_funding_multiplier(0.0) * _time_multiplier())
 
 
 def test_compute_reverse_alpha_score_applies_tokyo_open_session_start() -> None:
@@ -186,7 +213,7 @@ def test_compute_reverse_alpha_score_applies_tokyo_open_session_start() -> None:
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(_time_multiplier())
+    assert score == pytest.approx(_funding_multiplier(0.0) * _time_multiplier())
 
 
 def test_compute_reverse_alpha_score_excludes_asian_session_end() -> None:
@@ -197,7 +224,7 @@ def test_compute_reverse_alpha_score_excludes_asian_session_end() -> None:
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(1.0)
+    assert score == pytest.approx(_base_multiplier())
 
 
 def test_compute_reverse_alpha_score_applies_funding_settle_window() -> None:
@@ -208,7 +235,7 @@ def test_compute_reverse_alpha_score_applies_funding_settle_window() -> None:
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(_time_multiplier(0.5))
+    assert score == pytest.approx(_funding_multiplier(0.0) * _time_multiplier(0.5))
 
 
 def test_compute_reverse_alpha_score_localizes_naive_fill_timestamp_to_utc() -> None:
@@ -227,7 +254,7 @@ def test_compute_reverse_alpha_score_localizes_naive_fill_timestamp_to_utc() -> 
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(_time_multiplier())
+    assert score == pytest.approx(_funding_multiplier(0.0) * _time_multiplier())
 
 
 def test_compute_reverse_alpha_score_multiplies_all_axes() -> None:
@@ -249,7 +276,7 @@ def test_compute_reverse_alpha_score_ignores_missing_funding_context() -> None:
         config=ReverseScoreConfig(),
     )
 
-    assert score == pytest.approx(1.0)
+    assert score == pytest.approx(_base_multiplier())
 
 
 def _wallet_metrics(
@@ -321,14 +348,19 @@ def test_score_wallet_fills_returns_one_row_per_fill_with_components() -> None:
     assert scores["reverse_side"].tolist() == ["short", "short"]
     assert scores["token"].tolist() == ["BTC", "BTC"]
     assert scores["score"].tolist() == pytest.approx(
-        [1.5 * 1.3 * _funding_multiplier(2.5), _funding_multiplier(2.5)]
+        [
+            1.5 * 1.3 * _funding_multiplier(2.5) * _time_multiplier(0.0),
+            _funding_multiplier(2.5) * _time_multiplier(0.0),
+        ]
     )
     assert scores["components"].iloc[0]["oversized_multiplier"] == pytest.approx(1.5)
     assert scores["components"].iloc[0]["leverage_multiplier"] == pytest.approx(1.3)
     assert scores["components"].iloc[0]["funding_extreme_multiplier"] == pytest.approx(
         _funding_multiplier(2.5)
     )
-    assert scores["components"].iloc[0]["time_bucket_multiplier"] == pytest.approx(1.0)
+    assert scores["components"].iloc[0]["time_bucket_multiplier"] == pytest.approx(
+        _time_multiplier(0.0)
+    )
     assert scores["components"].iloc[0]["risk_ratio"] == pytest.approx(0.05)
     assert scores["components"].iloc[0]["funding_zscore"] == pytest.approx(2.5)
     assert scores["components"].iloc[0]["wallet_confidence"] == pytest.approx(

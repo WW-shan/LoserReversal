@@ -415,8 +415,6 @@ def _funding_extreme_multiplier(zscore: float, config: ReverseScoreConfig) -> fl
     magnitude = abs(zscore)
     if not math.isfinite(magnitude):
         return config.funding_extreme_max_boost if math.isinf(magnitude) else 1.0
-    if magnitude <= 0:
-        return 1.0
     return _smooth_boost(
         magnitude,
         max_boost=config.funding_extreme_max_boost,
@@ -436,8 +434,6 @@ def _time_bucket_multiplier(
     if _is_asian_session(timestamp, config):
         signal = 1.0
     signal = max(signal, _funding_settle_signal(timestamp, config, funding_context))
-    if signal <= 0:
-        return 1.0
     return _smooth_boost(
         signal,
         max_boost=config.time_bucket_max_boost,

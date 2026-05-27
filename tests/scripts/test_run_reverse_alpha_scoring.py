@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+TIME_BUCKET_BASELINE = 1.0151716360743523
+
 
 def _pool_row(wallet: object = "0xpass") -> dict[str, object]:
     return {
@@ -95,7 +97,9 @@ def test_run_reverse_alpha_scoring_writes_scores_and_report(tmp_path: Path) -> N
     assert written["time"].tolist() == [pd.Timestamp("2026-05-26T12:00:00Z")]
     assert written["dir"].tolist() == ["Open Long"]
     assert written["reverse_side"].tolist() == ["short"]
-    assert written["score"].iloc[0] == pytest.approx(1.5 * 1.3 * 1.2924234314520021)
+    assert written["score"].iloc[0] == pytest.approx(
+        1.5 * 1.3 * 1.2924234314520021 * TIME_BUCKET_BASELINE
+    )
     components = json.loads(written["components"].iloc[0])
     assert components["wallet_confidence"] == pytest.approx(0.3990799224301785)
     assert components["funding_zscore"] == 2.5
@@ -283,7 +287,7 @@ def test_run_reverse_alpha_scoring_serializes_nonfinite_components_as_json_null(
     assert "Infinity" not in raw_components
     components = json.loads(raw_components)
     assert components["funding_zscore"] is None
-    assert written["score"].iloc[0] == pytest.approx(1.5 * 1.3 * 1.4)
+    assert written["score"].iloc[0] == pytest.approx(1.5 * 1.3 * 1.4 * TIME_BUCKET_BASELINE)
 
 
 def test_run_reverse_alpha_scoring_rejects_score_token_count_mismatch(
