@@ -248,6 +248,31 @@ def test_build_clean_wallet_pool_respects_min_trades(mocker, tmp_path: Path) -> 
     assert result["funnel"]["clean_retail_pool"] == 1
 
 
+def test_score_wallets_threads_min_trades_kwarg(mocker, tmp_path: Path) -> None:
+    import scripts.build_clean_wallet_pool as builder
+
+    academic_path = tmp_path / "academic_wallet_pool.parquet"
+    _academic_pool(["0xwallet"]).to_parquet(academic_path, index=False)
+    mocker.patch.object(builder, "fetch_user_fills", return_value=_human_fills())
+    score_bot_likelihood = mocker.patch.object(
+        builder,
+        "score_bot_likelihood",
+        return_value=0.0,
+    )
+
+    builder.build_clean_wallet_pool(
+        academic_pool_path=academic_path,
+        clean_out=tmp_path / "clean.parquet",
+        excluded_out=tmp_path / "excluded.parquet",
+        funding_sources_path=tmp_path / "missing_funding_sources.parquet",
+        throttle_ms=0,
+        min_trades_for_scoring=37,
+        as_of=pd.Timestamp("2026-05-26T00:00:00Z"),
+    )
+
+    assert score_bot_likelihood.call_args.kwargs["min_trades_for_scoring"] == 37
+
+
 def test_build_clean_wallet_pool_main_entrypoint_prints_summary(
     mocker,
     tmp_path: Path,
@@ -301,6 +326,15 @@ def test_build_clean_wallet_pool_parse_args_accepts_min_trades(mocker) -> None:
     assert args.min_trades == 25
 
 
+def test_cli_help_does_not_crash() -> None:
+    import scripts.build_clean_wallet_pool as builder
+
+    with pytest.raises(SystemExit) as error:
+        builder._parse_args(["-h"])
+
+    assert error.value.code == 0
+
+
 def test_build_clean_wallet_pool_rejects_invalid_min_trades(mocker, capsys) -> None:
     import scripts.build_clean_wallet_pool as builder
 
@@ -334,3 +368,36 @@ def test_build_clean_wallet_pool_rejects_singleton_funding_source_threshold(mock
 
     assert error.value.code != 0
     assert "--funding-source-max-shared must be greater than 1" in capsys.readouterr().err
+
+
+def test_combine_excluded_no_double_count_when_bot_and_sybil_overlap() -> None:
+    import scripts.build_clean_wallet_pool as builder
+
+    score_excluded = pd.DataFrame(
+        {
+            "wallet": ["0xoverlap"],
+            "bot_score": [0.80],
+            "reason": ["bot_score"],
+        }
+    )
+    cluster_excluded = pd.DataFrame(
+        {
+            "wallet": ["0xoverlap", "0xcluster"],
+            "reason": ["funding_source_cluster", "funding_source_cluster"],
+        }
+    )
+    bot_scores = pd.DataFrame(
+        {
+            "wallet": ["0xoverlap", "0xcluster"],
+            "bot_score": [0.80, 0.20],
+        }
+    )
+
+    excluded = builder._combine_excluded(
+        score_excluded,
+        cluster_excluded,
+        builder._empty_excluded(),
+        bot_scores,
+    )
+
+    assert excluded["wallet"].tolist().count("0xoverlap") == 1

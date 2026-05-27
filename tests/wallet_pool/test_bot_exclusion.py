@@ -315,6 +315,30 @@ def test_exclude_funding_source_clusters_accepts_config() -> None:
     assert excluded["wallet"].tolist() == ["0xa", "0xb"]
 
 
+def test_exclude_funding_source_clusters_at_max_shared_2() -> None:
+    from wallet_pool.bot_exclusion import BotExclusionConfig, exclude_funding_source_clusters
+
+    wallet_pool = _pool(["0xa", "0xb"])
+    graph = {
+        "0xa": {"0xb"},
+        "0xb": {"0xa"},
+    }
+
+    excluded_at_two = exclude_funding_source_clusters(
+        wallet_pool,
+        graph,
+        config=BotExclusionConfig(funding_source_graph_max_shared=2),
+    )
+    excluded_at_three = exclude_funding_source_clusters(
+        wallet_pool,
+        graph,
+        config=BotExclusionConfig(funding_source_graph_max_shared=3),
+    )
+
+    assert excluded_at_two["wallet"].tolist() == ["0xa", "0xb"]
+    assert excluded_at_three.empty
+
+
 def test_exclude_funding_source_clusters_emits_deprecation_for_max_shared_kwarg() -> None:
     from wallet_pool.bot_exclusion import exclude_funding_source_clusters
 

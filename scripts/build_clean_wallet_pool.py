@@ -245,6 +245,7 @@ def _combine_excluded(
     excluded["wallet"] = excluded["wallet"].astype("string").str.lower()
     excluded["bot_score"] = pd.to_numeric(excluded["bot_score"], errors="coerce").astype("float64")
     excluded["reason"] = excluded["reason"].astype("string")
+    excluded = excluded.drop_duplicates(subset=["wallet"], keep="first")
     return excluded[EXCLUDED_COLUMNS].reset_index(drop=True)
 
 
@@ -324,7 +325,7 @@ def _print_summary(result: dict[str, Any]) -> None:
     print(f"runtime seconds: {result['runtime_seconds']:.1f}")
 
 
-def _parse_args() -> argparse.Namespace:
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build the Phase 2.5 clean retail wallet pool.")
     parser.add_argument("--academic-pool", type=Path, default=DEFAULT_ACADEMIC_POOL)
     parser.add_argument("--clean-out", type=Path, default=DEFAULT_CLEAN_OUT)
@@ -338,7 +339,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--retry-backoff-seconds", type=float, default=0.25)
     parser.add_argument("--lookback-days", type=int, default=LOOKBACK_DAYS)
     parser.add_argument("--as-of", type=_parse_timestamp, default=None)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     _validate_args(parser, args)
     return args
 
