@@ -23,6 +23,11 @@ class ReverseScoreConfig:
     ``docs/research/literature-review.md``) and proximity to the next funding
     settle. ``funding_settle_interval_hours`` defaults to auto-detect from
     strictly prior funding history.
+
+    Neutral fills score slightly above 1.0 by design: with default smooth
+    boosts, zero funding/time signals produce about 1.022 because the sigmoid
+    pivots are positive. Downstream consumers should rank scores rather than
+    threshold on exact absolute values.
     """
 
     oversized_threshold_1: float = 0.05
