@@ -86,7 +86,7 @@ def main() -> int:
     folds.to_parquet(args.out, index=False)
     print(f"wrote folds: {args.out}")
 
-    trades = result["all_trades"]
+    trades = result["oos_trades"]
     args.trades_out.parent.mkdir(parents=True, exist_ok=True)
     trades.to_parquet(args.trades_out, index=False)
     print(f"wrote trades: {args.trades_out}")

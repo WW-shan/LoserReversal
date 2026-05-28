@@ -128,7 +128,6 @@ def test_build_signal_frame_emits_reverse_direction(tmp_path: Path) -> None:
 
     # Build 250 scores (enough to clear default threshold_min_prior=200 + shift(1))
     n = 250
-    ids = [str(i + 1) for i in range(n)]
     # Repeat fill_ids 1, 2 in pattern so both real fills appear after threshold warmup
     fill_id_list = ["1" if i % 2 == 0 else "2" for i in range(n)]
     scores = [1.0] * (n - 2) + [5.0, 6.0]  # last 2 scores high → cleared

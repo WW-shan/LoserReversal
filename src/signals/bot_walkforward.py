@@ -204,12 +204,15 @@ def run_walkforward(
             test_days=walkforward_config.test_days,
         )
     except ValueError as exc:
-        # Span too short for requested split count.
+        # Span too short for requested split count. There is no OOS window,
+        # so the aggregate must reflect zero OOS trades (NOT all trades —
+        # spec rule "OOS-only aggregate" applies even when no fold runs).
+        empty = trades.iloc[0:0]
         return {
             "fold_stats": [],
-            "aggregate": aggregate_trade_stats(trades),
+            "aggregate": aggregate_trade_stats(empty),
             "all_trades": trades,
-            "oos_trades": trades.iloc[0:0],
+            "oos_trades": empty,
             "verdict": "INCONCLUSIVE",
             "verdict_reason": f"walk-forward span too short: {exc}",
         }

@@ -64,17 +64,30 @@ def build_signal_frame(
     if score_with_time.empty:
         return _empty_signal_frame()
 
-    # Sort by time; the threshold at row i uses score distribution of rows
-    # with index strictly less than i (shift(1)).
+    # Sort by time; the threshold at fill F with time T uses the score
+    # distribution of all fills with time strictly less than T (NOT row-order
+    # less-than — same-timestamp fills must not see each other's scores).
     score_with_time = score_with_time.sort_values("time").reset_index(drop=True)
-    thresholds = (
-        score_with_time["score"]
-        .expanding(min_periods=config.threshold_min_prior)
-        .quantile(config.score_percentile)
-        .shift(1)
-    )
-    keep_mask = score_with_time["score"] >= thresholds
-    high_score = score_with_time.loc[keep_mask.fillna(False)].copy()
+
+    # For each row, find the last row index with time strictly less than its
+    # own time. searchsorted(side="left") on the sorted time series gives
+    # the count of rows with time < current_time, which is exactly the cutoff.
+    times = score_with_time["time"].to_numpy()
+    sorted_times = pd.DatetimeIndex(times)
+    prior_counts = sorted_times.searchsorted(times, side="left")
+
+    scores_values = score_with_time["score"].to_numpy()
+    n_rows = len(score_with_time)
+    keep_flags = [False] * n_rows
+    for i in range(n_rows):
+        n_prior = int(prior_counts[i])
+        if n_prior < config.threshold_min_prior:
+            continue
+        prior_scores = scores_values[:n_prior]
+        threshold = float(pd.Series(prior_scores).quantile(config.score_percentile))
+        keep_flags[i] = bool(scores_values[i] >= threshold)
+
+    high_score = score_with_time.loc[keep_flags].copy()
     if high_score.empty:
         return _empty_signal_frame()
 

@@ -54,7 +54,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"wrote fold parquet: {args.out}")
 
     # Write trades parquet
-    trades = result["all_trades"]
+    trades = result["oos_trades"]
     args.trades_out.parent.mkdir(parents=True, exist_ok=True)
     trades.to_parquet(args.trades_out, index=False)
     print(f"wrote trades parquet: {args.trades_out}")
