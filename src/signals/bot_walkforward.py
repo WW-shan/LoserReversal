@@ -182,6 +182,7 @@ def run_walkforward(
             "fold_stats": [],
             "aggregate": aggregate_trade_stats(trades),
             "all_trades": trades,
+            "oos_trades": trades,
             "verdict": "RED",
             "verdict_reason": "no trades formed from signal frame",
         }
@@ -208,12 +209,14 @@ def run_walkforward(
             "fold_stats": [],
             "aggregate": aggregate_trade_stats(trades),
             "all_trades": trades,
+            "oos_trades": trades.iloc[0:0],
             "verdict": "INCONCLUSIVE",
             "verdict_reason": f"walk-forward span too short: {exc}",
         }
 
     fold_stats: list[dict[str, object]] = []
     fold_sharpes: list[float] = []
+    oos_trade_indices: list[int] = []
     for idx, ((_, _), (test_start, test_end)) in enumerate(splits):
         test_start_ts = _coerce_utc(test_start)
         test_end_ts = _coerce_utc(test_end)
@@ -222,6 +225,7 @@ def run_walkforward(
             & (trades["entry_timestamp"] < test_end_ts)
         )
         fold_trades = trades[mask]
+        oos_trade_indices.extend(fold_trades.index.tolist())
         stats = aggregate_trade_stats(fold_trades)
         fold_stats.append(
             {
@@ -234,7 +238,9 @@ def run_walkforward(
         if not np.isnan(stats["sharpe"]) and stats["n_trades"] > 0:
             fold_sharpes.append(stats["sharpe"])
 
-    aggregate = aggregate_trade_stats(trades)
+    # OOS-only aggregate (excludes train-window trades).
+    oos_trades = trades.loc[sorted(set(oos_trade_indices))] if oos_trade_indices else trades.iloc[0:0]
+    aggregate = aggregate_trade_stats(oos_trades)
     if fold_sharpes:
         aggregate = {**aggregate, "mean_fold_sharpe": float(np.mean(fold_sharpes))}
     else:
@@ -245,6 +251,7 @@ def run_walkforward(
         "fold_stats": fold_stats,
         "aggregate": aggregate,
         "all_trades": trades,
+        "oos_trades": oos_trades,
         "verdict": verdict,
         "verdict_reason": reason,
     }
@@ -279,9 +286,11 @@ def _pair_trades_for_channel(
     rows: list[dict[str, object]] = []
     active_entry_ts: pd.Timestamp | None = None
     for _, row in group.iterrows():
-        if bool(row["entry"]) and active_entry_ts is None:
+        entry_flag = _safe_bool(row["entry"])
+        exit_flag = _safe_bool(row["exit"])
+        if entry_flag and active_entry_ts is None:
             active_entry_ts = _coerce_utc(row["timestamp"])
-        elif bool(row["exit"]) and active_entry_ts is not None:
+        elif exit_flag and active_entry_ts is not None:
             exit_ts = _coerce_utc(row["timestamp"])
             entry_px = _price_at(candles, active_entry_ts)
             exit_px = _price_at(candles, exit_ts)
@@ -313,8 +322,19 @@ def _pair_trades_for_channel(
     return rows
 
 
-def _price_at(candles: pd.DataFrame, ts: pd.Timestamp) -> float | None:
-    """Look up close price at or immediately after timestamp ts."""
+def _price_at(
+    candles: pd.DataFrame,
+    ts: pd.Timestamp,
+    *,
+    max_gap_hours: float | None = 26.0,
+) -> float | None:
+    """Look up close price at or immediately after timestamp ts.
+
+    Returns None when the next candle is more than ``max_gap_hours`` after
+    ``ts``. This guards against the R1 wallet-walkforward finding where
+    trades from February were priced against a May candle (88-day gap).
+    Set ``max_gap_hours=None`` to disable the guard (legacy behavior).
+    """
     if candles.empty:
         return None
     index = candles.index
@@ -330,6 +350,11 @@ def _price_at(candles: pd.DataFrame, ts: pd.Timestamp) -> float | None:
     pos = index.searchsorted(ts, side="left")
     if pos >= len(index):
         return None
+    bar_ts = index[pos]
+    if max_gap_hours is not None:
+        gap = (bar_ts - ts).total_seconds() / 3600.0
+        if gap > max_gap_hours:
+            return None
     close_col = "close" if "close" in candles.columns else candles.columns[0]
     return float(candles.iloc[pos][close_col])
 
@@ -379,6 +404,23 @@ def _coerce_utc(value: object) -> pd.Timestamp:
     if ts.tzinfo is None:
         return ts.tz_localize("UTC")
     return ts.tz_convert("UTC")
+
+
+def _safe_bool(value: object) -> bool:
+    """Coerce a value to bool, treating NaN/None/<NA> as False (fail closed).
+
+    Per R1 finding (C1): ``bool(np.nan) is True`` would silently fire the
+    state machine on NaN entries. Coerce via ``pd.notna`` first to avoid
+    that landmine.
+    """
+    if value is None:
+        return False
+    try:
+        if pd.isna(value):
+            return False
+    except (TypeError, ValueError):
+        pass
+    return bool(value)
 
 
 def _trades_per_year(trades: pd.DataFrame) -> float:

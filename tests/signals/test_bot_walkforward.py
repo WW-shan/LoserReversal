@@ -274,3 +274,104 @@ def test_walkforward_returns_inconclusive_on_short_span() -> None:
     )
     assert result["verdict"] == "INCONCLUSIVE"
     assert "span too short" in result["verdict_reason"]
+
+
+# ---------- NaN handling (R1 C1) ----------
+
+
+def test_nan_in_entry_column_does_not_fire_state_machine() -> None:
+    """Regression: bool(np.nan) used to silently fire entries; must be False."""
+    import numpy as np
+    candles = _make_candles("2026-01-01", periods=24, base=100.0, step=1.0)
+    signal = pd.DataFrame(
+        {
+            "timestamp": pd.to_datetime(
+                [
+                    "2026-01-01 00:00:00+00:00",
+                    "2026-01-01 05:00:00+00:00",
+                    "2026-01-01 10:00:00+00:00",
+                ],
+                utc=True,
+            ),
+            "coin": ["BTC", "BTC", "BTC"],
+            "direction": ["long", "long", "long"],
+            "entry": [True, np.nan, False],
+            "exit": [False, np.nan, True],
+        }
+    )
+    trades = backtest_bot_signal(
+        signal, {"BTC": candles}, config=BotBacktestConfig(fees=0.0, slippage=0.0)
+    )
+    # The NaN row is dropped silently; the real exit at 10:00 closes the trade
+    # opened at 00:00 → entry $100, exit $110, return 0.10
+    assert len(trades) == 1
+    assert abs(trades.iloc[0]["pct_return"] - 0.10) < 1e-6
+
+
+# ---------- max-gap guard in _price_at (R1 C4) ----------
+
+
+def test_price_at_returns_none_when_gap_exceeds_max() -> None:
+    """Trades after the last candle within max_gap_hours should return None."""
+    from signals.bot_walkforward import _price_at
+    candles = _make_candles("2026-01-01", periods=24)
+    far_future = pd.Timestamp("2026-04-01", tz="UTC")  # 90 days later
+    px = _price_at(candles, far_future, max_gap_hours=26.0)
+    assert px is None
+
+
+def test_price_at_returns_close_when_within_max_gap() -> None:
+    from signals.bot_walkforward import _price_at
+    candles = _make_candles("2026-01-01", periods=24)
+    same_day = pd.Timestamp("2026-01-01 12:30:00", tz="UTC")
+    px = _price_at(candles, same_day, max_gap_hours=26.0)
+    assert px is not None
+
+
+# ---------- OOS-only aggregate (R1 C1 from P2) ----------
+
+
+def test_run_walkforward_aggregate_uses_oos_trades_only() -> None:
+    """Aggregate Sharpe must use only OOS-window trades, not train-window."""
+    candles = pd.DataFrame(
+        {
+            "close": [100.0 + i for i in range(400)],
+        },
+        index=pd.date_range("2026-01-01", periods=400, freq="1D", tz="UTC"),
+    )
+    # 2 entries in train window (days 5, 15), 2 in OOS window (days 60+, 90+).
+    # Span extended so walk_forward_splits accepts n_splits=1 + 30 train + 60 test.
+    signal = pd.DataFrame(
+        {
+            "timestamp": pd.to_datetime(
+                [
+                    "2026-01-06", "2026-01-09",
+                    "2026-01-16", "2026-01-19",
+                    "2026-03-20", "2026-03-23",
+                    "2026-04-25", "2026-04-28",
+                ],
+                utc=True,
+            ),
+            "coin": ["BTC"] * 8,
+            "direction": ["long"] * 8,
+            "entry": [True, False, True, False, True, False, True, False],
+            "exit": [False, True, False, True, False, True, False, True],
+        }
+    )
+    result = run_walkforward(
+        signal,
+        {"BTC": candles},
+        backtest_config=BotBacktestConfig(fees=0.0, slippage=0.0),
+        walkforward_config=BotWalkforwardConfig(
+            n_splits=1, min_train_days=30, test_days=60
+        ),
+    )
+    aggregate = result["aggregate"]
+    assert "oos_trades" in result
+    assert aggregate["n_trades"] == len(result["oos_trades"])
+    # All_trades has 4 paired trades; OOS should have only the 1 in the test window
+    # (test window is 30→90 days from start; entry at 2026-03-20 day 73 is in OOS;
+    # entry at 2026-04-25 is past the OOS window).
+    assert len(result["all_trades"]) == 4
+    assert aggregate["n_trades"] >= 1  # at least one OOS trade
+    assert aggregate["n_trades"] <= 2  # at most both later trades
