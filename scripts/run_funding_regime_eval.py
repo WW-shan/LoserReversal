@@ -143,16 +143,19 @@ def _summarize_per_signal(
             columns=["signal", f"n_{label}", f"sharpe_{label}", f"win_{label}", f"maxdd_{label}", f"ret_{label}"]
         )
     rows: list[dict[str, object]] = []
-    # Trades-per-year estimate from full trade span
-    span_days = max(
-        (
-            pd.Timestamp(trades["entry_ts"].max()) - pd.Timestamp(trades["entry_ts"].min())
-        ).total_seconds()
-        / 86400.0,
-        1.0,
-    )
-    trades_per_year_overall = float(len(trades) * 365.0 / span_days)
     for signal, group in trades.groupby("signal"):
+        # Annualize using THIS signal's own trade cadence (per smart-search
+        # 2026-05-27 R1 finding: overall-density was 6.7× canonical for v1).
+        # tpy_signal = n_signal_trades / span_signal_days * 365
+        if len(group) >= 2:
+            span_days = (
+                pd.Timestamp(group["entry_ts"].max())
+                - pd.Timestamp(group["entry_ts"].min())
+            ).total_seconds() / 86400.0
+            span_days = max(span_days, 1.0)
+            tpy_signal = float(len(group) * 365.0 / span_days)
+        else:
+            tpy_signal = 12.0  # fallback for n<2
         returns = group["return"].to_numpy()
         n = len(returns)
         if n == 0:
@@ -161,7 +164,7 @@ def _summarize_per_signal(
             mean = float(np.mean(returns))
             std = float(np.std(returns, ddof=0))
             sharpe = (
-                float(mean / std * np.sqrt(trades_per_year_overall)) if std > 0 else float("nan")
+                float(mean / std * np.sqrt(tpy_signal)) if std > 0 else float("nan")
             )
         win_rate = float((returns > 0).mean()) if n else float("nan")
         equity = np.cumprod(1.0 + returns) if n else np.array([])

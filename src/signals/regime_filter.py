@@ -1,20 +1,30 @@
-"""Per-signal BTC trend-regime filter.
+"""Per-signal trend-regime filters for unlock walkforward.
 
 Each signal in SIGNAL_REGISTRY has its own entry_offset_days and direction
-("short" or "long"). This filter gates events at each signal's entry
-timestamp (unlock_date + entry_offset_days) against BTC's 200d SMA trend:
-- direction="short": keep events landing in bear regime (BTC < SMA)
-- direction="long": keep events landing in bull regime (BTC >= SMA)
+("short" or "long"). The filter gates events at each signal's entry
+timestamp (unlock_date + entry_offset_days) against the chosen regime.
 
-Phase 1.5 diagnostic identified Split 4 (bear period 2025-09 to 2026-03)
-as punishing naive unlock shorts; this filter excludes events outside
-the trend favoring the signal's direction.
+Two regime detectors:
 
-The funding-rate regime alternative (2026-05-28) reads majors' rolling
-funding mean instead of BTC price; bear regime = mean funding < 0 across
-majors (shorts dominant, bearish positioning). Useful when BTC candle
-history is too short (200d SMA needs 200 days of 1d candles) but funding
-history is longer.
+1. ``compute_btc_regime`` — BTC < N-day SMA classifier. Original Phase 1.5
+   design. direction="short" keeps events landing in bear (BTC < SMA);
+   direction="long" keeps events landing in bull (BTC >= SMA). Phase 1.5
+   diagnostic identified Split 4 (bear period 2025-09 → 2026-03) as
+   punishing naive unlock shorts; this filter excludes events outside
+   the trend favoring the signal's direction.
+
+2. ``compute_funding_regime`` — overheated-long classifier based on
+   percentile of cross-major rolling-mean funding (2026-05-28 addition).
+   direction="short" keeps events landing in bear regime, here meaning
+   funding is in the top quartile of in-sample observations (overheated
+   long positioning → contrarian short entry). direction="long" keeps
+   events in bull regime (below threshold). Useful when BTC 1d candle
+   history is too short for 200-day SMA but funding history is longer.
+
+Per smart-search 2026-05-27, extreme positive funding signals overheated
+long positioning → contrarian short opportunity. HL funding is ~87%
+positive-biased so an absolute funding<0 threshold is too restrictive;
+percentile-relative is the right semantic.
 """
 
 from __future__ import annotations
@@ -248,11 +258,15 @@ def apply_funding_regime_filter(
 ) -> pd.DataFrame:
     """Filter events using funding-rate regime instead of BTC SMA.
 
-    Direction semantics:
+    Direction semantics (matching compute_funding_regime):
     - direction="short": keep events landing in bear regime (overheated long
-      positioning — top quartile of in-sample funding)
+      positioning — aggregate funding above the ``bear_quantile`` percentile)
     - direction="long": keep events landing in bull regime (below the
-      ``bear_quantile`` threshold — funding-cooled / shorts-paying-longs)
+      threshold, including outright negative funding)
+
+    Per smart-search 2026-05-27: HL funding is ~87% positive-biased so the
+    semantic is overheated-long ≡ bear (ripe for reversal down), NOT
+    "funding < 0 = bear". An absolute zero threshold would be too restrictive.
     """
     if events.empty or "unlock_date" not in events.columns:
         return events.copy()
