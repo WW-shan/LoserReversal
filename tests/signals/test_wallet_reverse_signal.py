@@ -182,11 +182,13 @@ def test_build_signal_frame_skips_when_fills_file_missing(tmp_path: Path) -> Non
 def test_build_signal_frame_handles_time_as_index(tmp_path: Path) -> None:
     """Fills parquets sometimes have 'time' as index instead of column."""
     wallet = "0xaaaa"
-    fills = _fills_frame([1], ["2026-01-01T00:00:00Z"], ["BTC"], ["Open Long"])
+    # Use 25 distinct timestamps so strict-time PIT can gate
+    times = [f"2026-01-{day:02d}T00:00:00Z" for day in range(1, 26)]
+    fills = _fills_frame(list(range(1, 26)), times, ["BTC"] * 25, ["Open Long"] * 25)
     fills_indexed = fills.set_index("time")
     # Save with index preserved (legacy fetcher writes this way before our fix)
     fills_indexed.to_parquet(tmp_path / f"{wallet}.parquet", index=True)
-    scores_df = _scores_frame(["1"] * 25, [wallet] * 25, [5.0] * 25)
+    scores_df = _scores_frame([str(i) for i in range(1, 26)], [wallet] * 25, [5.0] * 25)
     out = build_signal_frame(
         scores_df,
         tmp_path,
