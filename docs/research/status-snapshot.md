@@ -1,7 +1,60 @@
 # Project Status Snapshot — crypto-alpha-portfolio
 
-> Last updated: 2026-05-29 (post R1 Critical fixes on 4 retro-Ralph-Loop features)
-> Current branch: main, 871 tests passing, ruff clean
+> Last updated: 2026-05-29 (post retro Ralph Loop convergence + concept clarification)
+> Current branch: main, 871 tests passing, ruff clean, 21 commits pushed
+> Network: CEX proxy `127.0.0.1:10808` available (unblocks Binance/Bybit/Bitget/OKX)
+
+## 2026-05-29 Major Update — Retro Ralph Loop Closed
+
+Multi-round adversarial review (R1: 6C/18I/21M → R1 fix → R2: 4C/1I → R2 fix
+→ R3: 0C/0I/3M convergence) on 4 features delivered 2026-05-28. ALL 4
+features' original verdicts INVALIDATED by Critical bugs found in R1/R2:
+
+| Feature | Original verdict | True verdict (post-fix) |
+|---|---|---|
+| Phase 1.5 D-ATR sweep | YELLOW v2 rescued | YELLOW v2 rescued (real; same thesis as v1+D) |
+| Phase 4 Slice 3 bot walkforward | RED-INCONCLUSIVE | INCONCLUSIVE n=0 (sample too small) |
+| Phase 2.5 Slice 5 wallet walkforward | RED Sharpe -0.34 / n=177 | INCONCLUSIVE Sharpe -0.11 / n=29 (<CLT floor) |
+| Phase 1.5 funding-regime | v5 RESCUED Δ+1.20 | v5 stays RED (rescue was lookahead artifact) |
+
+**3 RED verdicts demoted to INCONCLUSIVE**. The "RED with bugs" outcome
+was FALSE CONFIDENCE — could have wrongly killed the theses. Multi-round
+3-way Ralph Loop is the only way to catch this class of lookahead /
+PIT / max-gap / NaN landmine bugs.
+
+5 new backend spec rules added to `.ccg/spec/backend/index.md`:
+- PIT quantile must use strict-time prior count (3 sites had same leak)
+- `_price_at` must accept `max_gap_hours` (88-day price leak found)
+- NaN-safe boolean coercion in state machines (`bool(np.nan)==True` landmine)
+- Per-signal Sharpe annualization (was 6.7× overall density error)
+- PIT regression test pattern (truncate-then-compare)
+
+## Concept clarifications (sometimes confused)
+
+### Funding rate direction
+- **Positive funding**: longs pay shorts → SHORT perp collects funding (NOT long)
+- **Negative funding**: shorts pay longs → LONG perp collects funding
+
+### Two distinct strategies that use funding
+- **Strategy A (Farming, delta-neutral)**: SHORT perp + LONG spot (hedge) → pure funding income, no price risk. Requires spot venue for hedge.
+- **Strategy B (Directional contrarian)**: SHORT perp at extreme positive funding → bet on mean-reversion squeeze. No hedge. This is what Phase 3 `funding_extreme_v1` does.
+
+### Lookahead leak forms (3 levels of subtlety)
+1. **Direct**: using tomorrow's price in today's decision
+2. **Subtle**: using a threshold computed from full-sample distribution
+3. **Boundary**: using same-day data (e.g., daily mean of full day T) for an entry decision at T+intraday
+
+All 3 must be eliminated. Subtle and boundary forms are what 4 features missed.
+
+### CLT floor — INCONCLUSIVE vs false RED
+- n<30: ~12% statistical power, Sharpe is noise
+- INCONCLUSIVE = "data insufficient, thesis untested"
+- RED = "tested adequately, no alpha"
+- A "RED with leak/NaN/max-gap bugs" is FALSE RED — looks like a finding but is misleading
+
+### Cross-thesis diversification (Phase 5 gate semantics)
+- v1+D, v1+ATR, v2+ATR are all unlock thesis variants → correlated → count as 1 thesis source
+- Phase 5 gate ≥2 GREEN/YELLOW requires DIFFERENT alpha sources (unlock + funding + wallet + bot), not multiple variants of the same source
 
 ## Where we are right now
 
@@ -111,26 +164,29 @@ re-run smart-search to regenerate). Key reclassifications:
 | Phase 2.5 n=21 power | wallet-level n=21 too small | n=20 OOS folds → 12% power; bootstrap CI is correct tool | **fill-level walkforward** (1000s observations), not wallet-level |
 | Phase 4 bot N/W design | needs academic precedent | No hyperparameter; behavioral patterns + (N,W) sweep | **sensitivity sweep**, current N=3/W=30min reasonable |
 
-## Recommended next-session order (revised 2026-05-27 post smart-search)
+## Recommended next-session order (revised 2026-05-29 post retro Ralph Loop)
 
-Now organized by ROI + dependency unlock, not original ROADMAP order:
+Now organized by ROI + Phase 5 gate-unlock potential. **3 RED verdicts demoted
+to INCONCLUSIVE** in retro — need MORE DATA, not new thesis design.
 
-| ID | Task | Tokens | Unblocks Phase 5 gate? |
-|---|---|---|---|
-| #15 (P3) | Phase 1.5 Ablation D-ATR full walkforward (rescue v2) | 30-50k | ✓ cheapest bet |
-| #13 (P1) | Phase 4 Slice 3 walkforward + (N,W) sweep + bootstrap CI | 80-120k | ✓ |
-| #14 (P2) | Phase 2.5 Slice 5 walkforward (fill-level, skip Slice 4) | 80-120k | ✓ |
-| #17 (P5) | Phase 1.5 Ablation C — funding-regime filter (not BTC SMA) | 40-60k | ✓ (combo with v1+D) |
-| #16 (P4) | Phase 3 1h candle paginated backfill + walkforward re-run | 50-80k + 90min wall | independent track |
-| #18 (P6) | Phase 2.5 Slice 4 cluster v2 + cascade reversal (innovation) | 100-150k | independent track |
+| ID | Task | Tokens | Phase 5 gate? | Notes |
+|---|---|---|---|---|
+| #16 (P4) | Phase 3 1h candle paginated backfill + walkforward re-run | 50-80k + 50-90min wall | ✓ cheapest | **NOW VIABLE** with proxy `127.0.0.1:10808`; ALSO try Phase 3 ORIGINAL cross-exchange plan (funding farming via Binance/Bybit, blocked is now unblocked) |
+| #21 (NEW) | Phase 3 cross-exchange funding arb resurrection | 100-150k | ✓ delta-neutral source | Was blocker'd in `.ccg/tasks/phase-3-funding-arbitrage/blocker.md`. Proxy unblocks Binance/Bybit/Bitget/OKX APIs. Strategy A (hedged farming) is now feasible. |
+| #18 (P6) | Phase 2.5 Slice 4 cluster v2 + cascade reversal (innovation) | 100-150k | ✓ | independent track |
 | #19 (P7) | Phase 5 paper signal generator | 80-100k | gated on ≥2 GREEN/YELLOW |
+| #22 (NEW) | Expand bot pool 50 → 500 via HL leaderboard API; re-run Phase 4 Slice 3 | 40-60k | ✓ if YELLOW | Phase 4 Slice 3 is INCONCLUSIVE due to small pool, not RED |
+| #23 (NEW) | Wallet-actual-close-aware exit (Phase 2.5 alternative entry/exit timing) | 60-90k | ✓ if YELLOW | Replaces fixed 24h hold; addresses Slice 5 INCONCLUSIVE thesis |
 
-**Phase 5 gate status**: 1/2 (Phase 1.5 v1+D YELLOW). Any of P1/P2/P3 reaching
-cross-thesis YELLOW+ satisfies gate. **P3 (D-ATR sweep) does NOT unlock gate**
-— v2+ATR is same Phase 1.5 unlock thesis as v1+D, only cross-thesis verdicts
-(Phase 4 Slice 3, Phase 2.5 Slice 5, Phase 3 re-run) move the count from 1 → 2.
-D-ATR sweep is still the lowest-cost discovery (verified v2 rescue-able to
-YELLOW Sharpe 0.521 with ATR mult=1.5).
+**Phase 5 gate status**: 1/2 (Phase 1.5 v1+D YELLOW). Any of #16/#18/#21/#22/#23
+reaching cross-thesis YELLOW+ satisfies gate.
+
+**Recommended order**:
+1. #16 (cheapest, no new code) — re-run Phase 3 with full data
+2. #21 (parallel — proxy now unblocks Strategy A funding farming)
+3. #22 / #18 if both 1+2 RED
+4. #19 paper signal once gate met
+
 
 ## Reference documents
 

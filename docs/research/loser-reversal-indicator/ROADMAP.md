@@ -3,6 +3,33 @@
 > **总目标**：在 16-20 周内，通过 4 个独立 alpha 源的回测验证，构建一个 Sharpe ≥ 1.5 的个人量化组合策略，从纸面到小额实盘。
 > **核心原则**：每个阶段都有明确 Pass/Kill criteria；不达标就砍掉走下一个；成功的留下进入组合。
 
+## 2026-05-29 Major Update — Retro Ralph Loop + Proxy Unblock
+
+### What changed
+- **Retro Ralph Loop on 4 features**（D-ATR sweep / Phase 4 Slice 3 / Phase 2.5 Slice 5 / funding regime）3 rounds → 9 Critical fixes
+- **3 RED verdicts demoted to INCONCLUSIVE**（lookahead leak / max-gap / NaN landmines fabricated false RED）
+- **5 spec rules added** to `.ccg/spec/backend/index.md`
+- **Proxy `127.0.0.1:10808` available** → unblocks Phase 3 original cross-exchange thesis (Binance/Bybit/Bitget/OKX)
+
+### Current Phase 5 gate state: 1/2 (only v1+D YELLOW)
+
+The 3 demoted-to-INCONCLUSIVE features need:
+- Phase 4 Slice 3 (bot reverse): expand wallet pool 50 → 500
+- Phase 2.5 Slice 5 (wallet reverse): wallet-actual-close-aware exits (not fixed 24h)
+- Phase 1.5 funding-regime filter (v5 rescue): was lookahead artifact, abandoned
+
+### Concept clarifications
+
+- **Positive funding → SHORT receives funding** (not LONG). Long pays in this regime.
+- **Strategy A (Farming, hedged)** vs **Strategy B (Directional contrarian)** are different
+  - Phase 3 originally Strategy A (geo-blocked) → pivoted to B (HL-only contrarian)
+  - Now: proxy unblocks → A is viable again
+- **Lookahead leak forms**: direct / subtle (full-sample quantile) / boundary (same-day data)
+- **CLT floor 30 trades** — INCONCLUSIVE ≠ false RED
+- **Cross-thesis ≠ multi-variant** of same thesis
+
+---
+
 ---
 
 ## 公开 / 不公开边界（反身性原则）
@@ -559,11 +586,39 @@ Configuration to lock if Phase 5 picks this up:
 
 ---
 
-## Phase 3: 跨平台 Funding 套利（Week 9-10）— **已 reframe，verdict RED-data_gap**
+## Phase 3: 跨平台 Funding 套利（Week 9-10）— 2026-05-29 重新激活
 
 > **原 plan**：跨 HL + Binance + Bybit + Bitget funding arb (delta-neutral)
-> **reframed**：HL-only funding extreme contrarian
-> **当前 verdict (2026-05-26)**：🔴 **RED** on aggregate OOS Sharpe 0.42 / 年化 5.23%，但有 data_gap caveat（1h candle 仅 90 天，funding 是 3 年）
+> **2026-05-26 reframed**：HL-only funding extreme contrarian (因 CEX 地理屏蔽)
+> **2026-05-29 重新激活原 plan**：proxy `127.0.0.1:10808` 解锁所有 CEX API
+> **当前 verdict**：🔴 RED-data_gap (contrarian, 1h candle 90 天) / **cross-exchange Strategy A 现在可做**
+
+### 2026-05-29 状态切换
+
+之前因为 `fapi.binance.com` / `api.bybit.com` / `api.bitget.com` / `okx.com`
+全部地理屏蔽 unreachable，强制 pivot 到 HL-only directional contrarian。
+
+**proxy `127.0.0.1:10808` 解锁** → 三个执行方向同时可行：
+
+| 路径 | 工作量 | Phase 5 gate? |
+|---|---|---|
+| **A. 原 cross-exchange funding arb** (Strategy A, delta-neutral) | 100-150k | ✓ 独立 cross-thesis 源 |
+| **B. HL-only contrarian 重跑** (1h candle backfill + walkforward) | 50-80k + 50-90min wall | ✓ 同 Phase 3 现有 thesis |
+| **C. 混合**：cross-venue basis trade (HL perp vs Binance spot) | 150-200k | ✓ 多个独立源 |
+
+A 学术：92% positive bias + cross-exchange spread typically 0.01-0.05% per 8h
+that compounds over hold. Cash-and-carry validated since 1980s。
+
+B 之前 RED 是 1h candle 仅 90 天 vs funding 3 年 = 100+ trades floor 不达。
+backfill 后样本 ~300-500 OOS trades，给真 verdict 机会。
+
+C 是 A 的子集，先做 A 顺便摸到 C。
+
+### 推荐顺序
+1. **B 先做**（不依赖 proxy，纯数据 backfill + 重跑）
+2. **A 同步推进**（proxy 验证 + 历史 funding 抓取 Binance/Bybit）
+3. 如果 A 或 B 出 YELLOW+，**Phase 5 gate 满足** → #19 paper signal
+
 
 ### 🔴 Verdict (2026-05-26) — 详见 `reports/phase_3_verdict.md`
 
