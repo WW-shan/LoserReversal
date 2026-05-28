@@ -1,7 +1,7 @@
 # Project Status Snapshot — crypto-alpha-portfolio
 
-> Last updated: 2026-05-27 (post smart-search failed-case investigation)
-> Current branch: main, 805 tests passing, ruff clean
+> Last updated: 2026-05-29 (post R1 Critical fixes on 4 retro-Ralph-Loop features)
+> Current branch: main, 871 tests passing, ruff clean
 
 ## Where we are right now
 
@@ -14,17 +14,17 @@
 | Phase 2 (v1) | ✅ archived | RED (misread) → re-classified **FILTER MISDESIGN** | IR=-4.83 because vlm-based filter selected 86%-profitable whale cohort |
 | **Phase 1.5** | ✅ done | 🟡 **YELLOW (v1+D recommended)** | Switched: v1 (T-7) + stop=10% + cohort=team: Sharpe 0.59 / MaxDD -7.8% / 29 trades. Was v2 (T-30): Sharpe 0.61 / MaxDD -29% / 36 trades. |
 | Phase 1.5 Ablations A/B/D | ✅ done | mixed | A robust [0.84,4.09] / B team-is-driver (Δ-0.02) / D mixed (v1 up, v2 collapse) |
-| **Phase 1.5 D-ATR sweep** | ✅ done 2026-05-28 | 🟡 v2 rescued | v2+ATR(mult=1.5) Sharpe 0.521 / MaxDD -21.7% / n=34 — bootstrap CI [0.61, 3.40] robust. Same thesis as v1+D so doesn't unlock Phase 5 gate (gate needs cross-thesis). |
+| **Phase 1.5 D-ATR sweep** | ✅ done 2026-05-28 + R1 closed 2026-05-29 | 🟡 v2 rescued | v2+ATR(mult=1.5) Sharpe 0.521 / MaxDD -21.7% / n=34 — bootstrap CI [0.61, 3.40] robust. Same thesis as v1+D so doesn't unlock Phase 5 gate (gate needs cross-thesis). R1 fixed 3 Important (n_trades count, floor saturation claim, v1+ATR mult=1.5 reclassified INCONCLUSIVE-by-n). |
 | Phase 1.5 Ablation C | ✅ done | 🔴 **REJECT** (bear-filter unusable) | Bear-only filter collapses sample to 1 trade/signal across 5 splits — `reports/phase-1-5-ablation-c.md`. BTC <200d windows too sparse layered with cohort=team. |
 | **Phase 3 (reframed)** | ✅ done | 🔴 **RED (data_gap)** | Aggregate OOS Sharpe 0.42 / ann 5.23% / 45 trades — but 1h candle backfill only 90 days; re-run needed after backfill |
 | Phase 2.5 Slice 1 | ✅ archived 2026-05-27 | 🟢 **GREEN with spec deviation** | academic wallet pool n=21 (target 200-500 unattainable on HL — see backend spec rule). 10-round 3-way review converged. |
 | Phase 2.5 Slice 2 | ✅ archived 2026-05-27 | 🟢 5-round CCG retro converged | reverse_alpha_score = oversized × leverage × funding × time_bucket (smooth sigmoid + log-scale confidence). 64 tests. 4 spec rules added. |
 | Phase 2.5 Slice 3 | ✅ archived 2026-05-27 | 🟢 3-round CCG retro converged | `src/wallet_pool/bot_exclusion.py` + `scripts/build_clean_wallet_pool.py` + 49 tests. 3 spec rules added (legacy kwarg validation routing, mixed valid/NaN dedup, Codex hang fallback). |
 | Phase 2.5 Slice 4 (cluster v2 + cascade reversal) | not started | — | depends on Slice 2/3 archive |
-| Phase 2.5 Slice 5 (walkforward verdict) | not started | — | depends on Slice 2/3/4 archive |
+| Phase 2.5 Slice 5 (walkforward verdict) | ✅ done 2026-05-28 + R1 closed 2026-05-29 | 🔴 INCONCLUSIVE after R1 PIT + OOS-only fixes | wallet_reverse_signal + walkforward harness + 22 new tests. R1 fixes: PIT score percentile, OOS-only aggregate, max-gap candle guard, _normalize_direction extended to liquidation/ADL/flip. After fixes: Sharpe -0.11, n=29 < CLT floor 30 (INCONCLUSIVE not RED). Reverse-fill thesis on 21-wallet pool yields too-small OOS sample. |
 | Phase 4 Slice 1 (bot identification) | ✅ archived | LGTM | bot_detector + bot_pool 5-round CCG retro closure (2026-05-27) |
 | Phase 4 Slice 2 (bot reverse signal) | ✅ archived 2026-05-27 | 🟢 3-round CCG retro converged | `src/bot_reverse/cluster_signal.py` + `scripts/run_bot_reverse_signal.py` + 53 tests. 2 spec rules added (aligned-bar state machine, atomic commit discipline). |
-| Phase 4 Slice 3 (walkforward verdict) | not started | — | depends on Phase 4 Slice 2 archive |
+| Phase 4 Slice 3 (walkforward verdict) | ✅ done 2026-05-28 + R1 closed 2026-05-29 | 🔴 INCONCLUSIVE after R1 max-gap guard | bot_walkforward harness + 30 tests. R1 5 Critical fixed (NaN entry guard, _price_at max_gap_hours=26, OOS-only aggregate, point-in-time corrections). After fixes: default sweep cell n=1 (INCONCLUSIVE). Need 100+ wallet pool for real verdict. |
 | Phase 5 portfolio composer | 🟡 implemented, gate NOT met | — | `src/portfolio/composer.py` (386 LOC) + signal_loader (129 LOC) + tests. ROADMAP gate: ≥2 GREEN/YELLOW signals — currently only 1 (Phase 1.5 v1+D YELLOW). Phase 2.5 Slice 1 GREEN is for the pool, not a signal yet. |
 | Phase 5 paper signal generator | not started | — | depends on composer archive + gate |
 
@@ -125,9 +125,12 @@ Now organized by ROI + dependency unlock, not original ROADMAP order:
 | #18 (P6) | Phase 2.5 Slice 4 cluster v2 + cascade reversal (innovation) | 100-150k | independent track |
 | #19 (P7) | Phase 5 paper signal generator | 80-100k | gated on ≥2 GREEN/YELLOW |
 
-**Phase 5 gate status**: 1/2 (Phase 1.5 v1+D YELLOW). Any of P1/P2/P3/P5 reaching
-YELLOW+ satisfies gate. P3 (D-ATR) is **lowest-cost first move** at 30-50k token
-using existing harness — if v2+ATR rescues, immediate second YELLOW.
+**Phase 5 gate status**: 1/2 (Phase 1.5 v1+D YELLOW). Any of P1/P2/P3 reaching
+cross-thesis YELLOW+ satisfies gate. **P3 (D-ATR sweep) does NOT unlock gate**
+— v2+ATR is same Phase 1.5 unlock thesis as v1+D, only cross-thesis verdicts
+(Phase 4 Slice 3, Phase 2.5 Slice 5, Phase 3 re-run) move the count from 1 → 2.
+D-ATR sweep is still the lowest-cost discovery (verified v2 rescue-able to
+YELLOW Sharpe 0.521 with ATR mult=1.5).
 
 ## Reference documents
 
