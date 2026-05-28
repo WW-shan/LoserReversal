@@ -116,8 +116,14 @@ def _apply_funding_regime_to_trades(
             entry_ts = entry_ts.tz_localize("UTC")
         else:
             entry_ts = entry_ts.tz_convert("UTC")
-        # Look up regime at or before entry_ts
-        eligible = regime_sorted.loc[regime_sorted.index <= entry_ts.normalize()]
+        # Strict-less-than slicing (spec rule: "Time-series boundary slicing
+        # must be strict-less-than for point-in-time queries"). The regime
+        # series is daily-resampled; for an entry at day D we want the regime
+        # label keyed on data through day D-1 only. Compare to normalized
+        # entry_ts so an entry at D 00:00:00 is excluded along with later D
+        # observations.
+        entry_day = entry_ts.normalize()
+        eligible = regime_sorted.loc[regime_sorted.index < entry_day]
         if eligible.empty:
             keep.append(False)
             continue
