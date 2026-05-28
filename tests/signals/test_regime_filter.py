@@ -163,3 +163,153 @@ def test_filter_events_by_regime_rejects_invalid_direction():
     bear = pd.Series([True], index=pd.date_range("2024-01-01", periods=1, freq="1D", tz="UTC"))
     with pytest.raises(ValueError):
         rf.filter_events_by_regime(events, bear, direction="sideways")
+
+
+# ---------- compute_funding_regime ----------------------------------------------
+
+
+def _funding_frame(rates: list[float], start: str = "2026-01-01") -> pd.DataFrame:
+    ts = pd.date_range(start, periods=len(rates), freq="8h", tz="UTC")
+    return pd.DataFrame({"timestamp": ts, "funding_rate": rates})
+
+
+def test_compute_funding_regime_marks_bear_when_mean_funding_negative():
+    # Bear regime is now "funding above 75th percentile" (overheated). To
+    # exercise the bear branch we feed a mix where some days exceed the
+    # in-sample quantile.
+    rates = [0.0001] * 60 + [0.002] * 30
+    funding = {"BTC": _funding_frame(rates), "ETH": _funding_frame(rates)}
+    regime = rf.compute_funding_regime(funding, majors=("BTC", "ETH"), window_days=7, bear_quantile=0.75)
+    warmed = regime.dropna()
+    assert len(warmed) > 0
+    assert bool(warmed.iloc[-1])  # tail is overheated → bear
+
+
+def test_compute_funding_regime_marks_bull_when_mean_funding_positive():
+    # Constant funding → quantile equals the value → tail days are at the
+    # boundary; with `>=` the regime evaluates to True (bear). Provide a
+    # mix where the tail is below the in-sample quantile to verify bull.
+    rates = [0.002] * 60 + [0.0001] * 30
+    funding = {"BTC": _funding_frame(rates), "ETH": _funding_frame(rates)}
+    regime = rf.compute_funding_regime(funding, majors=("BTC", "ETH"), window_days=7, bear_quantile=0.75)
+    warmed = regime.dropna()
+    assert len(warmed) > 0
+    assert not bool(warmed.iloc[-1])  # tail is calm → bull
+
+
+def test_compute_funding_regime_returns_empty_when_no_data():
+    regime = rf.compute_funding_regime({}, majors=("BTC",), window_days=7)
+    assert regime.empty
+
+
+def test_compute_funding_regime_rejects_invalid_window():
+    with pytest.raises(ValueError, match="window_days"):
+        rf.compute_funding_regime({}, majors=("BTC",), window_days=0)
+
+
+def test_compute_funding_regime_rejects_empty_majors():
+    with pytest.raises(ValueError, match="majors"):
+        rf.compute_funding_regime({}, majors=(), window_days=7)
+
+
+def test_compute_funding_regime_ignores_missing_token():
+    rates = [-0.001] * 30
+    funding = {"BTC": _funding_frame(rates)}  # ETH missing
+    regime = rf.compute_funding_regime(funding, majors=("BTC", "ETH"), window_days=7)
+    assert regime.notna().any()
+
+
+# ---------- apply_funding_regime_filter ----------------------------------------
+
+
+def test_apply_funding_regime_filter_keeps_only_bear_period_shorts():
+    # Mix: 60 calm days then 30 overheated days. With bear_quantile=0.75 the
+    # tail is bear (overheated → favor short).
+    rates = [0.0001] * 60 + [0.002] * 30
+    funding = {"BTC": _funding_frame(rates, start="2026-01-01"), "ETH": _funding_frame(rates, start="2026-01-01")}
+    events = pd.DataFrame(
+        {
+            "token": ["A"],
+            "unlock_date": pd.to_datetime(
+                ["2026-03-25T00:00:00"], utc=True  # in overheated tail
+            ),
+        }
+    )
+    filtered = rf.apply_funding_regime_filter(
+        events,
+        funding_by_token=funding,
+        signal_offset_days=0,
+        direction="short",
+    )
+    assert len(filtered) == 1
+
+
+def test_apply_funding_regime_filter_drops_warmup_events():
+    rates = [0.001] * 30
+    funding = {"BTC": _funding_frame(rates, start="2026-01-01")}
+    events = pd.DataFrame(
+        {
+            "token": ["A"],
+            "unlock_date": pd.to_datetime(["2026-01-02"], utc=True),  # before warmup
+        }
+    )
+    filtered = rf.apply_funding_regime_filter(
+        events,
+        funding_by_token=funding,
+        signal_offset_days=0,
+        direction="short",
+    )
+    assert filtered.empty
+
+
+def test_apply_funding_regime_filter_uses_signal_offset_days():
+    rates = [0.0001] * 60 + [0.002] * 30  # bear tail
+    funding = {"BTC": _funding_frame(rates, start="2026-01-01"), "ETH": _funding_frame(rates, start="2026-01-01")}
+    events = pd.DataFrame(
+        {
+            "token": ["A"],
+            "unlock_date": pd.to_datetime(["2026-04-01T00:00:00"], utc=True),
+        }
+    )
+    filtered = rf.apply_funding_regime_filter(
+        events,
+        funding_by_token=funding,
+        signal_offset_days=-7,  # entry at 2026-03-25, in bear tail
+        direction="short",
+    )
+    assert not filtered.empty
+
+
+def test_apply_funding_regime_filter_passes_through_when_no_unlock_date_column():
+    rates = [-0.001] * 30
+    funding = {"BTC": _funding_frame(rates, start="2026-01-01")}
+    events = pd.DataFrame({"token": ["A"]})
+    filtered = rf.apply_funding_regime_filter(
+        events,
+        funding_by_token=funding,
+        signal_offset_days=0,
+        direction="short",
+    )
+    pd.testing.assert_frame_equal(filtered, events)
+
+
+def test_apply_funding_regime_filter_passes_through_empty_events():
+    funding = {"BTC": _funding_frame([0.001] * 30, start="2026-01-01")}
+    events = pd.DataFrame(columns=["token", "unlock_date"])
+    filtered = rf.apply_funding_regime_filter(
+        events,
+        funding_by_token=funding,
+        signal_offset_days=0,
+        direction="short",
+    )
+    assert filtered.empty
+
+
+def test_compute_funding_regime_rejects_invalid_bear_quantile():
+    with pytest.raises(ValueError, match="bear_quantile"):
+        rf.compute_funding_regime(
+            {"BTC": _funding_frame([0.001] * 30)},
+            majors=("BTC",),
+            window_days=7,
+            bear_quantile=1.5,
+        )

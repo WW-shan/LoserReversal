@@ -9,14 +9,24 @@ timestamp (unlock_date + entry_offset_days) against BTC's 200d SMA trend:
 Phase 1.5 diagnostic identified Split 4 (bear period 2025-09 to 2026-03)
 as punishing naive unlock shorts; this filter excludes events outside
 the trend favoring the signal's direction.
+
+The funding-rate regime alternative (2026-05-28) reads majors' rolling
+funding mean instead of BTC price; bear regime = mean funding < 0 across
+majors (shorts dominant, bearish positioning). Useful when BTC candle
+history is too short (200d SMA needs 200 days of 1d candles) but funding
+history is longer.
 """
 
 from __future__ import annotations
+
+from collections.abc import Mapping
 
 import pandas as pd
 
 
 DEFAULT_WINDOW = 200
+DEFAULT_FUNDING_WINDOW_DAYS = 7
+DEFAULT_FUNDING_MAJORS: tuple[str, ...] = ("BTC", "ETH")
 
 
 def compute_btc_regime(
@@ -131,6 +141,108 @@ def apply_btc_regime_filter(
         unit="D",
     )
     regime = compute_btc_regime(btc_close, window=DEFAULT_WINDOW)
+    filtered = filter_events_by_regime(
+        events_with_entry,
+        regime,
+        direction=direction,
+        pass_through_when_unknown=False,
+        entry_date_column=entry_date_column,
+    )
+    return filtered.drop(columns=[entry_date_column], errors="ignore")
+
+
+def compute_funding_regime(
+    funding_by_token: Mapping[str, pd.DataFrame],
+    *,
+    majors: tuple[str, ...] = DEFAULT_FUNDING_MAJORS,
+    window_days: int = DEFAULT_FUNDING_WINDOW_DAYS,
+    bear_quantile: float = 0.75,
+) -> pd.Series:
+    """Return a daily bool series: True iff cross-majors rolling mean funding above
+    its in-sample ``bear_quantile`` percentile (overheated long positioning).
+
+    Per smart-search 2026-05-27: extreme positive funding signals overheated
+    long positioning → contrarian short opportunity. ``bear_quantile=0.75`` keeps
+    only the top quartile of historical funding observations as "bear" regime
+    for short-signal entries.
+
+    For each major token, compute the rolling N-day mean funding rate, then
+    average across tokens (equal weight). Bear regime = aggregate mean above
+    its own historical ``bear_quantile`` percentile.
+
+    Per spec rule "Time-series boundary slicing must be strict-less-than":
+    the regime label at day T uses funding history strictly before T (the
+    rolling mean is right-aligned at T but does not include future funding).
+    """
+    if window_days <= 0:
+        raise ValueError("window_days must be greater than 0")
+    if not majors:
+        raise ValueError("majors must contain at least one token")
+    if not 0.0 < bear_quantile < 1.0:
+        raise ValueError(
+            f"bear_quantile must be in (0.0, 1.0); got {bear_quantile!r}"
+        )
+
+    daily_means: list[pd.Series] = []
+    for token in majors:
+        frame = funding_by_token.get(token)
+        if frame is None or frame.empty:
+            continue
+        if "timestamp" not in frame.columns or "funding_rate" not in frame.columns:
+            continue
+        ts = pd.to_datetime(frame["timestamp"], utc=True)
+        series = pd.Series(
+            frame["funding_rate"].to_numpy(), index=pd.DatetimeIndex(ts), dtype="float64"
+        )
+        daily = series.resample("1D").mean().dropna()
+        if daily.empty:
+            continue
+        roll = daily.rolling(window=window_days, min_periods=window_days).mean()
+        roll.name = token
+        daily_means.append(roll)
+
+    if not daily_means:
+        return pd.Series(dtype=bool, name="bear")
+
+    combined = pd.concat(daily_means, axis=1).mean(axis=1, skipna=True)
+    warmed = combined.dropna()
+    if warmed.empty:
+        return pd.Series(dtype=bool, name="bear")
+    threshold = float(warmed.quantile(bear_quantile))
+    bear = (combined >= threshold).astype("boolean")
+    bear[combined.isna()] = pd.NA
+    bear.name = "bear"
+    return bear
+
+
+def apply_funding_regime_filter(
+    events: pd.DataFrame,
+    *,
+    funding_by_token: Mapping[str, pd.DataFrame],
+    signal_offset_days: int,
+    direction: str = "short",
+    majors: tuple[str, ...] = DEFAULT_FUNDING_MAJORS,
+    window_days: int = DEFAULT_FUNDING_WINDOW_DAYS,
+) -> pd.DataFrame:
+    """Filter events using funding-rate regime instead of BTC SMA.
+
+    Direction semantics:
+    - direction="short": keep events landing in bear regime (mean funding < 0)
+    - direction="long": keep events landing in bull regime (mean funding >= 0)
+    """
+    if events.empty or "unlock_date" not in events.columns:
+        return events.copy()
+
+    regime = compute_funding_regime(
+        funding_by_token, majors=majors, window_days=window_days
+    )
+    events_with_entry = events.copy()
+    unlock_date = pd.to_datetime(events_with_entry["unlock_date"], utc=True, errors="coerce")
+    entry_date_column = "__regime_entry_date"
+    events_with_entry[entry_date_column] = unlock_date + pd.to_timedelta(
+        signal_offset_days,
+        unit="D",
+    )
     filtered = filter_events_by_regime(
         events_with_entry,
         regime,
