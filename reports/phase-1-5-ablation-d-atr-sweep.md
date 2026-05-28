@@ -54,11 +54,14 @@ clear 0.5 with different parameters.
 
 1. **Tighter ATR multiplier (1.5x) beats wider (2.5-3.0x)** for both v1 and v2.
    The 2026-05-26 report's choice of mult=2.0 was reasonable but not optimal.
-2. **Floor parameter saturates above 8%**: 10% and 15% give identical results,
-   indicating ATR-derived stops rarely fall below ~10% for these signals.
-3. **5% floor underperforms** for both signals — too-tight floor cuts winning
-   T-30 trades.
-4. **v2+ATR mult=1.5 now clears the YELLOW threshold** the 2026-05-26 report
+2. **v1 floor parameter saturates at and above 5%**: floor_0.05/0.10/0.15 all
+   give Sharpe 0.534, win 0.724, MaxDD -9.9%, Ret 0.352 — ATR-derived stops
+   for v1 rarely fall below 5%. Anchor mult=2.0/floor=0.08 happens to coincide
+   with the saturation regime.
+3. **v2 floor parameter is NON-monotonic**: floor_0.05 → 0.462 / floor_0.10 →
+   0.462 / floor_0.15 → 0.494 / floor=0.08 (anchor) → 0.476. Higher floor
+   (0.15) actually beats the lower ones for v2. No clean saturation pattern.
+4. **v2+ATR mult=1.5 clears the YELLOW threshold** the 2026-05-26 report
    set: Sharpe 0.521 > 0.500.
 
 ## Bootstrap CI (annualized, percentile/bayesian per Efron-Tibshirani n>=30 rule)
@@ -77,18 +80,20 @@ Kelly.
 **v2+ATR mult=1.5 is YELLOW** per the band rule (Sharpe [0.3, 1.0) AND
 n_trades >= 30): 0.521 / 34.
 
-**v1+ATR mult=1.5 is YELLOW** per the band rule: 0.593 / 29 (n_trades misses the
-canonical >=30 threshold by 1; v1 anchor mult=2.0 satisfies with n=39).
+**v1+ATR mult=1.5** Sharpe is 0.593 with n_trades=29 — **MISSES** the
+canonical n_trades >= 30 threshold by 1, so technically RED-by-n. We list
+it below as "INCONCLUSIVE-by-n-trades" rather than YELLOW. The v1 anchor
+mult=2.0 satisfies with n=39, Sharpe 0.59 → YELLOW.
 
 ### Updated standalone-signal ranking
 
 | rank | variant | Sharpe | MaxDD | n_trades | classification |
 |---|---|---:|---:|---:|---|
-| 1 (deployable) | v1 + fixed 10% stop | 0.59 | -7.8% | 29 | YELLOW |
+| 1 (deployable) | v1 + fixed 10% stop | 0.59 | -7.8% | 29 | YELLOW (per Phase 1.5 band) |
 | 2 (deployable) | v1 + ATR mult=2.0 (anchor) | 0.59 | -11.0% | 39 | YELLOW |
 | 3 | v2 + ATR mult=1.5 | 0.521 | -21.7% | 34 | YELLOW (rescued) |
-| 4 | v1 + ATR mult=1.5 | 0.593 | -7.6% | 29 | YELLOW (n-trade boundary) |
-| killed | v2 + fixed 10% | 0.27 | -20.1% | 36 | RED |
+| 4 | v1 + ATR mult=1.5 | 0.593 | -7.6% | 29 | INCONCLUSIVE-by-n-trades |
+| killed | v2 + fixed 10% | 0.27 | -20.1% | 38 | RED |
 
 ### Implication for Phase 5 gate
 
