@@ -1,0 +1,25 @@
+{
+  "id": "phase-4-slice-3-bot-walkforward",
+  "title": "phase-4-slice-3-bot-walkforward retro Ralph Loop closure",
+  "status": "archived",
+  "complexity": "M",
+  "risk": "medium",
+  "domain": "backend",
+  "currentPhase": "archived",
+  "nextAction": "none",
+  "createdAt": "2026-05-28T00:00:00Z",
+  "archivedAt": "2026-05-29T17:30:00Z",
+  "branch": "main",
+  "rounds": [
+    {"round": 1, "review": {"codex": "0C-3C", "subagent": "0C-2C", "combined": "6C/18I/21M aggregate"}},
+    {"round": 2, "review": {"codex": "3C/1I/0M", "subagent": "1C/0I/1M", "combined": "4 R2 issues fixed"}},
+    {"round": 3, "review": {"codex": "0C/0I/3M", "subagent": "0C/0I/0M", "convergence": true}}
+  ],
+  "spec_evolution": [
+    "backend: PIT quantile must use strict-time prior count",
+    "backend: Backtest price-lookup needs max_gap_hours guard",
+    "backend: NaN-safe boolean coercion in state machines",
+    "backend: Per-signal Sharpe annualization",
+    "backend: PIT regression test pattern"
+  ]
+}
