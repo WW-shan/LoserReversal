@@ -318,3 +318,135 @@ fix-loop + R2 process review (Codex + subagent both flagged as Minor).
 
 
 
+
+### Point-in-time quantile thresholds must use strict-time prior count, not row-order expanding
+**Rule**: when computing a quantile/threshold from time-indexed observations
+for use at a future timestamp T, the threshold must be derived from
+observations with `time < T` (strict). `Series.expanding(min_periods=N).
+quantile(q).shift(1)` does row-order PIT — fine when timestamps are
+unique, but LEAKS when same-timestamp rows can see each other's scores.
+
+**Why**: 2026-05-29 retro Ralph Loop hit this leak THREE times in
+sibling code:
+- phase-1-5-funding-regime R1-C1: `compute_funding_regime` used
+  `warmed.quantile(bear_quantile)` over full warmed sample. Subagent
+  empirical repro: 26.2% of historical labels flipped when more future
+  funding was appended.
+- phase-2-5-slice-5-walkforward R1-C3: `wallet_reverse_signal.build_signal_frame`
+  used `scores_df["score"].quantile(0.75)` over full sample. Codex repro:
+  803-930 rows reclassified after 100-row burn-in.
+- phase-2-5-slice-5-walkforward R2-C2: R1 fix used
+  `expanding().shift(1)` which is row-order PIT — production data has
+  4887 duplicate-timestamp groups (max 486 rows). Same-timestamp fills
+  still leaked. Final fix: `sorted_times.searchsorted(times,
+  side='left')` per row gives count of strictly-prior observations.
+
+**How to apply**: for any "quantile/threshold as of T", structure as:
+1. Sort observations by time.
+2. For each row at time T, count = `sorted_times.searchsorted(T,
+   side='left')`. Use rows `[0:count]` to compute the threshold.
+3. Add a PIT regression test: truncate input data after T, recompute,
+   assert label at T unchanged. Source: phase-1-5-funding-regime R1-C1
+   + phase-2-5-slice-5-walkforward R1-C3 + R2-C2.
+
+### Backtest price-lookup needs max_gap_hours guard
+**Rule**: any "lookup price at timestamp T" helper that walks a candle
+DataFrame to find the next bar (e.g., via `searchsorted`) MUST accept a
+`max_gap_hours` parameter and return `None` when the next bar is further
+than that horizon. Sparse candle coverage otherwise silently lookups
+trades against far-future bars.
+
+**Why**: phase-4-slice-3-bot-walkforward R1-C4 (Codex repro):
+`_price_at` had no guard. Trades from February were priced against May
+candles. 209/354 lookups had >1h forward gap; max gap **88 days 18:03:29**.
+The reported Sharpe and verdict were entirely invalid for the affected
+trades. Fix added `max_gap_hours: float | None = 26.0` default —
+generous for 1h bars, refuses anything more than ~1 day ahead.
+
+**How to apply**: in any price-lookup helper, threshold the (next_bar -
+ts) gap before reading the close. Document the default (26h for 1h bars;
+adjust for 4h/1d intervals). Add a regression test where ts is far past
+the last candle → asserts None. Source:
+phase-4-slice-3-bot-walkforward R1-C4.
+
+### NaN-safe boolean coercion in state machines
+**Rule**: when a state machine evaluates `bool(row["flag"])` from a
+DataFrame column that may contain NaN, wrap the coercion via a helper
+`_safe_bool(value)` that treats `None`/`pd.NA`/`np.nan` as `False`
+(fail closed). Never call `bool(value)` directly on numeric-dtype
+columns.
+
+**Why**: phase-4-slice-3-bot-walkforward R1-C1 (subagent reproduced):
+`bool(np.nan)` returns `True` in Python (since `np.nan` is a non-zero
+float). Repro: signal frame `(entry=False, exit=NaN)` at intermediate
+timestamp silently triggered the exit branch → wrong trade pairing.
+`pd.NA` in nullable bool dtype raises `TypeError: boolean value of NA
+is ambiguous` (loud failure), but `float64` NaN bites silently.
+
+**How to apply**: any state-machine `for _, row in df.iterrows()` that
+reads bool columns must coerce via:
+```python
+def _safe_bool(value: object) -> bool:
+    if value is None: return False
+    try:
+        if pd.isna(value): return False
+    except (TypeError, ValueError): pass
+    return bool(value)
+```
+Add a regression test: signal frame with `np.nan` in entry column
+between a real entry and exit → still 1 paired trade, return correct.
+Source: phase-4-slice-3-bot-walkforward R1-C1.
+
+### Per-signal Sharpe annualization, not cross-signal density
+**Rule**: when computing annualized Sharpe per signal in a multi-signal
+report, the trades-per-year factor must be derived from THAT signal's
+own n_trades / span — NOT the cross-signal overall density (total /
+overall span).
+
+**Why**: phase-1-5-funding-regime R1-I1: `_summarize_per_signal` in
+`run_funding_regime_eval.py` initially used
+`trades_per_year_overall = len(all_trades) * 365 / overall_span`. Result:
+v1+stop Sharpe 3.97 vs canonical 0.59 (**6.7× wrong**). The factor was
+correct only for the aggregate density, not the per-signal density.
+Different signals have different cadences (v1 unlock T-7 vs v5 reversal
+T+3→T+14); applying one tpy to all yields misleading magnitudes.
+
+**How to apply**: in groupby-signal aggregation, compute
+`tpy_signal = len(group) * 365 / span_signal_days` INSIDE the loop.
+Fallback to a documented constant (e.g., 12 or 252) when n_signal < 2.
+Document the annualization choice in the report header. Source:
+phase-1-5-funding-regime R1-I1.
+
+### PIT regression test pattern (truncate-then-compare)
+**Rule**: every function that claims point-in-time correctness must have
+a regression test that:
+1. Computes labels on the FULL input.
+2. Truncates input at some cutoff T_cut.
+3. Recomputes labels on the truncated input.
+4. Asserts: for every t in `[T_warmup_start, T_cut)`, label(full)[t] ==
+   label(truncated)[t].
+
+**Why**: phase-1-5-funding-regime / phase-2-5-slice-5-walkforward /
+phase-2-5-slice-5-walkforward (3 PIT bugs in retro Ralph Loop 2026-05-29).
+Mechanical tests for "warmup", "validation", "row count" passed but
+**none asserted label invariance under future-data truncation**.
+Without this test, every iteration of expanding/rolling code is at risk
+of accidentally including future data via subtle bugs (full-sample
+quantile, row-order expanding when timestamps non-unique, `<=` daily
+boundary).
+
+**How to apply**: for every new PIT helper, add:
+```python
+def test_compute_X_is_point_in_time():
+    full = compute_X(full_data, ...)
+    cutoff = T_some_intermediate_date
+    short_data = truncate(full_data, cutoff)
+    truncated = compute_X(short_data, ...)
+    common = full.dropna().index.intersection(truncated.dropna().index)
+    pd.testing.assert_series_equal(
+        full.loc[common], truncated.loc[common],
+        check_names=False, check_dtype=False,
+    )
+```
+Source: phase-1-5-funding-regime R1-C1 (the leak that motivated the
+spec rule) — the regression test was added in the same commit.
