@@ -179,7 +179,7 @@ def test_compute_funding_regime_marks_bear_when_mean_funding_negative():
     # in-sample quantile.
     rates = [0.0001] * 60 + [0.002] * 30
     funding = {"BTC": _funding_frame(rates), "ETH": _funding_frame(rates)}
-    regime = rf.compute_funding_regime(funding, majors=("BTC", "ETH"), window_days=7, bear_quantile=0.75)
+    regime = rf.compute_funding_regime(funding, majors=("BTC", "ETH"), window_days=7, bear_quantile=0.75, threshold_min_prior_days=7)
     warmed = regime.dropna()
     assert len(warmed) > 0
     assert bool(warmed.iloc[-1])  # tail is overheated → bear
@@ -191,14 +191,14 @@ def test_compute_funding_regime_marks_bull_when_mean_funding_positive():
     # mix where the tail is below the in-sample quantile to verify bull.
     rates = [0.002] * 60 + [0.0001] * 30
     funding = {"BTC": _funding_frame(rates), "ETH": _funding_frame(rates)}
-    regime = rf.compute_funding_regime(funding, majors=("BTC", "ETH"), window_days=7, bear_quantile=0.75)
+    regime = rf.compute_funding_regime(funding, majors=("BTC", "ETH"), window_days=7, bear_quantile=0.75, threshold_min_prior_days=7)
     warmed = regime.dropna()
     assert len(warmed) > 0
     assert not bool(warmed.iloc[-1])  # tail is calm → bull
 
 
 def test_compute_funding_regime_returns_empty_when_no_data():
-    regime = rf.compute_funding_regime({}, majors=("BTC",), window_days=7)
+    regime = rf.compute_funding_regime({}, majors=("BTC",), window_days=7, threshold_min_prior_days=7)
     assert regime.empty
 
 
@@ -209,13 +209,13 @@ def test_compute_funding_regime_rejects_invalid_window():
 
 def test_compute_funding_regime_rejects_empty_majors():
     with pytest.raises(ValueError, match="majors"):
-        rf.compute_funding_regime({}, majors=(), window_days=7)
+        rf.compute_funding_regime({}, majors=(), window_days=7, threshold_min_prior_days=7)
 
 
 def test_compute_funding_regime_ignores_missing_token():
-    rates = [-0.001] * 30
+    rates = [-0.001] * 90
     funding = {"BTC": _funding_frame(rates)}  # ETH missing
-    regime = rf.compute_funding_regime(funding, majors=("BTC", "ETH"), window_days=7)
+    regime = rf.compute_funding_regime(funding, majors=("BTC", "ETH"), window_days=7, threshold_min_prior_days=7)
     assert regime.notna().any()
 
 
@@ -239,7 +239,7 @@ def test_apply_funding_regime_filter_keeps_only_bear_period_shorts():
         events,
         funding_by_token=funding,
         signal_offset_days=0,
-        direction="short",
+        direction="short", threshold_min_prior_days=7,
     )
     assert len(filtered) == 1
 
@@ -257,7 +257,7 @@ def test_apply_funding_regime_filter_drops_warmup_events():
         events,
         funding_by_token=funding,
         signal_offset_days=0,
-        direction="short",
+        direction="short", threshold_min_prior_days=7,
     )
     assert filtered.empty
 
@@ -275,7 +275,7 @@ def test_apply_funding_regime_filter_uses_signal_offset_days():
         events,
         funding_by_token=funding,
         signal_offset_days=-7,  # entry at 2026-03-25, in bear tail
-        direction="short",
+        direction="short", threshold_min_prior_days=7,
     )
     assert not filtered.empty
 
@@ -288,7 +288,7 @@ def test_apply_funding_regime_filter_passes_through_when_no_unlock_date_column()
         events,
         funding_by_token=funding,
         signal_offset_days=0,
-        direction="short",
+        direction="short", threshold_min_prior_days=7,
     )
     pd.testing.assert_frame_equal(filtered, events)
 
@@ -300,7 +300,7 @@ def test_apply_funding_regime_filter_passes_through_empty_events():
         events,
         funding_by_token=funding,
         signal_offset_days=0,
-        direction="short",
+        direction="short", threshold_min_prior_days=7,
     )
     assert filtered.empty
 
@@ -312,4 +312,50 @@ def test_compute_funding_regime_rejects_invalid_bear_quantile():
             majors=("BTC",),
             window_days=7,
             bear_quantile=1.5,
+        )
+
+
+def test_compute_funding_regime_is_point_in_time():
+    """Regime label at day T must NOT depend on funding observations after T.
+
+    Regression test for R1 Critical finding: full-sample quantile threshold
+    leaked future funding into historical regime labels.
+    """
+    rates_calm = [0.0001] * 90
+    rates_hot = [0.005] * 60  # large overheated spike
+
+    funding_short = {
+        "BTC": _funding_frame(rates_calm, start="2026-01-01"),
+        "ETH": _funding_frame(rates_calm, start="2026-01-01"),
+    }
+    regime_short = rf.compute_funding_regime(
+        funding_short, majors=("BTC", "ETH"), window_days=7, threshold_min_prior_days=14
+    )
+
+    rates_long = rates_calm + rates_hot
+    funding_long = {
+        "BTC": _funding_frame(rates_long, start="2026-01-01"),
+        "ETH": _funding_frame(rates_long, start="2026-01-01"),
+    }
+    regime_long = rf.compute_funding_regime(
+        funding_long, majors=("BTC", "ETH"), window_days=7, threshold_min_prior_days=14
+    )
+
+    # For each timestamp present in the short series, label must match the long.
+    common = regime_short.dropna().index.intersection(regime_long.dropna().index)
+    assert not common.empty
+    short_vals = regime_short.loc[common].astype("boolean")
+    long_vals = regime_long.loc[common].astype("boolean")
+    pd.testing.assert_series_equal(
+        short_vals, long_vals, check_names=False, check_dtype=False
+    )
+
+
+def test_compute_funding_regime_rejects_invalid_threshold_min_prior_days():
+    with pytest.raises(ValueError, match="threshold_min_prior_days"):
+        rf.compute_funding_regime(
+            {"BTC": _funding_frame([0.0001] * 30)},
+            majors=("BTC",),
+            window_days=7,
+            threshold_min_prior_days=0,
         )

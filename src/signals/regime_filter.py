@@ -157,9 +157,10 @@ def compute_funding_regime(
     majors: tuple[str, ...] = DEFAULT_FUNDING_MAJORS,
     window_days: int = DEFAULT_FUNDING_WINDOW_DAYS,
     bear_quantile: float = 0.75,
+    threshold_min_prior_days: int = 30,
 ) -> pd.Series:
     """Return a daily bool series: True iff cross-majors rolling mean funding above
-    its in-sample ``bear_quantile`` percentile (overheated long positioning).
+    its EXPANDING PRIOR-WINDOW ``bear_quantile`` percentile (overheated long positioning).
 
     Per smart-search 2026-05-27: extreme positive funding signals overheated
     long positioning → contrarian short opportunity. ``bear_quantile=0.75`` keeps
@@ -167,12 +168,17 @@ def compute_funding_regime(
     for short-signal entries.
 
     For each major token, compute the rolling N-day mean funding rate, then
-    average across tokens (equal weight). Bear regime = aggregate mean above
-    its own historical ``bear_quantile`` percentile.
+    average across tokens (equal weight). At each day T, the bear-classification
+    threshold is the ``bear_quantile`` of warmed observations with index < T
+    (strict-less-than, NOT the full sample). This is point-in-time correct:
+    the regime label at T uses only funding history strictly before T.
+
+    ``threshold_min_prior_days`` is the minimum number of warmed observations
+    required before a non-NA regime label can be produced (fail closed during
+    burn-in).
 
     Per spec rule "Time-series boundary slicing must be strict-less-than":
-    the regime label at day T uses funding history strictly before T (the
-    rolling mean is right-aligned at T but does not include future funding).
+    historical regime labels never depend on future funding observations.
     """
     if window_days <= 0:
         raise ValueError("window_days must be greater than 0")
@@ -181,6 +187,11 @@ def compute_funding_regime(
     if not 0.0 < bear_quantile < 1.0:
         raise ValueError(
             f"bear_quantile must be in (0.0, 1.0); got {bear_quantile!r}"
+        )
+    if type(threshold_min_prior_days) is not int or threshold_min_prior_days < 1:
+        raise ValueError(
+            f"threshold_min_prior_days must be a positive int; got "
+            f"{threshold_min_prior_days!r}"
         )
 
     daily_means: list[pd.Series] = []
@@ -208,10 +219,19 @@ def compute_funding_regime(
     warmed = combined.dropna()
     if warmed.empty:
         return pd.Series(dtype=bool, name="bear")
-    threshold = float(warmed.quantile(bear_quantile))
-    bear = (combined >= threshold).astype("boolean")
-    bear[combined.isna()] = pd.NA
-    bear.name = "bear"
+
+    # Expanding prior-window quantile (point-in-time correct).
+    # At each warmed index T, threshold(T) = quantile of warmed observations with
+    # index strictly less than T. Use shift(1) to enforce strict-less-than.
+    thresholds = (
+        warmed.expanding(min_periods=threshold_min_prior_days)
+        .quantile(bear_quantile)
+        .shift(1)
+    )
+    bear = pd.Series(pd.NA, index=combined.index, dtype="boolean", name="bear")
+    aligned_thresholds = thresholds.reindex(combined.index)
+    mask = combined.notna() & aligned_thresholds.notna()
+    bear.loc[mask] = combined.loc[mask] >= aligned_thresholds.loc[mask]
     return bear
 
 
@@ -223,18 +243,26 @@ def apply_funding_regime_filter(
     direction: str = "short",
     majors: tuple[str, ...] = DEFAULT_FUNDING_MAJORS,
     window_days: int = DEFAULT_FUNDING_WINDOW_DAYS,
+    bear_quantile: float = 0.75,
+    threshold_min_prior_days: int = 30,
 ) -> pd.DataFrame:
     """Filter events using funding-rate regime instead of BTC SMA.
 
     Direction semantics:
-    - direction="short": keep events landing in bear regime (mean funding < 0)
-    - direction="long": keep events landing in bull regime (mean funding >= 0)
+    - direction="short": keep events landing in bear regime (overheated long
+      positioning — top quartile of in-sample funding)
+    - direction="long": keep events landing in bull regime (below the
+      ``bear_quantile`` threshold — funding-cooled / shorts-paying-longs)
     """
     if events.empty or "unlock_date" not in events.columns:
         return events.copy()
 
     regime = compute_funding_regime(
-        funding_by_token, majors=majors, window_days=window_days
+        funding_by_token,
+        majors=majors,
+        window_days=window_days,
+        bear_quantile=bear_quantile,
+        threshold_min_prior_days=threshold_min_prior_days,
     )
     events_with_entry = events.copy()
     unlock_date = pd.to_datetime(events_with_entry["unlock_date"], utc=True, errors="coerce")
