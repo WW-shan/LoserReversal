@@ -178,18 +178,43 @@ def _normalize_direction(dir_value: object, side_value: object) -> str | None:
     """Hyperliquid fill ``dir`` is 'Open Long' / 'Open Short' / 'Close Long' etc.
 
     Treat 'Open Long' / 'Close Short' as the wallet's effective long position;
-    'Open Short' / 'Close Long' as effective short. Ignore other strings.
+    'Open Short' / 'Close Long' as effective short. Also handle liquidation
+    and auto-deleveraging variants (which carry the same Long/Short suffix)
+    and ``A > B`` net-flip notation (the wallet ends up in direction B).
+
+    Per R1 finding: explicitly handle high-information events (liquidations,
+    ADL, flips) rather than silently dropping them.
     """
     if dir_value is None or (isinstance(dir_value, float) and pd.isna(dir_value)):
         # Fall back to side (B/A)
         if isinstance(side_value, str):
-            return "long" if side_value.upper() == "B" else "short" if side_value.upper() == "A" else None
+            up = side_value.upper()
+            return "long" if up == "B" else "short" if up == "A" else None
         return None
     text = str(dir_value).strip().lower()
+    if not text:
+        return None
+    # Handle net-flip notation 'A > B' — wallet ends in direction B.
+    if " > " in text:
+        # 'long > short' → short; 'short > long' → long
+        right = text.split(" > ", 1)[1].strip()
+        if "long" in right:
+            return "long"
+        if "short" in right:
+            return "short"
+        return None
+    # Tokens that semantically mean the wallet was in a LONG position:
     if "open long" in text or "close short" in text:
         return "long"
     if "open short" in text or "close long" in text:
         return "short"
+    # Liquidation / ADL preserve the position direction: "Liquidated ... Long"
+    # is a forced close of a long → was long. ADL same.
+    if "liquidat" in text or "deleverag" in text or "adl" in text:
+        if "long" in text:
+            return "long"
+        if "short" in text:
+            return "short"
     return None
 
 
